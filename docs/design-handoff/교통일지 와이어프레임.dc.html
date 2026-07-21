@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  :root{--fnt:'Pretendard','Pretendard Variable',-apple-system,system-ui,sans-serif}
+  body{margin:0;background:#f4f5f7;font-family:var(--fnt);color:#333d4b;-webkit-font-smoothing:antialiased}
+  .dv-turn{padding:44px 48px 36px;border-bottom:1px solid rgba(0,0,0,.07);scroll-margin-top:16px}
+  .dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+  .dv-tid{font:600 11px var(--fnt);padding:3px 9px;background:#191f28;color:#fff;border-radius:5px;text-decoration:none;letter-spacing:.02em}
+  .dv-tname{font:700 15px var(--fnt);color:#191f28}
+  .dv-tsub{margin:0 0 24px;font-size:12.5px;color:#8b95a1;max-width:640px;line-height:1.6}
+  .dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+  .dv-opt{flex:none;display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+  .dv-olabel{display:flex;align-items:baseline;gap:9px;font-size:12.5px;color:#6b7684}
+  .dv-oname{font:700 14px var(--fnt);color:#191f28}
+  .dv-oid{font:600 11px var(--fnt);padding:3px 8px;background:#e5e8eb;color:#333d4b;border-radius:6px;text-decoration:none}
+  .dv-opt:target .dv-oid{background:#ec7211;color:#fff}
+  .dv-next{margin:26px 0 0;font-size:12.5px;color:#8b95a1;line-height:1.8}
+  .dv-next a{color:#c96a17;text-decoration:none;font-weight:600}
+
+  /* ---- primitives ---- */
+  .row{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap}
+  .scr{background:#fff;border:1px solid #e5e8eb;border-radius:16px;box-shadow:0 6px 20px rgba(0,20,60,.06);overflow:hidden;display:flex;flex-direction:column}
+  .scr-cap{font:600 12px var(--fnt);color:#8b95a1;text-align:center;margin-top:2px}
+  .m{width:236px}
+  .d{width:520px}
+  .notch{height:24px;background:#fff;border-bottom:1px solid #f2f4f6;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:600 9px var(--fnt);color:#8b95a1}
+  .notch::before{content:'9:41'}
+  .notch::after{content:'●●● ▮'}
+  .tbar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:#fff;border-bottom:1px solid #f2f4f6}
+  .dot{width:9px;height:9px;border-radius:50%;background:#e5e8eb}
+  .pad{padding:14px}
+  .g{color:#8b95a1}
+  .hl{color:#ec7211;font-weight:700}
+  .ln{height:9px;border-radius:5px;background:#eef0f2}
+  .ln.s{width:45%}.ln.m{width:70%}.ln.l{width:100%}
+  .h1{font:700 17px var(--fnt);color:#191f28;letter-spacing:-.01em}
+  .h2{font:600 13px var(--fnt);color:#333d4b}
+  .box{border:1px dashed #c4cdd6;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;font:600 11px var(--fnt);color:#9aa5b1;background:#f7f9fa}
+  .btn{border:1px solid #d1d6db;border-radius:10px;padding:9px 12px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;font:600 12px var(--fnt);background:#fff;color:#4e5968}
+  .btn.p{background:#ec7211;color:#fff;border-color:#ec7211}
+  .btn.b{background:#2f6fed;color:#fff;border-color:#2f6fed}
+  .pill{border:1px solid #d1d6db;border-radius:8px;padding:6px 11px;font:600 10.5px var(--fnt);background:#fff;color:#6b7684;white-space:nowrap}
+  .pill.on{background:#191f28;color:#fff;border-color:#191f28}
+  .field{border:1px solid #d1d6db;border-radius:10px;padding:10px;font:600 11px var(--fnt);color:#9aa5b1;background:#fbfcfd}
+  .tab{display:flex;border-top:1px solid #f2f4f6;background:#fff}
+  .tab>div{flex:1;padding:9px 0 8px;text-align:center;font:600 9.5px var(--fnt);color:#adb5bd}
+  .tab .act{color:#ec7211}
+  .ico{width:22px;height:22px;margin:0 auto 4px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+  .stat{border:1px solid #eef0f2;border-radius:12px;padding:10px;flex:1;background:#fbfcfd}
+  .stat .n{font:700 18px var(--fnt);color:#191f28}
+  .stat .k{font-size:9.5px;color:#8b95a1;margin-top:1px}
+  .pin{position:absolute;width:14px;height:14px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .maparea{position:relative;background:
+      repeating-linear-gradient(0deg,#e4e9ef,#e4e9ef 1px,transparent 1px,transparent 26px),
+      repeating-linear-gradient(90deg,#e4e9ef,#e4e9ef 1px,transparent 1px,transparent 26px),#eef2f6}
+  table.wf{width:100%;border-collapse:collapse;font:600 9.5px var(--fnt)}
+  table.wf th{background:#f7f9fa;text-align:left;padding:7px;border-bottom:1px solid #e5e8eb;color:#6b7684;font-weight:700}
+  table.wf td{padding:7px;border-bottom:1px solid #f2f4f6;color:#8b95a1}
+  .side{width:150px;border-right:1px solid #f2f4f6;background:#fbfcfd;padding:12px 10px;display:flex;flex-direction:column;gap:6px}
+  .side .navi{font:600 11px var(--fnt);color:#8b95a1;padding:8px 10px;border-radius:8px}
+  .side .navi.on{background:#fff2e8;color:#ec7211}
+  .roulette{width:118px;height:118px;border-radius:50%;margin:0 auto;border:4px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.15);background:conic-gradient(#ec7211 0 60deg,#fff 60deg 120deg,#2f6fed 120deg 180deg,#fff 180deg 240deg,#ec7211 240deg 300deg,#fff 300deg 360deg);position:relative}
+  .roulette::after{content:'';position:absolute;top:-11px;left:50%;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-top:13px solid #191f28}
+  .anno{font:600 10px var(--fnt);color:#2f6fed}
+  .bub{max-width:82%;padding:9px 11px;border-radius:12px;font:600 11px var(--fnt);line-height:1.5}
+  .bub.ai{background:#fff2e8;color:#8a4a12;border-radius:12px 12px 12px 3px;align-self:flex-start}
+  .bub.me{background:#f2f4f6;color:#333d4b;border-radius:12px 12px 3px 12px;align-self:flex-end}
+  .aitag{display:inline-flex;align-items:center;gap:5px;font:700 9px var(--fnt);color:#ec7211;letter-spacing:.04em;text-transform:uppercase}
+  .aitag::before{content:'';width:6px;height:6px;border-radius:50%;background:#ec7211}
+  .aicard{border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px}
+  .logolock{display:flex;align-items:center;gap:8px;justify-content:center}
+  .logomk{width:34px;height:34px;border-radius:8px;border:1px dashed #c4cdd6;background:#f7f9fa;display:flex;align-items:center;justify-content:center;font:700 8px var(--fnt);color:#9aa5b1;flex:none}
+  .logotx{display:flex;flex-direction:column;line-height:1.15}
+  .logotx b{font:800 15px var(--fnt);color:#191f28;letter-spacing:-.01em}
+  .logotx span{font:600 8px var(--fnt);color:#8b95a1;letter-spacing:.14em}
+  .btn.kko{background:#fee500;color:#191919;border-color:#fee500;display:flex;align-items:center;justify-content:center;gap:7px}
+  .kko-ic{width:15px;height:13px;border-radius:50%/44%;background:#191919;position:relative}
+  .kko-ic::after{content:'';position:absolute;bottom:-3px;left:3px;width:4px;height:5px;background:#191919;transform:rotate(28deg);border-radius:0 0 2px 0}
+  .hm-tip{background:rgba(255,255,255,.9);border:none;box-shadow:0 1px 3px rgba(0,0,0,.25);border-radius:6px;padding:1px 5px;font:700 9px var(--fnt);color:#333d4b;white-space:nowrap}
+  .hm-tip::before{display:none}
+  .leaflet-container{font-family:var(--fnt)}
+  .avatar{border-radius:50%;background:radial-gradient(circle at 50% 34%,#ffd9bd,#ffe8d6);display:flex;align-items:center;justify-content:center;color:#c96a17;font:800 12px var(--fnt);border:1px solid #ffd9bd;flex:none}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t11">
+  <div class="dv-thd"><a class="dv-tid" href="#t11">11</a><span class="dv-tname">메인 페이지 (참여율 지도 · 지역 경쟁)</span></div>
+  <p class="dv-tsub">앱을 열면 바로 보이는 홈. 실제 지도 위 온도계 참여율(<a class="dv-oid" href="#10a">10a</a>)을 메인에 올려 "우리 동네 순위"로 경쟁심을 자극하고, 기록 참여를 유도합니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="11a">
+      <div class="dv-olabel"><a class="dv-oid" href="#11a">11a</a><span class="dv-oname">홈 · 지도 히어로 → 전체 순위</span></div>
+      <div class="row">
+
+        <!-- 메인 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="logolock" style="justify-content:flex-start;flex:1"><div class="logomk" style="width:22px;height:22px;font-size:6px">CI</div><div class="logotx"><b style="font-size:12px">화성 교통일지</b></div></div><div class="dot"></div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="position:relative;border:1px solid #eef0f2;border-radius:14px;overflow:hidden;height:160px">
+                <div class="js-hmap" data-static="1" style="position:absolute;inset:0"></div>
+                <div style="position:absolute;top:8px;left:8px;background:rgba(25,31,40,.82);color:#fff;border-radius:8px;padding:5px 9px;font:700 10px var(--fnt)">우리 동네 참여율 지도</div>
+              </div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px;display:flex;align-items:center;gap:10px">
+                <div style="text-align:center;flex:none"><div class="h1" style="font-size:20px;color:#ec7211">3위</div><div class="g" style="font-size:8.5px">병점2동</div></div>
+                <div style="flex:1;line-height:1.5"><div class="h2" style="font-size:11px">2위 동탄2동까지 <span class="hl">8건!</span></div><div class="g" style="font-size:9.5px">지금 기록하면 우리 동네 역전</div></div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <div class="btn p" style="flex:1">기록하기</div>
+                <div class="btn" style="flex:1">길찾기</div>
+                <div class="btn" style="flex:1">룰렛</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h2" style="font-size:11px">실시간 동네 순위</span><span class="g" style="font-size:9.5px">전체 보기 ›</span></div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px"><span class="g" style="font-size:10px;width:14px">1</span><span class="h2" style="font-size:10px;width:48px">동탄1동</span><div style="flex:1;height:9px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:72%;height:100%;background:#ec7211"></div></div><span class="g" style="font-size:9px">72%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="g" style="font-size:10px;width:14px">2</span><span class="h2" style="font-size:10px;width:48px">동탄2동</span><div style="flex:1;height:9px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:61%;height:100%;background:#f89b4a"></div></div><span class="g" style="font-size:9px">61%</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;margin:0 -6px;background:#fff9f4;border-radius:8px"><span class="hl" style="font-size:10px;width:14px">3</span><span class="h2" style="font-size:10px;width:48px;color:#ec7211">병점2동</span><div style="flex:1;height:9px;border-radius:5px;background:#ffe8d6;overflow:hidden"><div style="width:55%;height:100%;background:#ec7211"></div></div><span class="hl" style="font-size:9px">55%</span></div>
+              </div>
+            </div>
+            <div class="tab"><div class="act"><svg class="ico" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"></path><path d="M6 10v9h12v-9"></path></svg>홈</div><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M8 9h8M8 13h5"></path></svg>게시판</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">1. 메인 · 지도 히어로</div>
+        </div>
+
+        <!-- 전체 순위 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">동네 참여 랭킹</div><div class="g" style="font-size:10px">이번 달</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:8px;flex:1">
+              <div style="display:flex;gap:6px;justify-content:center;align-items:flex-end;padding:6px 0">
+                <div style="text-align:center"><div class="box" style="width:44px;height:44px;border-radius:50%">2위</div><div class="h2" style="font-size:9.5px;margin-top:4px">동탄2동</div><div class="g" style="font-size:9px">61%</div></div>
+                <div style="text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#ec7211;color:#fff;display:flex;align-items:center;justify-content:center;font:800 12px var(--fnt)">1위</div><div class="h2" style="font-size:9.5px;margin-top:4px">동탄1동</div><div class="hl" style="font-size:9px">72%</div></div>
+                <div style="text-align:center"><div class="box" style="width:40px;height:40px;border-radius:50%">3위</div><div class="h2" style="font-size:9.5px;margin-top:4px">병점2동</div><div class="g" style="font-size:9px">55%</div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:9px 11px;border-bottom:1px solid #f2f4f6;display:flex;gap:9px;align-items:center"><span class="g" style="font-size:11px;width:16px">4</span><span class="h2" style="font-size:11px;flex:1">병점1동</span><span class="g" style="font-size:10px">48%</span></div>
+                <div style="padding:9px 11px;border-bottom:1px solid #f2f4f6;display:flex;gap:9px;align-items:center"><span class="g" style="font-size:11px;width:16px">5</span><span class="h2" style="font-size:11px;flex:1">봉담읍</span><span class="g" style="font-size:10px">42%</span></div>
+                <div style="padding:9px 11px;border-bottom:1px solid #f2f4f6;display:flex;gap:9px;align-items:center"><span class="g" style="font-size:11px;width:16px">6</span><span class="h2" style="font-size:11px;flex:1">진안동</span><span class="g" style="font-size:10px">33%</span></div>
+                <div style="padding:9px 11px;display:flex;gap:9px;align-items:center"><span class="g" style="font-size:11px;width:16px">7</span><span class="h2" style="font-size:11px;flex:1">향남읍</span><span class="g" style="font-size:10px">29%</span></div>
+              </div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px;text-align:center"><div class="h2" style="font-size:11px">우리 동네 <span class="hl">병점2동 3위</span></div><div class="g" style="font-size:9.5px;margin-top:2px">이번 주 8건 더 기록하면 2위 등극!</div></div>
+              <div style="flex:1"></div>
+              <div class="btn p">우리 동네 기록 참여</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 전체 동네 순위</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "동네 랭킹 시즌·보상 이벤트" · "지도 탭하면 우리 동네 상세로" · "이웃 동네에 도전장 보내기" · "주간 순위 변동 알림"</p>
+</section>
+
+<section class="dv-turn" id="t10">
+  <div class="dv-thd"><a class="dv-tid" href="#t10">10</a><span class="dv-tname">지역별 참여율 (온도계 히트맵)</span></div>
+  <p class="dv-tsub">화성시 읍·면·동을 온도계처럼 색 농도로 칠해 참여율을 한눈에 봅니다. 진할수록 참여 활발. 관리자 히트맵과 시민용 "우리 동네 참여율"로 구성했습니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="10a">
+      <div class="dv-olabel"><a class="dv-oid" href="#10a">10a</a><span class="dv-oname">관리자 지역 히트맵 · 시민용 우리 동네</span></div>
+      <div class="row">
+
+        <!-- 관리자 히트맵 -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="anno" style="margin-left:8px">지역 참여율</div></div>
+            <div style="display:flex;min-height:300px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">AI 자동 분류</div>
+                <div class="navi on">지역 참여율</div>
+                <div class="navi">AI 인사이트</div>
+                <div class="navi">경품/당첨</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><div class="h1">읍·면·동 참여율</div><div style="display:flex;gap:5px"><div class="pill on">이번 달</div><div class="pill">누적</div></div></div>
+                <div style="display:flex;gap:12px;flex:1">
+                  <!-- real map choropleth -->
+                  <div style="flex:1.6;border:1px solid #eef0f2;border-radius:10px;position:relative;overflow:hidden;min-height:210px">
+                    <div id="hmap" class="js-hmap" style="position:absolute;inset:0"></div>
+                  </div>
+                  <!-- legend + ranking -->
+                  <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+                    <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px">
+                      <div class="g" style="font-size:9px;margin-bottom:6px">참여율 온도계</div>
+                      <div style="height:12px;border-radius:6px;background:linear-gradient(90deg,#fff2e8,#ffd9bd,#ffb877,#f89b4a,#ec7211)"></div>
+                      <div style="display:flex;justify-content:space-between;margin-top:3px"><span class="g" style="font-size:8px">0%</span><span class="g" style="font-size:8px">100%</span></div>
+                    </div>
+                    <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px;flex:1">
+                      <div class="g" style="font-size:9px;margin-bottom:6px">참여율 순위</div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt)"><span>1  동탄1동</span><span class="hl">72%</span></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#4e5968"><span>2  동탄2동</span><span>61%</span></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#4e5968"><span>3  병점2동</span><span>55%</span></div>
+                      <div style="border-top:1px dashed #e5e8eb;margin:5px 0"></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#8b95a1"><span>9  우정읍</span><span>18%</span></div>
+                      <div class="g" style="font-size:8.5px;margin-top:5px">참여 저조 지역은 홍보·이벤트 집중 대상</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">관리자 지역 히트맵</div>
+        </div>
+
+        <!-- 우리 동네 참여율 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">우리 동네 참여율</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="display:flex;gap:12px;align-items:center;border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:13px">
+                <!-- thermometer -->
+                <div style="width:26px;height:96px;border-radius:13px;background:#fff;border:1px solid #ffd9bd;position:relative;flex:none;display:flex;align-items:flex-end;padding:3px">
+                  <div style="width:100%;height:68%;border-radius:11px;background:linear-gradient(180deg,#f89b4a,#ec7211)"></div>
+                </div>
+                <div style="flex:1"><div class="h2" style="font-size:12px">동탄1동</div><div class="h1" style="font-size:24px;color:#ec7211">72%</div><div class="g" style="font-size:9.5px">화성시 1위 · 매우 활발</div></div>
+              </div>
+              <div class="g" style="font-size:10px">이웃 동네 비교</div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span class="h2" style="font-size:10px;width:48px">동탄2동</span><div style="flex:1;height:10px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:61%;height:100%;background:#f89b4a"></div></div><span class="g" style="font-size:9px;width:26px">61%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="h2" style="font-size:10px;width:48px">병점2동</span><div style="flex:1;height:10px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:55%;height:100%;background:#ffb877"></div></div><span class="g" style="font-size:9px;width:26px">55%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="h2" style="font-size:10px;width:48px">봉담읍</span><div style="flex:1;height:10px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:42%;height:100%;background:#ffd9bd"></div></div><span class="g" style="font-size:9px;width:26px">42%</span></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px"><div class="h2" style="font-size:11px">이번 주 우리 동네</div><div class="g" style="font-size:9.5px;margin-top:4px">기록 128건 · 참여 시민 46명 · 전주 대비 +12%</div></div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9.5px;text-align:center">기록에 참여해 우리 동네 순위를 올려보세요</div>
+              <div class="btn p">지금 기록하기</div>
+            </div>
+          </div>
+          <div class="scr-cap">시민용 · 우리 동네</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "동네별 랭킹 경쟁 이벤트 화면" · "참여율 낮은 지역 타겟 알림" · "시간대별 참여 히트맵" · "지도 위에 실제 경계선으로 표시"</p>
+</section>
+
+<section class="dv-turn" id="t20">
+  <div class="dv-thd"><a class="dv-tid" href="#t20">20</a><span class="dv-tname">반응형 규칙 (모든 화면 적용)</span></div>
+  <p class="dv-tsub">모든 화면은 아래 5가지 유형 중 하나입니다. 유형별 재배치 규칙을 지키면 로그인·가입·게시판·기록·지도·상세·관리자 등 전 화면이 노트북·태블릿·데스크톱에서 동작합니다. 브레이크포인트: 모바일 ~600 / 태블릿 600–1024 / 데스크톱 1024+.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="20a">
+      <div class="dv-olabel"><a class="dv-oid" href="#20a">20a</a><span class="dv-oname">화면 유형별 반응형 규칙 · 예시</span></div>
+      <div class="row">
+
+        <!-- 규칙 카드 -->
+        <div>
+          <div class="scr" style="width:340px">
+            <div class="tbar"><div class="h2" style="flex:1">유형별 재배치 규칙</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px">
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div class="h2" style="font-size:11px">폼형 <span class="g" style="font-weight:400">로그인·가입·작성·수정</span></div><div class="g" style="font-size:9.5px;margin-top:3px;line-height:1.5">모바일: 전체폭 1열 · 데스크톱: 가운데 정렬 카드(최대 480px), 좌우 여백</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div class="h2" style="font-size:11px">리스트·피드형 <span class="g" style="font-weight:400">게시판·기록·당첨</span></div><div class="g" style="font-size:9.5px;margin-top:3px;line-height:1.5">모바일 1열 → 태블릿 2열 → 데스크톱 3열 카드 그리드</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div class="h2" style="font-size:11px">지도형 <span class="g" style="font-weight:400">홈·길찾기·희망노선</span></div><div class="g" style="font-size:9.5px;margin-top:3px;line-height:1.5">모바일: 지도 위·패널 아래 · 데스크톱: 지도 좌 + 패널 우 분할</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div class="h2" style="font-size:11px">상세형 <span class="g" style="font-weight:400">게시물·노선·일지</span></div><div class="g" style="font-size:9.5px;margin-top:3px;line-height:1.5">데스크톱: 본문(좌) + 요약·액션(우) 2열, 모바일 1열 세로</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div class="h2" style="font-size:11px">관리자형 <span class="g" style="font-weight:400">대시보드·표</span></div><div class="g" style="font-size:9.5px;margin-top:3px;line-height:1.5">데스크톱: 사이드바 + 넓은 표 · 모바일: 사이드바→상단 메뉴, 표→카드 리스트</div></div>
+              <div style="border-top:1px solid #f2f4f6;padding-top:8px"><div class="g" style="font-size:9px;line-height:1.5">공통: 내비게이션은 모바일 하단탭 → 데스크톱 상단바, 터치 타깃 ≥44px, 이미지·지도 컨테이너는 유동 폭</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">유형별 규칙</div>
+        </div>
+
+        <!-- 폼형 예시 (데스크톱) -->
+        <div>
+          <div class="scr" style="width:460px">
+            <div class="tbar" style="gap:14px"><div class="logolock" style="justify-content:flex-start"><div class="logomk" style="width:22px;height:22px;font-size:6px">CI</div><div class="logotx"><b style="font-size:12px">화성 교통일지</b></div></div></div>
+            <div class="pad" style="min-height:210px;display:flex;align-items:center;justify-content:center;background:#fbfcfd">
+              <div style="width:300px;display:flex;flex-direction:column;gap:9px;background:#fff;border:1px solid #eef0f2;border-radius:14px;padding:18px">
+                <div class="h1" style="font-size:16px;text-align:center">로그인</div>
+                <div class="btn kko" style="min-height:44px"><span class="kko-ic"></span>카카오로 시작하기</div>
+                <div class="field">아이디 / 전화번호</div>
+                <div class="field">비밀번호</div>
+                <div class="btn p">로그인</div>
+                <div class="g" style="font-size:9px;text-align:center">폼은 데스크톱에서 가운데 정렬 카드로</div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">폼형 예시 · 데스크톱 중앙 정렬</div>
+        </div>
+
+        <!-- 리스트형 예시 (데스크톱 2열) -->
+        <div>
+          <div class="scr" style="width:460px">
+            <div class="tbar" style="gap:14px"><div class="logolock" style="justify-content:flex-start;flex:1"><div class="logomk" style="width:22px;height:22px;font-size:6px">CI</div><div class="logotx"><b style="font-size:12px">시민 게시판</b></div></div><div style="display:flex;gap:14px;font:600 10px var(--fnt);color:#8b95a1"><span>홈</span><span class="hl">게시판</span><span>마이</span></div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;min-height:210px">
+              <div style="display:flex;gap:6px"><div class="pill on">전체</div><div class="pill">노선 신청</div><div class="pill">정보공유</div><div style="flex:1"></div><div class="pill">최신순</div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div style="display:flex;gap:5px"><span class="pill" style="padding:2px 6px;font-size:8px">노선 신청</span></div><div class="h2" style="font-size:11px;margin-top:5px">병점–동탄 심야버스</div><div class="g" style="font-size:9px;margin-top:3px">투표 88 · 댓글 8</div></div>
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div style="display:flex;gap:5px"><span class="pill" style="padding:2px 6px;font-size:8px">정보공유</span></div><div class="h2" style="font-size:11px;margin-top:5px">마을 3번 우회 안내</div><div class="g" style="font-size:9px;margin-top:3px">조회 148 · 댓글 3</div></div>
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div style="display:flex;gap:5px"><span class="pill" style="padding:2px 6px;font-size:8px">질문</span></div><div class="h2" style="font-size:11px;margin-top:5px">200번 첫차 시간은?</div><div class="g" style="font-size:9px;margin-top:3px">조회 92 · 댓글 5</div></div>
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div style="display:flex;gap:5px"><span class="pill" style="padding:2px 6px;font-size:8px">노선 신청</span></div><div class="h2" style="font-size:11px;margin-top:5px">남양–봉담 순환</div><div class="g" style="font-size:9px;margin-top:3px">투표 74 · 댓글 2</div></div>
+              </div>
+              <div class="g" style="font-size:9px;text-align:center">리스트는 폭이 넓어지면 다열 그리드로</div>
+            </div>
+          </div>
+          <div class="scr-cap">리스트형 예시 · 데스크톱 2열</div>
+        </div>
+
+        <!-- 관리자형 예시 (모바일 축소) -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="h2" style="flex:1">관리자</div><div style="width:22px;height:16px;display:flex;flex-direction:column;justify-content:space-between"><div style="height:2px;background:#8b95a1"></div><div style="height:2px;background:#8b95a1"></div><div style="height:2px;background:#8b95a1"></div></div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;gap:6px;overflow:hidden"><div class="pill on">기록 관리</div><div class="pill">회원</div><div class="pill">만족도</div></div>
+              <div class="g" style="font-size:9px">표 → 카드 리스트로 전환</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:3px"><div style="display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">#1204 동탄1동 정류장</span><span class="hl" style="font-size:9px">대기</span></div><div class="g" style="font-size:9px">배차 · 홍*동 · +8 중복</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:3px"><div style="display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">#1203 병점역 환승</span><span class="g" style="font-size:9px">처리</span></div><div class="g" style="font-size:9px">혼잡 · 김*수 · +2 중복</div></div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">사이드바→상단 메뉴, 넓은 표→카드</div>
+            </div>
+          </div>
+          <div class="scr-cap">관리자형 예시 · 모바일 축소</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "특정 화면의 3폭 목업 자세히" · "데스크톱 공통 상단 내비 확정" · "관리자 표의 모바일 카드 규칙" · "핸드오프 패키지 만들어줘"</p>
+</section>
+
+<section class="dv-turn" id="t19">
+  <div class="dv-thd"><a class="dv-tid" href="#t19">19</a><span class="dv-tname">반응형 (태블릿 · 데스크톱)</span></div>
+  <p class="dv-tsub">같은 메인 화면(<a class="dv-oid" href="#11a">11a</a>)이 화면 폭에 따라 재배치됩니다. 모바일=1열+하단탭, 태블릿=2열, 데스크톱=상단 내비+다열 그리드. 브레이크포인트: ~600 / ~1024 / 1024+.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="19a">
+      <div class="dv-olabel"><a class="dv-oid" href="#19a">19a</a><span class="dv-oname">메인 페이지 · 폭별 재배치</span></div>
+      <div class="row">
+
+        <!-- 모바일 요약 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="logolock" style="justify-content:flex-start;flex:1"><div class="logomk" style="width:22px;height:22px;font-size:6px">CI</div><div class="logotx"><b style="font-size:12px">화성 교통일지</b></div></div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="position:relative;border:1px solid #eef0f2;border-radius:12px;overflow:hidden;height:120px"><div class="js-hmap" data-static="1" style="position:absolute;inset:0"></div></div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:10px;padding:9px"><div class="h2" style="font-size:11px">우리 동네 병점2동 3위</div></div>
+              <div style="display:flex;gap:6px"><div class="btn p" style="flex:1">기록</div><div class="btn" style="flex:1">길찾기</div><div class="btn" style="flex:1">룰렛</div></div>
+              <div class="g" style="font-size:9px">실시간 순위…</div>
+            </div>
+            <div class="tab"><div class="act"><svg class="ico" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"></path><path d="M6 10v9h12v-9"></path></svg>홈</div><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M8 9h8M8 13h5"></path></svg>게시판</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">모바일 · 1열 + 하단탭 (~600px)</div>
+        </div>
+
+        <!-- 태블릿 -->
+        <div>
+          <div class="scr" style="width:420px">
+            <div class="tbar"><div class="logolock" style="justify-content:flex-start;flex:1"><div class="logomk" style="width:22px;height:22px;font-size:6px">CI</div><div class="logotx"><b style="font-size:12px">화성 교통일지</b></div></div><div style="display:flex;gap:12px;font:600 10px var(--fnt);color:#8b95a1"><span class="hl">홈</span><span>지도</span><span>게시판</span><span>마이</span></div></div>
+            <div class="pad" style="display:flex;gap:10px;min-height:230px">
+              <div style="flex:1.4;display:flex;flex-direction:column;gap:9px">
+                <div style="position:relative;border:1px solid #eef0f2;border-radius:12px;overflow:hidden;flex:1;min-height:150px"><div class="js-hmap" data-static="1" style="position:absolute;inset:0"></div></div>
+                <div style="display:flex;gap:6px"><div class="btn p" style="flex:1">기록하기</div><div class="btn" style="flex:1">길찾기</div><div class="btn" style="flex:1">룰렛</div></div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:10px;padding:10px"><div class="h2" style="font-size:11px">병점2동 3위</div><div class="g" style="font-size:9px;margin-top:2px">2위까지 8건</div></div>
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px;flex:1"><div class="g" style="font-size:9px;margin-bottom:5px">실시간 순위</div><div style="display:flex;justify-content:space-between;font:700 10px var(--fnt);padding:2px 0"><span>1 동탄1동</span><span class="hl">72%</span></div><div style="display:flex;justify-content:space-between;font:700 10px var(--fnt);color:#4e5968;padding:2px 0"><span>2 동탄2동</span><span>61%</span></div><div style="display:flex;justify-content:space-between;font:700 10px var(--fnt);color:#ec7211;padding:2px 0"><span>3 병점2동</span><span>55%</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">태블릿 · 상단 내비 + 2열 (~1024px)</div>
+        </div>
+
+        <!-- 데스크톱 -->
+        <div>
+          <div class="scr" style="width:560px">
+            <div class="tbar" style="gap:14px"><div class="logolock" style="justify-content:flex-start"><div class="logomk" style="width:22px;height:22px;font-size:6px">CI</div><div class="logotx"><b style="font-size:12px">화성 교통일지</b></div></div><div style="display:flex;gap:16px;font:600 11px var(--fnt);color:#8b95a1;flex:1"><span class="hl">홈</span><span>지도</span><span>게시판</span><span>일지</span><span>마이</span></div><div class="avatar" style="width:26px;height:26px;font-size:8px">아바타</div></div>
+            <div class="pad" style="display:flex;gap:12px;min-height:250px">
+              <div style="flex:1.7;position:relative;border:1px solid #eef0f2;border-radius:12px;overflow:hidden;min-height:220px"><div class="js-hmap" data-static="1" style="position:absolute;inset:0"></div><div style="position:absolute;top:8px;left:8px;background:rgba(25,31,40,.82);color:#fff;border-radius:8px;padding:5px 9px;font:700 10px var(--fnt)">우리 동네 참여율 지도</div></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:10px;padding:11px;display:flex;align-items:center;gap:10px"><div class="h1" style="font-size:18px;color:#ec7211">3위</div><div class="g" style="font-size:9.5px;flex:1">병점2동 · 2위까지 8건</div></div>
+                <div style="display:flex;gap:6px"><div class="btn p" style="flex:1">기록하기</div><div class="btn" style="flex:1">길찾기</div></div>
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;flex:1"><div class="g" style="font-size:9px;margin-bottom:6px">실시간 동네 순위</div><div style="display:flex;justify-content:space-between;font:700 10px var(--fnt);padding:3px 0"><span>1 동탄1동</span><span class="hl">72%</span></div><div style="display:flex;justify-content:space-between;font:700 10px var(--fnt);color:#4e5968;padding:3px 0"><span>2 동탄2동</span><span>61%</span></div><div style="display:flex;justify-content:space-between;font:700 10px var(--fnt);color:#ec7211;padding:3px 0"><span>3 병점2동</span><span>55%</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">데스크톱 · 상단 내비 + 다열 그리드 (1024px+)</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "게시판을 데스크톱 2열 목록으로" · "관리자 화면 태블릿 대응" · "데스크톱 지도 전체화면 레이아웃" · "브레이크포인트별 내비 동작 정의"</p>
+</section>
+
+<section class="dv-turn" id="t18">
+  <div class="dv-thd"><a class="dv-tid" href="#t18">18</a><span class="dv-tname">게시물 신고 · 회원정보 수정</span></div>
+  <p class="dv-tsub">부적절한 게시물을 익명으로 신고하고, 회원정보(프로필·계정)를 한 화면에서 수정합니다. 닉네임·아바타·거주지역·언어부터 전화·비밀번호까지 함께 편집합니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="18a">
+      <div class="dv-olabel"><a class="dv-oid" href="#18a">18a</a><span class="dv-oname">게시물 신고 · 회원정보(계정) 수정</span></div>
+      <div class="row">
+
+        <!-- 게시물 신고 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">취소</div><div class="h2" style="flex:1;text-align:center">게시물 신고</div><div class="g" style="font-size:11px">제출</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px"><div class="g" style="font-size:9px">신고 대상</div><div class="h2" style="font-size:11px;margin-top:3px">병점–동탄 심야버스 신설 신청</div><div class="g" style="font-size:9px;margin-top:2px">익명 · 노선 신청</div></div>
+              <div class="g" style="font-size:10px">신고 사유</div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">스팸·광고</span><div class="dot"></div></div>
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">욕설·비방</span><div class="dot" style="border:1.5px solid #ec7211;background:#fff"></div></div>
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">허위 정보</span><div class="dot"></div></div>
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">개인정보 노출</span><div class="dot"></div></div>
+                <div style="padding:11px 12px;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">기타</span><div class="dot"></div></div>
+              </div>
+              <div class="field" style="align-items:flex-start;color:#9aa5b1;min-height:44px">상세 내용 (선택)</div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">신고는 익명 처리되며 관리자가 검토합니다</div>
+              <div class="btn p">신고 제출</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 게시물 신고</div>
+        </div>
+
+        <!-- 회원정보 수정 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">취소</div><div class="h2" style="flex:1;text-align:center">회원정보 수정</div><div class="hl" style="font-size:11px">저장</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;align-items:center;gap:11px">
+                <div class="avatar" style="width:48px;height:48px">아바타</div>
+                <div style="flex:1"><div class="g" style="font-size:9px">닉네임</div><div class="h2" style="font-size:12px">느긋한통근러347</div></div>
+                <div class="pill">아바타 변경</div>
+              </div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1;color:#333d4b">느긋한통근러347</div><div class="btn" style="width:76px">다시 생성</div></div>
+              <div class="g" style="font-size:10px">거주 지역</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1">화성시</div><div class="field" style="flex:1;color:#333d4b">동탄1동</div></div>
+              <div class="g" style="font-size:10px">언어</div>
+              <div style="display:flex;gap:5px"><div class="pill on">한국어</div><div class="pill">EN</div><div class="pill">中</div><div class="pill">VI</div></div>
+              <div style="border-top:1px solid #f2f4f6;margin:3px 0"></div>
+              <div class="g" style="font-size:10px">아이디</div>
+              <div class="field" style="display:flex;justify-content:space-between;color:#8b95a1">hws_user_2k9f<span class="g" style="font-size:9px">변경 불가</span></div>
+              <div class="g" style="font-size:10px">전화번호</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1;color:#333d4b">010-1234-5678</div><div class="btn" style="width:76px">재인증</div></div>
+              <div class="g" style="font-size:10px">이메일 (선택)</div>
+              <div class="field">이메일 주소</div>
+              <div class="g" style="font-size:10px">비밀번호 변경</div>
+              <div class="field">현재 비밀번호</div>
+              <div class="field">새 비밀번호</div>
+              <div class="field">새 비밀번호 확인</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">알림 설정</span><span class="g" style="font-size:10px">›</span></div>
+              <div style="flex:1"></div>
+              <div class="btn p">변경사항 저장</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 회원정보(계정) 수정</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "신고 접수 완료·처리 상태 화면" · "관리자 신고 처리 대기열" · "전화번호 변경 OTP 재인증 흐름" · "비밀번호 변경 완료 화면"</p>
+</section>
+
+<section class="dv-turn" id="t17">
+  <div class="dv-thd"><a class="dv-tid" href="#t17">17</a><span class="dv-tname">간편가입 · 프로필 편집 · 당첨 내역 · 관리자 회원 관리</span></div>
+  <p class="dv-tsub">회원가입(<a class="dv-oid" href="#2a">2a</a>)·마이페이지(<a class="dv-oid" href="#2b">2b</a>) 후속 화면들. 카카오·본인인증 간편가입, 프로필 편집, 당첨 내역 상세, 관리자 회원 관리.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="17a">
+      <div class="dv-olabel"><a class="dv-oid" href="#17a">17a</a><span class="dv-oname">간편가입 · 프로필 편집 · 당첨 내역 · 회원 관리</span></div>
+      <div class="row">
+
+        <!-- 간편가입 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">간편 가입</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div class="h1" style="font-size:16px">3초 만에 시작하기</div>
+              <div class="g" style="font-size:10px;margin-top:-6px">카카오·본인인증으로 정보 입력 없이 가입</div>
+              <div class="btn kko" style="min-height:46px"><span class="kko-ic"></span>카카오로 시작하기</div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:1px;background:#eef0f2"></div><span class="g" style="font-size:9px">또는</span><div style="flex:1;height:1px;background:#eef0f2"></div></div>
+              <div class="btn b" style="min-height:46px">PASS 본인인증 가입</div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:8px">
+                <div class="g" style="font-size:9px">자동 처리</div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:10.5px">닉네임 자동 생성</span><span class="g" style="font-size:10px">느긋한통근러347</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:10.5px">본인인증 · 연령/성별</span><span class="g" style="font-size:10px">인증 시 자동</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:10.5px">거주 지역</span><span class="g" style="font-size:10px">가입 후 설정</span></div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">약관 동의 후 진행됩니다</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 카카오·본인인증 간편가입</div>
+        </div>
+
+        <!-- 프로필 편집 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">취소</div><div class="h2" style="flex:1;text-align:center">프로필 편집</div><div class="hl" style="font-size:11px">저장</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+                <div class="avatar" style="width:66px;height:66px;font-size:14px">아바타</div>
+                <div style="display:flex;gap:6px"><div class="pill">아바타 변경</div><div class="pill">색상</div></div>
+              </div>
+              <div class="g" style="font-size:10px">닉네임</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1;color:#333d4b">느긋한통근러347</div><div class="btn" style="width:76px">다시 생성</div></div>
+              <div class="g" style="font-size:10px">거주 지역</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1">화성시</div><div class="field" style="flex:1;color:#333d4b">동탄1동</div></div>
+              <div class="g" style="font-size:10px">언어</div>
+              <div style="display:flex;gap:5px"><div class="pill on">한국어</div><div class="pill">EN</div><div class="pill">中</div><div class="pill">VI</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center"><span class="g" style="font-size:10px">생년월일 · 성별</span><span class="g" style="font-size:9.5px">비공개 · 변경 불가</span></div>
+              <div style="flex:1"></div>
+              <div class="btn" style="color:#e03131;border-color:#f2c2c2">회원 탈퇴</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 프로필 편집</div>
+        </div>
+
+        <!-- 당첨 내역 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">당첨 내역</div><div class="g" style="font-size:10px">전체</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:12px;display:flex;gap:11px;align-items:center">
+                <div class="box" style="width:48px;height:48px;flex:none">상품</div>
+                <div style="flex:1"><div class="h2" style="font-size:12px">스타벅스 아메리카노</div><div class="g" style="font-size:9.5px">07.19 당첨 · 유효기간 08.19</div></div>
+                <span class="pill on" style="padding:3px 8px;font-size:8.5px">미사용</span>
+              </div>
+              <div style="border:1px dashed #ffd9bd;border-radius:12px;padding:11px;text-align:center;display:flex;flex-direction:column;gap:6px">
+                <div class="box" style="height:44px">바코드 / 쿠폰번호</div>
+                <div class="g" style="font-size:9px">매장에서 바코드를 제시하세요</div>
+                <div class="btn p">사용 완료 처리</div>
+              </div>
+              <div class="g" style="font-size:10px">지난 내역</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;gap:9px;align-items:center"><div class="box" style="width:36px;height:36px;flex:none">상품</div><div style="flex:1"><div class="h2" style="font-size:11px">교통카드 3,000원</div><div class="g" style="font-size:9px">06.28</div></div><span class="pill" style="padding:2px 7px;font-size:8.5px">사용완료</span></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;gap:9px;align-items:center"><div style="flex:1"><div class="h2" style="font-size:11px">꽝 · 다음 기회에</div><div class="g" style="font-size:9px">06.20</div></div><span class="g" style="font-size:9px">미당첨</span></div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 당첨 내역 상세</div>
+        </div>
+
+        <!-- 관리자 회원 관리 -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="anno" style="margin-left:8px">회원 관리</div></div>
+            <div style="display:flex;min-height:290px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">기록 관리</div>
+                <div class="navi on">회원 관리</div>
+                <div class="navi">만족도</div>
+                <div class="navi">AI 인사이트</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><div class="h1">회원 관리</div><div class="field" style="width:150px;padding:7px 10px">닉네임·ID 검색</div></div>
+                <div style="display:flex;gap:8px">
+                  <div class="stat"><div class="n">3,182</div><div class="k">전체 회원</div></div>
+                  <div class="stat"><div class="n" style="color:#2f9e44">+128</div><div class="k">이번 주 가입</div></div>
+                  <div class="stat"><div class="n">14</div><div class="k">정지·신고</div></div>
+                </div>
+                <div style="display:flex;gap:5px"><div class="pill on">전체</div><div class="pill">정상</div><div class="pill">정지</div><div class="pill">신고 누적</div></div>
+                <table class="wf">
+                  <tr><th>닉네임</th><th>가입일</th><th>연령/성별</th><th>기록</th><th>상태</th></tr>
+                  <tr><td>느긋한통근러347</td><td>07.20</td><td>30대 · 남</td><td>12</td><td>정상</td></tr>
+                  <tr><td>행복한버스러버</td><td>07.18</td><td>20대 · 여</td><td>34</td><td>정상</td></tr>
+                  <tr><td>새벽출근러88</td><td>07.11</td><td>40대 · 남</td><td>7</td><td class="hl">신고 2</td></tr>
+                  <tr><td>동탄주민A</td><td>06.30</td><td>50대 · 여</td><td>0</td><td class="hl">정지</td></tr>
+                </table>
+                <div style="display:flex;gap:8px;margin-top:2px"><div class="btn b" style="flex:1">회원 상세</div><div class="btn" style="flex:1">경고</div><div class="btn p" style="flex:1">정지 처리</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">4. 관리자 회원 관리</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "회원 상세 프로필(관리자) 화면" · "신고 처리·제재 사유 입력" · "당첨 상품 배송 정보 입력" · "탈퇴 사유 설문"</p>
+</section>
+
+<section class="dv-turn" id="t16">
+  <div class="dv-thd"><a class="dv-tid" href="#t16">16</a><span class="dv-tname">만족도 시각화 · 교통 취약지</span></div>
+  <p class="dv-tsub">구간별 만족/불만족 데이터(<a class="dv-oid" href="#8a">8a</a>)를 노선·행정동 만족도 온도계로 시각화해 메인에 노출하고, 배차 공백·미탑승 다발 등을 행정동 단위 교통 취약지로 파악합니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="16a">
+      <div class="dv-olabel"><a class="dv-oid" href="#16a">16a</a><span class="dv-oname">만족도 대시보드 · 시민 노출 · 취약지 관제</span></div>
+      <div class="row">
+
+        <!-- 만족도 대시보드 (관리자) -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="anno" style="margin-left:8px">만족도 대시보드</div></div>
+            <div style="display:flex;min-height:300px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi on">만족도</div>
+                <div class="navi">교통 취약지</div>
+                <div class="navi">지역 참여율</div>
+                <div class="navi">AI 인사이트</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><div class="h1">행정동·노선 만족도</div><div style="display:flex;gap:5px"><div class="pill on">행정동</div><div class="pill">노선</div></div></div>
+                <div style="display:flex;gap:12px;flex:1">
+                  <div style="flex:1.5;border:1px solid #eef0f2;border-radius:10px;overflow:hidden;position:relative;min-height:190px"><div class="js-smap" style="position:absolute;inset:0"></div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+                    <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px">
+                      <div class="g" style="font-size:9px;margin-bottom:6px">만족도 온도계</div>
+                      <div style="height:11px;border-radius:6px;background:linear-gradient(90deg,#e03131,#f59f00,#74b816,#2f9e44)"></div>
+                      <div style="display:flex;justify-content:space-between;margin-top:3px"><span class="g" style="font-size:8px">불만족</span><span class="g" style="font-size:8px">만족</span></div>
+                    </div>
+                    <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px;flex:1">
+                      <div class="g" style="font-size:9px;margin-bottom:6px">만족도 순위</div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt)"><span>1  동탄1동</span><span style="color:#2f9e44">82%</span></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#4e5968"><span>2  동탄2동</span><span>74%</span></div>
+                      <div style="border-top:1px dashed #e5e8eb;margin:5px 0"></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#e03131"><span>9  우정읍</span><span>33%</span></div>
+                      <div class="g" style="font-size:8.5px;margin-top:5px">불만족 원인 1위: 배차 지연</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 관리자 만족도 대시보드</div>
+        </div>
+
+        <!-- 시민 만족도 노출 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">노선 만족도</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="display:flex;gap:12px;align-items:center;border:1px solid #eef0f2;border-radius:12px;padding:13px">
+                <div style="width:26px;height:96px;border-radius:13px;background:#fff;border:1px solid #d1f0d8;position:relative;flex:none;display:flex;align-items:flex-end;padding:3px"><div style="width:100%;height:74%;border-radius:11px;background:linear-gradient(180deg,#74b816,#2f9e44)"></div></div>
+                <div style="flex:1"><div class="h2" style="font-size:12px">우리 동네 만족도</div><div class="h1" style="font-size:24px;color:#2f9e44">74%</div><div class="g" style="font-size:9.5px">동탄2동 · 화성 평균 62%</div></div>
+              </div>
+              <div class="g" style="font-size:10px">노선별 만족도</div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span class="h2" style="font-size:10px;width:44px">100번</span><div style="flex:1;height:10px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:78%;height:100%;background:#2f9e44"></div></div><span class="g" style="font-size:9px;width:26px">78%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="h2" style="font-size:10px;width:44px">200번</span><div style="flex:1;height:10px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:59%;height:100%;background:#f59f00"></div></div><span class="g" style="font-size:9px;width:26px">59%</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="h2" style="font-size:10px;width:44px">마을 3번</span><div style="flex:1;height:10px;border-radius:5px;background:#eef0f2;overflow:hidden"><div style="width:41%;height:100%;background:#e03131"></div></div><span class="g" style="font-size:9px;width:26px">41%</span></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px"><div class="h2" style="font-size:11px">우리 동네 불만족 1위</div><div class="g" style="font-size:9.5px;margin-top:3px">마을 3번 · 배차 지연 · 최근 28건</div></div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">메인 통계에도 만족도가 함께 노출됩니다</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 시민 만족도 노출</div>
+        </div>
+
+        <!-- 교통 취약지 (관리자) -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="anno" style="margin-left:8px">교통 취약지</div></div>
+            <div style="display:flex;min-height:300px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">만족도</div>
+                <div class="navi on">교통 취약지</div>
+                <div class="navi">지역 참여율</div>
+                <div class="navi">AI 인사이트</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div class="h1">교통 취약지·사각지대</div>
+                <div class="aicard" style="display:flex;gap:8px;align-items:center"><div class="aitag">AI</div><div class="g" style="font-size:10.5px;flex:1">행정동 단위로 배차 공백·미탑승 다발·야간 노선 부재를 종합해 <b style="color:#e03131">취약 3개 동</b> 식별</div></div>
+                <div style="display:flex;gap:12px;flex:1">
+                  <div style="flex:1.3;border:1px solid #eef0f2;border-radius:10px;overflow:hidden;position:relative;min-height:170px"><div class="js-vmap" style="position:absolute;inset:0"></div></div>
+                  <div style="flex:1.2;display:flex;flex-direction:column;gap:8px">
+                    <table class="wf">
+                      <tr><th>행정동</th><th>야간공백</th><th>미탑승</th><th>배차간격</th><th>등급</th></tr>
+                      <tr><td>우정읍</td><td>있음</td><td>높음</td><td>45분</td><td class="hl">취약</td></tr>
+                      <tr><td>향남읍</td><td>있음</td><td>중간</td><td>38분</td><td class="hl">취약</td></tr>
+                      <tr><td>남양읍</td><td>일부</td><td>중간</td><td>30분</td><td class="hl">취약</td></tr>
+                      <tr><td>봉담읍</td><td>없음</td><td>낮음</td><td>18분</td><td>보통</td></tr>
+                    </table>
+                    <div style="display:flex;gap:6px"><div class="btn b" style="flex:1">상세 분석</div><div class="btn p" style="flex:1">개선안 생성</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 교통 취약지 관제</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "취약지 개선안 AI 자동 생성 화면" · "시간대별 만족도 추이" · "만족도를 메인 히어로에 함께 노출" · "취약지 대상 똑버스 우선 배치 연동"</p>
+</section>
+
+<section class="dv-turn" id="t15">
+  <div class="dv-thd"><a class="dv-tid" href="#t15">15</a><span class="dv-tname">AI 자율 대응 (상황 인식 → 시민 알림 · 시청 공문)</span></div>
+  <p class="dv-tsub">축적 데이터에서 AI가 스스로 상황을 인식합니다 — "병점역 후문 10분간 20명 미탑승". 시민에게는 우회 알림을 자율 발송하고, 시청에는 똑버스 긴급 배치 권고 공문을 자동 생성·전송합니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="15a">
+      <div class="dv-olabel"><a class="dv-oid" href="#15a">15a</a><span class="dv-oname">AI 감지 → 시민 우회 알림 · 시청 공문 자동 전송</span></div>
+      <div class="row">
+
+        <!-- 시민 우회 알림 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="aitag" style="flex:1">AI 우회 알림</div><div class="pill" style="padding:3px 8px;font-size:8.5px">자율 발송</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div class="aicard" style="display:flex;flex-direction:column;gap:5px"><div class="aitag">AI 자율 감지</div><div class="g" style="font-size:10.5px;line-height:1.5">병점역 후문 정류장에서 <b style="color:#333d4b">10분간 20명</b>이 버스를 못 탔어요</div></div>
+              <div class="maparea" style="height:120px;position:relative;border-radius:12px;overflow:hidden">
+                <svg viewBox="0 0 236 120" style="position:absolute;inset:0;width:100%;height:100%"><polyline points="60,64 150,50" fill="none" stroke="#2f6fed" stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round"></polyline></svg>
+                <div style="position:absolute;top:52px;left:52px;display:flex;align-items:center;gap:4px"><div class="pin" style="position:static;background:#e03131"></div></div>
+                <div style="position:absolute;top:38px;left:150px;display:flex;align-items:center;gap:4px"><div class="pin" style="position:static;background:#2f9e44"></div><span class="pill" style="padding:2px 7px;font-size:8px">C정류장</span></div>
+                <div class="anno" style="position:absolute;bottom:6px;left:8px">병점역 후문 → 200m</div>
+              </div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px"><div class="h2" style="font-size:12px">200m 옆 C정류장으로 가세요</div><div class="g" style="font-size:10px;margin-top:3px;line-height:1.5">C정류장(08-150)에서 <b style="color:#ec7211">305번</b> 탑승 가능 · 도보 3분</div></div>
+              <div style="flex:1"></div>
+              <div style="display:flex;gap:6px"><div class="btn" style="flex:1">닫기</div><div class="btn p" style="flex:2">C정류장 길 안내</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">1. [시민] 우회 알림 자율 발송</div>
+        </div>
+
+        <!-- 시청 공문 자동 생성 -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="aitag" style="margin-left:8px">AI 자율 대응</div></div>
+            <div style="display:flex;min-height:290px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi on">AI 자율 대응</div>
+                <div class="navi">똑버스 관제</div>
+                <div class="navi">기록 관리</div>
+                <div class="navi">AI 인사이트</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div class="h1">똑버스 긴급 배치 권고 공문</div>
+                <div class="aicard" style="display:flex;gap:8px;align-items:center"><div class="aitag">AI 감지</div><div class="g" style="font-size:10.5px;flex:1">병점역 후문 정류장 10분간 20명 미탑승 · 만차 통과 신고 7건 · 반경 2.5km 수요 급증</div></div>
+                <div style="border:1px solid #eef0f2;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:9.5px">문서번호 (자동)</span><span class="h2" style="font-size:10.5px">교통-2026-0721-018</span></div>
+                  <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:9.5px">수신</span><span class="h2" style="font-size:10.5px">교통정책과 · 대중교통팀</span></div>
+                  <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:9.5px">제목</span><span class="h2" style="font-size:10.5px">병점역 후문 구역 똑버스 2대 긴급 배치 권고</span></div>
+                  <div class="g" style="font-size:9.5px;margin-top:2px">본문 (근거 데이터 자동 인용)</div>
+                  <div class="ln l"></div><div class="ln l"></div><div class="ln m"></div>
+                  <div class="g" style="font-size:9.5px">권고 사항</div>
+                  <div class="ln m"></div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap"><div class="pill">근거 첨부</div><div class="pill">더 정중하게</div><div class="pill">배치 대수 조정</div></div>
+                <div style="flex:1"></div>
+                <div style="display:flex;gap:8px"><div class="btn" style="flex:1">공문 수정</div><div class="btn b" style="flex:1">미리보기</div><div class="btn p" style="flex:1.4">시청에 시그널 전송</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">2. [시청] 공문 자동 생성·전송</div>
+        </div>
+
+        <!-- 자율 대응 로그 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">자율 대응 로그</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:0;flex:1">
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#e03131"></div></div><div style="flex:1;padding-bottom:12px;border-left:2px solid #eef0f2;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">09:02 상황 감지</div><div class="g" style="font-size:9.5px">병점역 후문 10분간 20명 미탑승</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#ec7211"></div></div><div style="flex:1;padding-bottom:12px;border-left:2px solid #ec7211;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">09:03 시민 우회 알림 발송</div><div class="hl" style="font-size:9.5px">인근 34명 자율 발송 완료</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#ec7211"></div></div><div style="flex:1;padding-bottom:12px;border-left:2px solid #ec7211;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">09:04 시청 공문·시그널 전송</div><div class="g" style="font-size:9.5px">교통정책과 접수 · 권고 2대</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#2f9e44"></div></div><div style="flex:1;padding-left:15px;margin-left:-8px"><div class="h2" style="font-size:11px">09:10 똑버스 2대 배치</div><div class="g" style="font-size:9.5px">현장 투입 · 대기 해소 중</div></div></div>
+              <div style="flex:1"></div>
+              <div class="aicard" style="display:flex;gap:8px;align-items:center"><div class="aitag">AI</div><div class="g" style="font-size:10px;flex:1">모든 자율 대응은 로그로 남고 관리자가 언제든 개입·중단할 수 있습니다</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 자율 대응 타임라인</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "AI 자율 발송 전 관리자 승인 옵션" · "공문 PDF 미리보기" · "우회 알림을 받은 시민 반응 통계" · "자율 대응 규칙 설정 화면"</p>
+</section>
+
+<section class="dv-turn" id="t14">
+  <div class="dv-thd"><a class="dv-tid" href="#t14">14</a><span class="dv-tname">원터치 익명 신고 (정류장)</span></div>
+  <p class="dv-tsub">로그인 후 정류장에서 즉시 신고. 3색 버튼 원터치로 접수되며, 저장 데이터는 [정류장ID] / [시간] / [불편유형]뿐이라 개인식별자는 남기지 않습니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="14a">
+      <div class="dv-olabel"><a class="dv-oid" href="#14a">14a</a><span class="dv-oname">원터치 신고 → 익명 접수 → 실시간 집계</span></div>
+      <div class="row">
+
+        <!-- 원터치 신고 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="h2" style="flex:1">정류장 원터치 신고</div><div class="pill" style="padding:3px 8px;font-size:8.5px">익명</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center"><div><div class="g" style="font-size:9px">현재 정류장 (GPS 자동)</div><div class="h2" style="font-size:11px">병점역 환승센터</div></div><span class="pill" style="padding:2px 7px;font-size:8.5px">08-142</span></div>
+              <div style="border:1.5px solid #e03131;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px"><div style="width:22px;height:22px;border-radius:50%;background:#e03131;flex:none"></div><div style="flex:1"><div class="h2" style="font-size:14px">만차 통과</div><div class="g" style="font-size:9.5px">버스가 가득 차 그냥 지나감</div></div></div>
+              <div style="border:1.5px solid #f59f00;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px"><div style="width:22px;height:22px;border-radius:50%;background:#f59f00;flex:none"></div><div style="flex:1"><div class="h2" style="font-size:14px">배차 지연</div><div class="g" style="font-size:9.5px">예정 시간보다 늦게 도착</div></div></div>
+              <div style="border:1.5px solid #2f9e44;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px"><div style="width:22px;height:22px;border-radius:50%;background:#2f9e44;flex:none"></div><div style="flex:1"><div class="h2" style="font-size:14px">환승 실패</div><div class="g" style="font-size:9.5px">연계 버스 놓침</div></div></div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">로그인 후 접수 · 신고 데이터에는 개인식별자를 남기지 않음</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 3색 원터치 신고</div>
+        </div>
+
+        <!-- 익명 접수 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:12px;flex:1;align-items:center;justify-content:center;text-align:center">
+              <div style="width:60px;height:60px;border-radius:50%;background:#e03131;display:flex;align-items:center;justify-content:center;color:#fff;font:800 11px var(--fnt)">접수</div>
+              <div class="h1">익명으로 접수되었습니다</div>
+              <div class="g" style="font-size:11px;max-width:180px;line-height:1.6">신고해 주셔서 감사합니다. 데이터는 통계로만 활용됩니다</div>
+              <div class="aicard" style="width:100%;text-align:left;display:flex;flex-direction:column;gap:6px">
+                <div class="g" style="font-size:9px">저장되는 데이터 (신고자 신원 미저장)</div>
+                <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:10px">정류장ID</span><span class="h2" style="font-size:11px">08-142</span></div>
+                <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:10px">시간</span><span class="h2" style="font-size:11px">2026-07-21 09:12</span></div>
+                <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:10px">불편유형</span><span class="h2" style="font-size:11px">만차 통과</span></div>
+                <div style="border-top:1px dashed #ffd9bd;padding-top:6px"><span class="g" style="font-size:9px">개인식별자 없음 · 익명</span></div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="btn" style="width:100%">닫기</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 익명 접수 완료</div>
+        </div>
+
+        <!-- 실시간 집계 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">정류장 실시간 현황</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">병점역 환승센터</span><span class="pill" style="padding:2px 7px;font-size:8.5px">08-142</span></div>
+              <div class="g" style="font-size:10px">오늘 익명 신고 (13건)</div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#e03131;flex:none"></div><span class="h2" style="font-size:10px;width:56px">만차 통과</span><div style="flex:1;height:11px;border-radius:6px;background:#eef0f2;overflow:hidden"><div style="width:70%;height:100%;background:#e03131"></div></div><span class="g" style="font-size:10px;width:20px">7</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#f59f00;flex:none"></div><span class="h2" style="font-size:10px;width:56px">배차 지연</span><div style="flex:1;height:11px;border-radius:6px;background:#eef0f2;overflow:hidden"><div style="width:40%;height:100%;background:#f59f00"></div></div><span class="g" style="font-size:10px;width:20px">4</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;border-radius:50%;background:#2f9e44;flex:none"></div><span class="h2" style="font-size:10px;width:56px">환승 실패</span><div style="flex:1;height:11px;border-radius:6px;background:#eef0f2;overflow:hidden"><div style="width:20%;height:100%;background:#2f9e44"></div></div><span class="g" style="font-size:10px;width:20px">2</span></div>
+              </div>
+              <div class="aicard" style="display:flex;gap:8px;align-items:center"><div class="aitag">AI</div><div class="g" style="font-size:10px;flex:1">만차 통과 신고 급증 — 반경 2.5km 똑버스 호출 검토 대상</div></div>
+              <div class="g" style="font-size:9px;text-align:center">집계는 익명 데이터 기반이며 관리자 대시보드로 연동됩니다</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 정류장 실시간 집계</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "QR·NFC로 정류장 신고 진입" · "관리자 대시보드에 원터치 신고 히트맵" · "신고 급증 시 자동 알림" · "홈 위젯에서 바로 원터치 신고"</p>
+</section>
+
+<section class="dv-turn" id="t13">
+  <div class="dv-thd"><a class="dv-tid" href="#t13">13</a><span class="dv-tname">포인트 적립 · 출석 체크</span></div>
+  <p class="dv-tsub">참여를 습관으로. 출석·게시글·기록으로 포인트를 모아 룰렛 뽑기권으로 씁니다. (출석 +5P, 7일 연속 보너스 +10P, 게시글 작성 +10P·1일 1회, 뽑기권 1회 300P)</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="13a">
+      <div class="dv-olabel"><a class="dv-oid" href="#13a">13a</a><span class="dv-oname">출석 체크 · 적립 규칙 · 뽑기권 전환</span></div>
+      <div class="row">
+
+        <!-- 출석 체크 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">출석 체크</div><div class="hl" style="font-size:10px">보유 320P</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:12px;text-align:center"><div class="h2" style="font-size:12px">연속 <span class="hl">3일</span> 출석 중</div><div class="g" style="font-size:9.5px;margin-top:2px">7일 연속 채우면 보너스 +10P</div></div>
+              <div class="g" style="font-size:10px">이번 주 출석</div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">
+                <div style="aspect-ratio:1;border-radius:9px;background:#ec7211;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 8px var(--fnt)">1일<span style="font-size:7px;opacity:.85">+5P</span></div>
+                <div style="aspect-ratio:1;border-radius:9px;background:#ec7211;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 8px var(--fnt)">2일<span style="font-size:7px;opacity:.85">+5P</span></div>
+                <div style="aspect-ratio:1;border-radius:9px;background:#ec7211;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 8px var(--fnt)">3일<span style="font-size:7px;opacity:.85">+5P</span></div>
+                <div style="aspect-ratio:1;border-radius:9px;border:1.5px dashed #ec7211;color:#ec7211;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 8px var(--fnt)">오늘<span style="font-size:7px">+5P</span></div>
+                <div style="aspect-ratio:1;border-radius:9px;background:#f2f4f6;color:#adb5bd;display:flex;align-items:center;justify-content:center;font:700 8px var(--fnt)">5일</div>
+                <div style="aspect-ratio:1;border-radius:9px;background:#f2f4f6;color:#adb5bd;display:flex;align-items:center;justify-content:center;font:700 8px var(--fnt)">6일</div>
+                <div style="aspect-ratio:1;border-radius:9px;background:#fff2e8;border:1px solid #ffd9bd;color:#ec7211;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 7.5px var(--fnt)">7일<span style="font-size:7px">+10P</span></div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="btn p">오늘 출석하고 5P 받기</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 출석 체크</div>
+        </div>
+
+        <!-- 적립 규칙 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">포인트 적립 안내</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div class="g" style="font-size:10px">적립</div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:10px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><div><div class="h2" style="font-size:11px">출석 체크</div><div class="g" style="font-size:9px">1일 1회</div></div><span class="hl" style="font-size:11px">+5P</span></div>
+                <div style="padding:10px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><div><div class="h2" style="font-size:11px">7일 연속 출석 보너스</div><div class="g" style="font-size:9px">주 1회</div></div><span class="hl" style="font-size:11px">+10P</span></div>
+                <div style="padding:10px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between;align-items:center"><div><div class="h2" style="font-size:11px">게시글 작성</div><div class="g" style="font-size:9px">1일 1회</div></div><span class="hl" style="font-size:11px">+10P</span></div>
+                <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center"><div><div class="h2" style="font-size:11px">교통일지 기록</div><div class="g" style="font-size:9px">구간별</div></div><span class="hl" style="font-size:11px">+P</span></div>
+              </div>
+              <div class="g" style="font-size:10px">사용</div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px;display:flex;justify-content:space-between;align-items:center"><div><div class="h2" style="font-size:11px">룰렛 뽑기권</div><div class="g" style="font-size:9px">1회</div></div><span class="hl" style="font-size:13px">300P</span></div>
+              <div class="g" style="font-size:9px;text-align:center">포인트는 부정 적립 방지를 위해 1일 한도가 적용됩니다</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 적립 규칙</div>
+        </div>
+
+        <!-- 뽑기권 전환 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">뽑기권 전환</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:13px;text-align:center"><div class="g" style="font-size:10px">보유 포인트</div><div class="h1" style="font-size:24px;color:#ec7211">320 P</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px"><div style="text-align:center;flex:none"><div class="h2" style="font-size:11px">뽑기권</div><div class="h1" style="font-size:18px;color:#ec7211">1</div></div><div style="flex:1"><div class="g" style="font-size:9.5px">300P로 룰렛 뽑기권 1회를 받습니다</div></div></div>
+              <div style="display:flex;gap:6px;align-items:center;justify-content:center"><div class="btn" style="width:44px">−</div><div class="h1" style="font-size:16px;width:34px;text-align:center">1</div><div class="btn" style="width:44px">＋</div><span class="g" style="font-size:9.5px;margin-left:6px">= 300P</span></div>
+              <div style="flex:1"></div>
+              <div class="btn p">뽑기권 1개 받기 (300P)</div>
+              <div class="g" style="font-size:9px;text-align:center">전환 후 잔여 20P</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 뽑기권 전환</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "출석 보너스 애니메이션·팝업" · "포인트 적립 실시간 토스트" · "관리자용 포인트 정책 설정 화면" · "월간 출석 달력 화면"</p>
+</section>
+
+<section class="dv-turn" id="t9">
+  <div class="dv-thd"><a class="dv-tid" href="#t9">9</a><span class="dv-tname">추천인 (친구 초대 · 포인트 적립)</span></div>
+  <p class="dv-tsub">추천 코드로 친구를 초대하면 추천인에게 추가 포인트, 신규 가입자에게도 가입 축하 포인트를 지급합니다. 포인트는 룰렛 뽑기권으로 전환됩니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="9a">
+      <div class="dv-olabel"><a class="dv-oid" href="#9a">9a</a><span class="dv-oname">친구 초대 → 코드 입력(신규) → 포인트 내역</span></div>
+      <div class="row">
+
+        <!-- 친구 초대 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">친구 초대</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center">
+                <div class="h2" style="font-size:12px">내 추천 코드</div>
+                <div style="display:flex;gap:6px;align-items:center;border:1px dashed #ffb877;border-radius:9px;padding:9px 14px;background:#fff"><span class="h1" style="font-size:17px;letter-spacing:.12em">HWS-2K9F</span><span class="hl" style="font-size:11px">복사</span></div>
+                <div class="g" style="font-size:9.5px;line-height:1.5">추천인 <b style="color:#ec7211">+500P</b> · 신규 가입자 <b style="color:#ec7211">+300P</b></div>
+              </div>
+              <div style="display:flex;gap:8px"><div class="btn kko" style="flex:1"><span class="kko-ic"></span>카카오로 초대</div><div class="btn" style="flex:1">링크 공유</div></div>
+              <div style="display:flex;gap:8px"><div class="stat"><div class="n">3</div><div class="k">초대한 친구</div></div><div class="stat"><div class="n" style="color:#ec7211">1,500P</div><div class="k">누적 적립</div></div></div>
+              <div class="g" style="font-size:10px">초대 현황</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px 11px;display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">익명 님 가입 완료</span><span class="hl" style="font-size:10px">+500P</span></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px 11px;display:flex;justify-content:space-between"><span class="g" style="font-size:11px">초대 대기중</span><span class="g" style="font-size:10px">미가입</span></div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 친구 초대·코드 공유</div>
+        </div>
+
+        <!-- 코드 입력(신규) -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">추천인 코드 입력</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="g" style="font-size:10px">회원가입 · 마지막 단계 (선택)</div>
+              <div class="h1" style="font-size:16px">추천인이 있나요?</div>
+              <div class="g" style="font-size:11px;line-height:1.6;margin-top:-4px">코드를 입력하면 <b style="color:#ec7211">가입 축하 300P</b>를 바로 받아요</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1;color:#333d4b;letter-spacing:.08em">HWS-2K9F</div><div class="btn" style="width:60px">확인</div></div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:10px;padding:10px;display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">유효한 코드입니다</span><span class="hl" style="font-size:11px">+300P</span></div>
+              <div style="flex:1"></div>
+              <div class="btn" style="color:#8b95a1">건너뛰기</div>
+              <div class="btn p">300P 받고 시작하기</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 신규 가입 · 코드 입력</div>
+        </div>
+
+        <!-- 포인트 내역 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">내 포인트</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px">
+                <div class="g" style="font-size:10px">보유 포인트</div>
+                <div class="h1" style="font-size:22px;color:#ec7211">2,300 P</div>
+                <div class="btn p">룰렛 뽑기권으로 전환 (300P = 1회)</div>
+              </div>
+              <div class="g" style="font-size:10px">적립·사용 내역</div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:10px 11px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><div><div class="h2" style="font-size:11px">친구 초대 적립</div><div class="g" style="font-size:9px">07.21</div></div><span class="hl" style="font-size:11px">+500P</span></div>
+                <div style="padding:10px 11px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><div><div class="h2" style="font-size:11px">가입 축하 (추천 코드)</div><div class="g" style="font-size:9px">07.20</div></div><span class="hl" style="font-size:11px">+300P</span></div>
+                <div style="padding:10px 11px;display:flex;justify-content:space-between"><div><div class="h2" style="font-size:11px">응모권 전환</div><div class="g" style="font-size:9px">07.19</div></div><span class="g" style="font-size:11px">-500P</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 포인트 내역·전환</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "추천 랭킹·리더보드 화면" · "포인트로 교통카드 충전 리워드" · "관리자용 추천/포인트 정산 화면" · "가입 축하 포인트를 응모권 지급으로 바꾸기"</p>
+</section>
+
+<section class="dv-turn" id="t8">
+  <div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">오늘의 일지 (길찾기 경로 기록)</span></div>
+  <p class="dv-tsub">길찾기(<a class="dv-oid" href="#7a">7a</a>)로 얻은 경로를 그대로 오늘의 일지로 저장합니다. 이용 평가·메모를 덧붙이고, 하루/월별로 나의 대중교통 기록을 모아봅니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="8a">
+      <div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a><span class="dv-oname">카테고리 원클릭 → 경로 선택 → 구간 기록 → 오늘의 일지 → 월별</span></div>
+      <div class="row">
+
+        <!-- 카테고리 원클릭 기록 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">일지 기록</div><div class="g" style="font-size:10px">2026.07.21</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div class="h1" style="font-size:16px">어떤 이동인가요?</div>
+              <div class="g" style="font-size:10px;margin-top:-6px">카테고리만 누르면 오늘 날짜로 바로 기록돼요</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                <div style="border:1.5px solid #ec7211;border-radius:14px;padding:16px 10px;text-align:center;background:#fff9f4"><div class="h2" style="font-size:13px;color:#ec7211">출근</div><div class="g" style="font-size:9px;margin-top:2px">집 → 회사</div></div>
+                <div style="border:1px solid #d1d6db;border-radius:14px;padding:16px 10px;text-align:center"><div class="h2" style="font-size:13px">퇴근</div><div class="g" style="font-size:9px;margin-top:2px">회사 → 집</div></div>
+                <div style="border:1px solid #d1d6db;border-radius:14px;padding:16px 10px;text-align:center"><div class="h2" style="font-size:13px">등하교</div><div class="g" style="font-size:9px;margin-top:2px">집 ↔ 학교</div></div>
+                <div style="border:1px solid #d1d6db;border-radius:14px;padding:16px 10px;text-align:center"><div class="h2" style="font-size:13px">기타 이동</div><div class="g" style="font-size:9px;margin-top:2px">직접 선택</div></div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">날짜·시간은 자동 입력됩니다</div>
+              <div class="btn p">출근 경로 불러오기</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 카테고리 원클릭 (날짜 자동)</div>
+        </div>
+
+        <!-- 추천 경로 선택 → 구간 버튼 생성 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">추천 경로 선택</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div class="g" style="font-size:10px">집 → 회사 · 추천 경로 (카카오맵)</div>
+              <div style="border:1.5px solid #ec7211;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:7px;background:#fff9f4">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h1" style="font-size:15px">33분</span><span class="hl" style="font-size:9.5px">선택됨</span></div>
+                <div style="display:flex;gap:2px;height:11px;border-radius:6px;overflow:hidden"><div style="flex:5;background:#c4cdd6"></div><div style="flex:10;background:#2f6fed"></div><div style="flex:10;background:#0ca678"></div></div>
+                <div style="display:flex;gap:7px;flex-wrap:wrap;font-size:8.5px;color:#8b95a1"><span>도보 10분</span><span style="color:#2f6fed;font-weight:700">56번 10분</span><span style="color:#0ca678;font-weight:700">200번 10분</span></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h1" style="font-size:15px">28분</span><span class="g" style="font-size:9.5px">환승 1회</span></div>
+                <div style="display:flex;gap:2px;height:11px;border-radius:6px;overflow:hidden"><div style="flex:4;background:#c4cdd6"></div><div style="flex:12;background:#ec7211"></div></div>
+              </div>
+              <div class="aicard" style="display:flex;gap:8px;align-items:center"><div class="aitag">다음</div><div class="g" style="font-size:9.5px;flex:1">경로를 선택하면 구간별 만족도 버튼이 자동 생성됩니다</div></div>
+              <div style="flex:1"></div>
+              <div class="btn p">이 경로로 구간 기록하기</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 추천 경로 선택 → 구간 생성</div>
+        </div>
+
+        <!-- 경로 기록 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">취소</div><div class="h2" style="flex:1;text-align:center">오늘의 일지 기록</div><div class="hl" style="font-size:11px">저장</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center"><span class="aitag">길찾기에서 불러옴</span><span class="g" style="font-size:9.5px">33분 · 09:12 이용</span></div>
+              <div class="g" style="font-size:10px">구간별 만족도 · 불만족 원인</div>
+
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;gap:7px;align-items:center"><span class="pill" style="padding:2px 7px;font-size:8.5px">도보</span><span class="h2" style="font-size:11px;flex:1">도보 10분</span><div style="display:flex;gap:5px"><div class="pill on" style="padding:4px 10px">만족</div><div class="pill" style="padding:4px 10px">불만족</div></div></div>
+              </div>
+
+              <div style="border:1px solid #ffd9bd;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:#fff9f4">
+                <div style="display:flex;gap:7px;align-items:center"><span class="pill on" style="padding:2px 7px;font-size:8.5px">56번</span><span class="h2" style="font-size:11px;flex:1">버스 10분</span><div style="display:flex;gap:5px"><div class="pill" style="padding:4px 10px">만족</div><div class="pill on" style="padding:4px 10px;background:#ec7211;border-color:#ec7211">불만족</div></div></div>
+                <div class="g" style="font-size:9px">불만족 원인 (복수 선택)</div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap"><div class="pill on" style="padding:4px 9px">배차 지연</div><div class="pill" style="padding:4px 9px">혼잡</div><div class="pill on" style="padding:4px 9px">무정차</div><div class="pill" style="padding:4px 9px">불친절</div><div class="pill" style="padding:4px 9px">시설</div></div>
+              </div>
+
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;gap:7px;align-items:center"><span class="pill" style="padding:2px 7px;font-size:8.5px">200번</span><span class="h2" style="font-size:11px;flex:1">버스 10분</span><div style="display:flex;gap:5px"><div class="pill on" style="padding:4px 10px">만족</div><div class="pill" style="padding:4px 10px">불만족</div></div></div>
+              </div>
+
+              <div class="field" style="align-items:flex-start;color:#9aa5b1;min-height:40px">메모 (선택)</div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px;text-align:center">불만족 구간은 자동으로 해당 노선 기록에 반영돼요</div>
+              <div class="btn p">오늘의 일지에 저장</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 구간별 만족/불만족 기록</div>
+        </div>
+
+        <!-- 오늘의 일지 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="h2" style="flex:1">오늘의 일지</div><div class="g" style="font-size:10px">7월 21일</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;gap:8px"><div class="stat"><div class="n">2</div><div class="k">이동</div></div><div class="stat"><div class="n">50분</div><div class="k">이용 시간</div></div><div class="stat"><div class="n" style="color:#ec7211">+2</div><div class="k">응모권</div></div></div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:5px">
+                <div style="display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">출근 · 09:12</span><span class="pill" style="padding:2px 7px;font-size:8.5px">정시</span></div>
+                <div style="display:flex;gap:5px;align-items:center;font-size:10px;color:#8b95a1"><span class="pill" style="padding:2px 7px;font-size:8.5px">병점역</span>→ 100번 →<span class="pill" style="padding:2px 7px;font-size:8.5px">동탄역</span></div>
+                <div class="g" style="font-size:9.5px">22분 · 혼잡 보통</div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:5px">
+                <div style="display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">퇴근 · 18:40</span><span class="pill" style="padding:2px 7px;font-size:8.5px;color:#ec7211;border-color:#ffd9bd">지연</span></div>
+                <div style="display:flex;gap:5px;align-items:center;font-size:10px;color:#8b95a1"><span class="pill" style="padding:2px 7px;font-size:8.5px">회사</span>→ 마을 3번 →<span class="pill" style="padding:2px 7px;font-size:8.5px">집</span></div>
+                <div class="g" style="font-size:9.5px">28분 · 환승 1회</div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="btn">＋ 길찾기로 새 기록 추가</div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"></rect><path d="M8 9l1.4 1.4L12 8M8 15h6"></path></svg>일지</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M8 9h8M8 13h5"></path></svg>게시판</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">4. 오늘의 일지</div>
+        </div>
+
+        <!-- 월별 모아보기 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1;text-align:center">2026년 7월</div><div class="g" style="font-size:11px">›</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center">
+                <div class="g" style="font-size:8px">일</div><div class="g" style="font-size:8px">월</div><div class="g" style="font-size:8px">화</div><div class="g" style="font-size:8px">수</div><div class="g" style="font-size:8px">목</div><div class="g" style="font-size:8px">금</div><div class="g" style="font-size:8px">토</div>
+                <div style="aspect-ratio:1;border-radius:6px;background:#f7f9fa"></div><div style="aspect-ratio:1;border-radius:6px;background:#ffe8d6"></div><div style="aspect-ratio:1;border-radius:6px;background:#ffd9bd"></div><div style="aspect-ratio:1;border-radius:6px;background:#f7f9fa"></div><div style="aspect-ratio:1;border-radius:6px;background:#ffe8d6"></div><div style="aspect-ratio:1;border-radius:6px;background:#ec7211"></div><div style="aspect-ratio:1;border-radius:6px;background:#f7f9fa"></div>
+                <div style="aspect-ratio:1;border-radius:6px;background:#ffd9bd"></div><div style="aspect-ratio:1;border-radius:6px;background:#ec7211"></div><div style="aspect-ratio:1;border-radius:6px;background:#ffe8d6"></div><div style="aspect-ratio:1;border-radius:6px;background:#ffd9bd"></div><div style="aspect-ratio:1;border-radius:6px;background:#f7f9fa"></div><div style="aspect-ratio:1;border-radius:6px;background:#ffe8d6"></div><div style="aspect-ratio:1;border-radius:6px;background:#ec7211"></div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;justify-content:center"><span class="g" style="font-size:8.5px">적음</span><div class="dot" style="background:#ffe8d6"></div><div class="dot" style="background:#ffd9bd"></div><div class="dot" style="background:#ec7211"></div><span class="g" style="font-size:8.5px">많음</span></div>
+              <div style="display:flex;gap:8px"><div class="stat"><div class="n">38</div><div class="k">이달 이동</div></div><div class="stat"><div class="n">14h</div><div class="k">누적 시간</div></div></div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px"><div class="h2" style="font-size:11px">자주 탄 노선</div><div class="g" style="font-size:9.5px;margin-top:4px">100번 · 마을 3번 · 200번</div></div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9.5px;text-align:center">기록을 꾸준히 남기면 응모권이 쌓여요</div>
+            </div>
+          </div>
+          <div class="scr-cap">5. 월별 모아보기</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "일지 기록에서 바로 불편 신고로 전환" · "주간 이용 리포트 화면" · "일지 기반 응모권 적립 규칙 화면" · "일지를 익명 게시물로 공유"</p>
+</section>
+
+<section class="dv-turn" id="t7">
+  <div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">길찾기 (대중교통 경로 안내)</span></div>
+  <p class="dv-tsub">출발·도착을 정하면 버스 중심 경로를 추천하고, 대안 비교와 단계별 실시간 안내를 제공합니다. 저장한 집·회사·즐겨찾는 정류장을 바로 불러옵니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="7a">
+      <div class="dv-olabel"><a class="dv-oid" href="#7a">7a</a><span class="dv-oname">출발·도착 입력 → 경로 비교 → 단계별 안내</span></div>
+      <div class="row">
+
+        <!-- 입력 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">길찾기</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;gap:8px;align-items:center">
+                <div style="display:flex;flex-direction:column;gap:14px;padding-top:12px"><div class="dot" style="background:#ec7211"></div><div class="dot" style="background:#191f28"></div></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                  <div class="field" style="color:#333d4b">출발 · 집 (병점역 환승센터)</div>
+                  <div class="field" style="color:#9aa5b1">도착 · 정류장·주소 검색</div>
+                </div>
+                <div class="box" style="width:30px;height:52px">↕</div>
+              </div>
+              <div class="g" style="font-size:10px">즐겨찾기</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><div class="pill">집</div><div class="pill">회사</div><div class="pill">진안동 08-057</div><div class="pill">반월동 08-231</div></div>
+              <div class="g" style="font-size:10px">최근 검색</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px 11px;display:flex;gap:7px;align-items:center"><span class="h2" style="font-size:11px;flex:1">동탄역 4번출구</span><span class="pill" style="padding:2px 6px;font-size:8.5px">01-092</span></div>
+              <div style="flex:1"></div>
+              <div class="btn p">길찾기</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 출발·도착 입력</div>
+        </div>
+
+        <!-- 경로 비교 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">병점역 → 동탄역</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><div class="pill on">추천순</div><div class="pill">최소시간</div><div class="pill">최소환승</div><div class="pill">최소도보</div></div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h1" style="font-size:15px">22분</span><span class="g" style="font-size:9.5px">환승 없음 · 도보 5분</span></div>
+                <div style="display:flex;gap:2px;height:12px;border-radius:6px;overflow:hidden"><div style="flex:5;background:#c4cdd6"></div><div style="flex:14;background:#ec7211"></div><div style="flex:3;background:#c4cdd6"></div></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:8.5px;color:#8b95a1"><span>도보 5분</span><span style="color:#ec7211;font-weight:700">100번 14분</span><span>도보 3분</span></div>
+                <div class="g" style="font-size:9.5px">3분 뒤 도착 · 08-142 승차</div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h1" style="font-size:15px">18분</span><span class="g" style="font-size:9.5px">환승 1회 · 도보 8분</span></div>
+                <div style="display:flex;gap:2px;height:12px;border-radius:6px;overflow:hidden"><div style="flex:4;background:#c4cdd6"></div><div style="flex:6;background:#2f6fed"></div><div style="flex:6;background:#ec7211"></div><div style="flex:2;background:#c4cdd6"></div></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:8.5px;color:#8b95a1"><span>도보 4분</span><span style="color:#2f6fed;font-weight:700">7-2 마을 6분</span><span style="color:#ec7211;font-weight:700">100번 6분</span><span>도보 2분</span></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h1" style="font-size:15px">26분</span><span class="g" style="font-size:9.5px">환승 없음 · 도보 2분</span></div>
+                <div style="display:flex;gap:2px;height:12px;border-radius:6px;overflow:hidden"><div style="flex:1;background:#c4cdd6"></div><div style="flex:23;background:#0ca678"></div><div style="flex:2;background:#c4cdd6"></div></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:8.5px;color:#8b95a1"><span>도보 1분</span><span style="color:#0ca678;font-weight:700">200번 23분</span><span>도보 2분</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 경로 비교</div>
+        </div>
+
+        <!-- 단계별 안내 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="maparea" style="height:96px;position:relative">
+              <svg viewBox="0 0 236 96" style="position:absolute;inset:0;width:100%;height:100%"><polyline points="30,70 90,40 160,55 206,26" fill="none" stroke="#ec7211" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+              <div class="pin" style="top:62px;left:24px;background:#ec7211"></div>
+              <div class="pin" style="top:18px;left:199px;background:#191f28"></div>
+              <div class="anno" style="position:absolute;top:6px;right:8px">카카오맵</div>
+            </div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:0;flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span class="h1" style="font-size:15px">22분</span><span class="g" style="font-size:9.5px">도착 예정 09:12</span></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#ec7211"></div></div><div style="flex:1;padding-bottom:12px;border-left:2px solid #eef0f2;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">병점역 환승센터 08-142</div><div class="g" style="font-size:9.5px">도보 5분 · 승차</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><span class="pill on" style="padding:2px 6px;font-size:8px">100</span></div><div style="flex:1;padding-bottom:12px;border-left:2px solid #ec7211;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">100번 · 약 14분 (6정류장)</div><div class="hl" style="font-size:9.5px">3분 뒤 도착 · 실시간</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#191f28"></div></div><div style="flex:1;padding-left:15px;margin-left:-8px"><div class="h2" style="font-size:11px">동탄역 4번출구 01-092</div><div class="g" style="font-size:9.5px">도보 2분 · 하차</div></div></div>
+              <div style="flex:1"></div>
+              <div class="btn p">안내 시작</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 단계별 실시간 안내</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "실시간 버스 도착 상세 화면" · "길찾기 결과를 희망 노선으로 전환" · "도착 알림·하차 알림" · "길찾기 결과 게시물에 첨부"</p>
+</section>
+
+<section class="dv-turn" id="t6">
+  <div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">장소·경로 고정 (집 · 회사 저장, 핀 고정)</span></div>
+  <p class="dv-tsub">집·회사 등 자주 가는 장소와 정류장을 저장해 두면 지도에 핀으로 고정되고, 경로 선택 시 한 번에 불러올 수 있습니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="6a">
+      <div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a><span class="dv-oname">즐겨찾기 관리 → 지도 고정 핀 → 저장 경로</span></div>
+      <div class="row">
+
+        <!-- 즐겨찾기 관리 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">내 장소</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:11px;border-bottom:1px solid #f2f4f6;display:flex;gap:9px;align-items:center"><div class="box" style="width:30px;height:30px;flex:none">집</div><div style="flex:1"><div class="h2" style="font-size:11px">집</div><div class="g" style="font-size:9.5px">병점역 환승센터 부근</div></div><span class="g">›</span></div>
+                <div style="padding:11px;display:flex;gap:9px;align-items:center"><div class="box" style="width:30px;height:30px;flex:none">회사</div><div style="flex:1"><div class="h2" style="font-size:11px">회사</div><div class="g" style="font-size:9.5px">동탄1동 정류장 부근</div></div><span class="g">›</span></div>
+              </div>
+              <div class="g" style="font-size:10px">저장한 정류장</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px 11px;display:flex;gap:7px;align-items:center"><span class="h2" style="font-size:11px;flex:1">진안동 행정복지센터</span><span class="pill" style="padding:2px 6px;font-size:8.5px">08-057</span><span class="hl">★</span></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px 11px;display:flex;gap:7px;align-items:center"><span class="h2" style="font-size:11px;flex:1">반월동 입구</span><span class="pill" style="padding:2px 6px;font-size:8.5px">08-231</span><span class="hl">★</span></div>
+              <div style="flex:1"></div>
+              <div class="btn p">＋ 장소·정류장 추가</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 내 장소 관리</div>
+        </div>
+
+        <!-- 지도 고정 핀 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="field" style="flex:1;padding:6px 9px">어디로 갈까요?</div></div>
+            <div class="maparea" style="flex:1;min-height:250px;position:relative">
+              <div style="position:absolute;top:52px;left:44px;display:flex;align-items:center;gap:4px"><div class="pin" style="position:static;background:#191f28"></div><span class="pill" style="padding:3px 8px;font-size:9px">집</span></div>
+              <div style="position:absolute;top:150px;left:150px;display:flex;align-items:center;gap:4px"><div class="pin" style="position:static;background:#191f28"></div><span class="pill" style="padding:3px 8px;font-size:9px">회사</span></div>
+              <div class="pin" style="top:110px;left:90px;background:#ec7211"></div>
+              <div class="anno" style="position:absolute;top:8px;right:8px">카카오맵</div>
+              <div style="position:absolute;bottom:10px;left:10px;right:10px;background:#fff;border:1px solid #eef0f2;border-radius:12px;padding:9px;display:flex;gap:6px">
+                <div class="btn" style="flex:1;border-color:#191f28;color:#191f28">집으로</div>
+                <div class="btn" style="flex:1;border-color:#191f28;color:#191f28">회사로</div>
+                <div class="btn p" style="flex:1">경로</div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 고정 핀 · 빠른 경로</div>
+        </div>
+
+        <!-- 저장 경로 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">저장한 경로</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:12px">출근길</span><span class="hl">★ 고정</span></div>
+                <div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#8b95a1"><span class="pill" style="padding:2px 7px;font-size:9px">집</span>→ 100번 →<span class="pill" style="padding:2px 7px;font-size:9px">회사</span></div>
+                <div class="g" style="font-size:9.5px">약 22분 · 환승 없음</div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:12px">퇴근길</span><span class="g">☆</span></div>
+                <div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#8b95a1"><span class="pill" style="padding:2px 7px;font-size:9px">회사</span>→ 마을 3번 →<span class="pill" style="padding:2px 7px;font-size:9px">집</span></div>
+                <div class="g" style="font-size:9.5px">약 28분 · 환승 1회</div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:10px;text-align:center">★ 고정한 경로는 홈 상단에 먼저 표시됩니다</div>
+              <div class="btn p">＋ 현재 경로 저장</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 저장·고정 경로</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "장소 추가할 때 정류장 검색 화면" · "고정 경로를 홈 위젯으로 보여주기" · "집/회사 도착 알림 설정" · "저장 경로를 게시물에 첨부"</p>
+</section>
+
+<section class="dv-turn" id="t5">
+  <div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">게시물 작성 (커뮤니티 게시판)</span></div>
+  <p class="dv-tsub">시민이 대중교통 관련 의견·정보를 나누는 게시판. 목록에서 글을 보고, 카테고리·정류장 태그를 붙여 게시물을 작성합니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="5a">
+      <div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a><span class="dv-oname">게시판 목록 → 작성 → 완료</span></div>
+      <div class="row">
+
+        <!-- 목록 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="h2" style="flex:1">시민 게시판</div><div class="g" style="font-size:10px">검색</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;gap:5px;flex-wrap:wrap"><div class="pill on">전체</div><div class="pill">노선 신청</div><div class="pill">노선 건의</div><div class="pill">정보공유</div><div class="pill">질문</div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="display:flex;gap:5px"><div class="pill">전체</div><div class="pill on">마을버스</div><div class="pill">시내버스</div></div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;border-top:1px solid #f2f4f6;border-bottom:1px solid #f2f4f6;padding:7px 2px">
+                <span class="hl" style="font-size:11px">최신순</span><span class="g" style="font-size:11px">조회순</span><span class="g" style="font-size:11px">인기순</span>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;gap:6px;align-items:center"><span class="pill" style="padding:3px 7px;font-size:9px;background:#fff2e8;border-color:#ffd9bd;color:#c96a17">노선 신청</span><span class="pill" style="padding:3px 7px;font-size:9px">시내버스</span><span class="g" style="font-size:9px">익명 · 2시간 전</span></div>
+                <div class="h2" style="font-size:12px">병점–동탄 심야버스 신설 신청</div>
+                <div class="g" style="font-size:10px">투표 <b style="color:#ec7211">88</b> · 조회 312 · 댓글 8</div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;gap:6px;align-items:center"><span class="pill" style="padding:3px 7px;font-size:9px">정보공유</span><span class="pill" style="padding:3px 7px;font-size:9px">마을버스</span><span class="g" style="font-size:9px">익명 · 어제</span></div>
+                <div class="h2" style="font-size:12px">마을 3번 우회 운행 안내 (공사)</div>
+                <div class="g" style="font-size:10px">조회 148 · 공감 12 · 댓글 3</div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="btn p" style="position:relative">글쓰기</div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M8 9h8M8 13h5"></path></svg>게시판</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">1. 게시판 목록</div>
+        </div>
+
+        <!-- 작성 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">취소</div><div class="h2" style="flex:1;text-align:center">게시물 작성</div><div class="hl" style="font-size:11px">등록</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="display:flex;gap:8px">
+                <div style="flex:1"><div class="g" style="font-size:10px;margin-bottom:5px">카테고리</div><div class="field" style="color:#333d4b;display:flex;justify-content:space-between">노선 건의<span class="g">‾</span></div></div>
+                <div style="flex:1"><div class="g" style="font-size:10px;margin-bottom:5px">버스 종류</div><div style="display:flex;gap:5px"><div class="pill on" style="flex:1;text-align:center">마을</div><div class="pill" style="flex:1;text-align:center">시내</div></div></div>
+              </div>
+              <div class="g" style="font-size:9px">익명으로 등록됩니다 · 닉네임/이름 미표시</div>
+              <div class="field" style="color:#333d4b">제목을 입력하세요</div>
+              <div class="field" style="align-items:flex-start;color:#9aa5b1;min-height:64px">내용을 입력하세요.&#10;대중교통 이용 경험이나 의견을 자유롭게.</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h2" style="font-size:11px">버스 이동 동선</span><span class="g" style="font-size:9.5px">최소 5개 정류장</span></div>
+              <div class="field" style="display:flex;justify-content:space-between;color:#9aa5b1">정류장 이름 · 번호 검색<span class="g">＋</span></div>
+              <div class="g" style="font-size:9px;color:#ec7211">같은 이름의 정류장이 있을 수 있어요. 정류장 번호를 꼭 확인하세요</div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:10px;overflow:hidden">
+                <div style="padding:8px 10px;border-bottom:1px solid #f2f4f6;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:11px">1</span><span class="h2" style="font-size:11px;flex:1">병점역 환승센터</span><span class="pill" style="padding:2px 6px;font-size:8.5px">08-142</span><span class="g">≡</span></div>
+                <div style="padding:8px 10px;border-bottom:1px solid #f2f4f6;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:11px">2</span><span class="h2" style="font-size:11px;flex:1">진안동 행정복지센터</span><span class="pill" style="padding:2px 6px;font-size:8.5px">08-057</span><span class="g">≡</span></div>
+                <div style="padding:8px 10px;border-bottom:1px solid #f2f4f6;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:11px">3</span><span class="h2" style="font-size:11px;flex:1">반월동 입구</span><span class="pill" style="padding:2px 6px;font-size:8.5px">08-231</span><span class="g">≡</span></div>
+                <div style="padding:8px 10px;border-bottom:1px solid #f2f4f6;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:11px">4</span><span class="h2" style="font-size:11px;flex:1">동탄1동 정류장</span><span class="pill" style="padding:2px 6px;font-size:8.5px">01-088</span><span class="g">≡</span></div>
+                <div style="padding:8px 10px;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:11px">5</span><span class="h2" style="font-size:11px;flex:1">동탄역 4번출구</span><span class="pill" style="padding:2px 6px;font-size:8.5px">01-092</span><span class="g">≡</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 게시물 작성</div>
+        </div>
+
+        <!-- 상세/완료 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹ 목록</div><div class="h2" style="flex:1;text-align:center">게시물</div><div class="g" style="font-size:11px">⋯</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <span class="pill" style="align-self:flex-start;padding:3px 8px;font-size:9px;background:#fff2e8;border-color:#ffd9bd;color:#c96a17">노선 신청</span>
+              <div class="h1" style="font-size:15px">병점–동탄 심야버스 신설 신청</div>
+              <div class="g" style="font-size:9.5px">익명 · 화성시 병점동 · 2시간 전</div>
+              <div class="ln l"></div><div class="ln l"></div><div class="ln m"></div>
+              <div class="box" style="height:64px">버스 이동 동선 · 정류장 5개</div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">이 노선 신청에 투표</span><span class="hl" style="font-size:10px">88표</span></div>
+                <div style="height:9px;border-radius:5px;background:#ffe8d6;overflow:hidden"><div style="width:64%;height:100%;background:#ec7211"></div></div>
+              </div>
+              <div style="display:flex;gap:8px"><div class="btn p" style="flex:2">투표하기</div><div class="btn kko" style="flex:1"><span class="kko-ic"></span>공유</div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:11px">댓글</span><span class="g" style="font-size:9px">비공개 · 작성자와 나만 보임</span></div>
+              <div class="aicard" style="background:#f7f9fa;border-color:#eef0f2;display:flex;flex-direction:column;gap:2px;padding:9px 10px">
+                <div style="display:flex;gap:6px;align-items:center"><span class="h2" style="font-size:10.5px">익명</span><span class="g" style="font-size:8.5px">나 · 어제</span></div>
+                <div class="g" style="font-size:10.5px;line-height:1.5">저도 같은 시간대에 불편했어요. 심야 증편 꼭 필요합니다.</div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;gap:6px;align-items:center"><span class="h2" style="font-size:10.5px">익명</span><span class="pill" style="padding:2px 6px;font-size:8px">작성자</span></div>
+                <div class="g" style="font-size:10.5px;line-height:1.5">공감 감사합니다. 함께 노선 건의 올려볼게요.</div>
+              </div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:9px">댓글은 게시물 작성자와 댓글 작성자에게만 공개됩니다</div>
+              <div class="field">댓글 입력…</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 게시물 상세</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "게시물에 투표·설문 첨부 기능" · "관리자가 게시물 신고·관리하는 화면" · "AI가 게시물 초안 다듬어주는 버튼" · "인기글·공지 상단 고정"</p>
+</section>
+
+<section class="dv-turn" id="t12">
+  <div class="dv-thd"><a class="dv-tid" href="#t12">12</a><span class="dv-tname">희망 노선 확장 (공감·투표 · AI 추천 · 상세 · 관리자 히트맵)</span></div>
+  <p class="dv-tsub">시민이 만든 희망 노선(<a class="dv-oid" href="#4a">4a</a>)을 서로 공감·투표하고, AI가 핀 연결을 도와주며, 관리자는 수요를 지도 히트맵으로 봅니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="12a">
+      <div class="dv-olabel"><a class="dv-oid" href="#12a">12a</a><span class="dv-oname">둘러보기·투표 · AI 추천 · 상세·공유 · 관리자 히트맵</span></div>
+      <div class="row">
+
+        <!-- 공감·투표 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="h2" style="flex:1">희망 노선 둘러보기</div><div class="g" style="font-size:10px">지도</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;gap:6px"><div class="pill on">공감순</div><div class="pill">최신순</div><div class="pill">우리 동네</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:12px">병점–동탄 출근 급행</span><span class="g" style="font-size:9px">익명 · 정류장 5</span></div>
+                <div style="display:flex;gap:2px;height:9px;border-radius:5px;overflow:hidden"><div style="flex:3;background:#c4cdd6"></div><div style="flex:6;background:#ec7211"></div></div>
+                <div style="display:flex;gap:6px"><div class="btn" style="flex:1">공감 128</div><div class="btn p" style="flex:1">투표하기</div></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:12px">남양–봉담 마을 순환</span><span class="g" style="font-size:9px">익명 · 정류장 6</span></div>
+                <div style="display:flex;gap:2px;height:9px;border-radius:5px;overflow:hidden"><div style="flex:4;background:#2f6fed"></div><div style="flex:4;background:#c4cdd6"></div></div>
+                <div style="display:flex;gap:6px"><div class="btn" style="flex:1">공감 74</div><div class="btn" style="flex:1">투표 완료</div></div>
+              </div>
+              <div class="g" style="font-size:9px;text-align:center">투표가 많은 노선은 관리자 검토 대상이 됩니다</div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2"></circle><circle cx="18" cy="17" r="2"></circle><path d="M6 9c0 5 12 3 12 6" stroke-dasharray="2 2.5"></path></svg>희망노선</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"></rect><path d="M8 9h8M8 13h5"></path></svg>게시판</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">1. 공감·투표</div>
+        </div>
+
+        <!-- AI 경로 추천 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="field" style="flex:1;padding:6px 9px">정류장 검색해서 추가</div><div class="aitag">AI</div></div>
+            <div class="maparea" style="flex:1;min-height:210px;position:relative">
+              <svg viewBox="0 0 236 210" style="position:absolute;inset:0;width:100%;height:100%"><polyline points="40,50 120,80 90,150 180,170" fill="none" stroke="#2f6fed" stroke-width="3" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+              <div class="pin" style="top:43px;left:33px;background:#ec7211"></div>
+              <div class="pin" style="top:143px;left:83px;background:#ec7211"></div>
+              <div class="pin" style="top:163px;left:173px;background:#2f6fed"></div>
+              <div style="position:absolute;top:8px;left:8px;right:44px" class="aicard"><div class="aitag">AI 추천</div><div class="g" style="font-size:9.5px;margin-top:3px;line-height:1.4">출발·도착만 찍으면 수요·도로를 고려해 <b style="color:#333d4b">중간 정류장 3곳</b>을 자동 제안</div></div>
+              <div style="position:absolute;bottom:10px;left:10px;right:10px;display:flex;gap:6px"><div class="btn" style="flex:1;background:#fff">직접 편집</div><div class="btn p" style="flex:2">AI 추천 경로 사용</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">2. AI 경로 자동 추천</div>
+        </div>
+
+        <!-- 노선 상세·공유 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="g" style="font-size:11px">‹</div><div class="h2" style="flex:1">노선 상세</div><div class="g" style="font-size:11px">공유</div></div>
+            <div class="maparea" style="height:92px;position:relative"><svg viewBox="0 0 236 92" style="position:absolute;inset:0;width:100%;height:100%"><polyline points="26,64 90,36 156,50 206,26" fill="none" stroke="#ec7211" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline></svg><div class="pin" style="top:56px;left:20px;background:#ec7211"></div><div class="pin" style="top:18px;left:199px;background:#191f28"></div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:8px;flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:center"><span class="h1" style="font-size:14px">병점–동탄 출근 급행</span><span class="hl" style="font-size:10px">공감 128</span></div>
+              <div class="g" style="font-size:9.5px">익명 제안 · 정류장 5 · 예상 22분</div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:10px;overflow:hidden">
+                <div style="padding:7px 10px;border-bottom:1px solid #f2f4f6;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:10px">1</span><span class="h2" style="font-size:10.5px;flex:1">병점역 환승센터</span><span class="pill" style="padding:2px 6px;font-size:8px">08-142</span></div>
+                <div style="padding:7px 10px;border-bottom:1px solid #f2f4f6;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:10px">2</span><span class="h2" style="font-size:10.5px;flex:1">진안동 행정복지센터</span><span class="pill" style="padding:2px 6px;font-size:8px">08-057</span></div>
+                <div style="padding:7px 10px;display:flex;gap:7px;align-items:center"><span class="hl" style="font-size:10px">…</span><span class="g" style="font-size:9.5px;flex:1">외 3개 정류장</span></div>
+              </div>
+              <div style="flex:1"></div>
+              <div style="display:flex;gap:6px"><div class="btn p" style="flex:1">공감하기</div><div class="btn kko" style="flex:1"><span class="kko-ic"></span>공유</div><div class="btn" style="flex:1">링크</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 노선 상세·공유</div>
+        </div>
+
+        <!-- 관리자 히트맵 -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="anno" style="margin-left:8px">희망 노선 히트맵</div></div>
+            <div style="display:flex;min-height:300px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">기록 관리</div>
+                <div class="navi on">희망 노선</div>
+                <div class="navi">지역 참여율</div>
+                <div class="navi">AI 인사이트</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><div class="h1">희망 노선 수요 히트맵</div><div style="display:flex;gap:5px"><div class="pill on">투표순</div><div class="pill">최근</div></div></div>
+                <div style="display:flex;gap:12px;flex:1">
+                  <div style="flex:1.6;border:1px solid #eef0f2;border-radius:10px;overflow:hidden;position:relative;min-height:200px"><div class="js-rmap" style="position:absolute;inset:0"></div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+                    <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px">
+                      <div class="g" style="font-size:9px;margin-bottom:6px">선 굵기 = 수요(투표)</div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:26px;height:6px;border-radius:3px;background:#ec7211"></div><span class="g" style="font-size:9px">높음</span></div>
+                      <div style="display:flex;align-items:center;gap:6px"><div style="width:26px;height:3px;border-radius:2px;background:#ffb877"></div><span class="g" style="font-size:9px">낮음</span></div>
+                    </div>
+                    <div style="border:1px solid #eef0f2;border-radius:10px;padding:9px;flex:1">
+                      <div class="g" style="font-size:9px;margin-bottom:6px">투표 상위 노선</div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt)"><span>병점–동탄 급행</span><span class="hl">128</span></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#4e5968"><span>남양–봉담 순환</span><span>74</span></div>
+                      <div style="display:flex;justify-content:space-between;padding:3px 0;font:700 10px var(--fnt);color:#8b95a1"><span>향남–봉담</span><span>41</span></div>
+                      <div class="g" style="font-size:8.5px;margin-top:5px">수요 높은 노선은 노선 신설·증차 검토</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">4. 관리자 · 희망 노선 히트맵</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "투표 마감·결과 발표 화면" · "AI 추천 근거(수요·도로) 설명 화면" · "노선 신설 확정 시 시민 알림" · "희망 노선을 실제 지도 위에 그리기"</p>
+</section>
+
+<section class="dv-turn" id="t4">
+  <div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">희망 노선 만들기 (정류장 검색 · 핀 연결)</span></div>
+  <p class="dv-tsub">정류장을 검색해 순서대로 핀을 찍으면 선으로 연결되어 시민이 원하는 노선을 제안하는 기능. 검색 → 핀 추가·연결 → 노선 확정·제출 흐름입니다.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="4a">
+      <div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a><span class="dv-oname">정류장 검색 → 핀 연결 → 제출</span></div>
+      <div class="row">
+
+        <!-- 검색 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">희망 노선 · 정류장 검색</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div class="field" style="display:flex;justify-content:space-between;color:#333d4b">병점역<span class="g">✕</span></div>
+              <div class="g" style="font-size:9px;color:#ec7211">같은 이름의 다른 정류장이 있을 수 있어요. 정류장 번호를 꼭 확인하세요</div>
+              <div class="g" style="font-size:10px">검색 결과</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;align-items:center;gap:7px"><div style="flex:1"><div class="h2" style="font-size:11px">병점역 환승센터</div><div class="g" style="font-size:9.5px">화성시 병점동 · 정류장 12개</div></div><span class="pill" style="padding:2px 6px;font-size:8.5px">08-142</span></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;align-items:center;gap:7px"><div style="flex:1"><div class="h2" style="font-size:11px">병점역 1번출구</div><div class="g" style="font-size:9.5px">화성시 병점동</div></div><span class="pill" style="padding:2px 6px;font-size:8.5px">08-146</span></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;align-items:center;gap:7px"><div style="flex:1"><div class="h2" style="font-size:11px">병점초교 앞</div><div class="g" style="font-size:9.5px">화성시 진안동</div></div><span class="pill" style="padding:2px 6px;font-size:8.5px">08-231</span></div>
+              <div style="flex:1"></div>
+              <div class="g" style="font-size:10px;text-align:center">정류장을 선택하면 노선에 추가됩니다</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 정류장 검색</div>
+        </div>
+
+        <!-- 핀 연결 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="field" style="flex:1;padding:6px 9px">정류장 검색해서 추가</div></div>
+            <div class="maparea" style="flex:1;min-height:250px;position:relative">
+              <svg viewBox="0 0 236 250" style="position:absolute;inset:0;width:100%;height:100%">
+                <polyline points="46,54 150,96 92,168 176,206" fill="none" stroke="#ec7211" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 8"></polyline>
+              </svg>
+              <div class="pin" style="top:47px;left:39px;background:#ec7211"></div>
+              <div class="pin" style="top:89px;left:143px;background:#ec7211"></div>
+              <div class="pin" style="top:161px;left:85px;background:#ec7211"></div>
+              <div class="pin" style="top:199px;left:169px;background:#ec7211"></div>
+              <div class="anno" style="position:absolute;top:8px;right:8px">카카오맵</div>
+              <div style="position:absolute;bottom:10px;left:10px;right:10px;display:flex;gap:6px">
+                <div class="btn" style="flex:1;background:#fff">되돌리기</div>
+                <div class="btn p" style="flex:2">정류장 4개 · 노선 확정</div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 핀 찍어 연결</div>
+        </div>
+
+        <!-- 확정/제출 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">희망 노선 확정</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div class="field">노선 이름 (예: 병점–동탄 출근길)</div>
+              <div class="g" style="font-size:10px">정류장 순서 (드래그로 변경)</div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:10px;overflow:hidden">
+                <div style="padding:9px 11px;border-bottom:1px solid #f2f4f6;display:flex;gap:8px;align-items:center"><span class="hl" style="font-size:11px">1</span><span class="h2" style="font-size:11px;flex:1">병점역 환승센터</span><span class="g">≡</span></div>
+                <div style="padding:9px 11px;border-bottom:1px solid #f2f4f6;display:flex;gap:8px;align-items:center"><span class="hl" style="font-size:11px">2</span><span class="h2" style="font-size:11px;flex:1">진안동 행정복지센터</span><span class="g">≡</span></div>
+                <div style="padding:9px 11px;border-bottom:1px solid #f2f4f6;display:flex;gap:8px;align-items:center"><span class="hl" style="font-size:11px">3</span><span class="h2" style="font-size:11px;flex:1">반월동 입구</span><span class="g">≡</span></div>
+                <div style="padding:9px 11px;display:flex;gap:8px;align-items:center"><span class="hl" style="font-size:11px">4</span><span class="h2" style="font-size:11px;flex:1">동탄1동 정류장</span><span class="g">≡</span></div>
+              </div>
+              <div class="field" style="height:34px">제안 사유 (선택)</div>
+              <div style="flex:1"></div>
+              <div class="btn p">희망 노선 제출 · 응모권 +1</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 순서 확정 · 제출</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "다른 시민 희망 노선에 공감·투표하는 화면" · "관리자가 희망 노선을 히트맵으로 보는 화면" · "핀 찍을 때 AI가 경로 자동 추천" · "노선 상세·공유 화면"</p>
+</section>
+
+<section class="dv-turn" id="t3">
+  <div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">AI 에이전트 — 사용자용 · 관리자용</span></div>
+  <p class="dv-tsub">민원보고서를 대신 써주고, 구역 반경 2.5km 내 버스 지연을 감지해 최적 동선으로 똑버스를 자동 호출하는 사용자용 AI와, 쌓인 민원을 자동으로 처리하는 관리자용 AI.</p>
+  <div class="dv-opts">
+
+    <!-- 3a 사용자용 AI -->
+    <div class="dv-opt" id="3a">
+      <div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a><span class="dv-oname">사용자용 AI (민원보고서 대리 작성 · 똑버스 자동 호출)</span></div>
+      <div class="row">
+
+        <!-- 민원보고서 대리 작성 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2" style="flex:1">AI 민원보고서 작성</div><div class="aitag">AI</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="g" style="font-size:10px">내 일지·기록에서 불편 구간을 선택하면 AI가 공식 보고서로 정리합니다</div>
+              <div class="aicard" style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="aitag">AI 자동 작성</span><span class="pill" style="padding:3px 8px;font-size:8.5px">민원 초안</span></div>
+                <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:10px">제목</span><span class="h2" style="font-size:10.5px">100번 상습 배차 지연 개선 요청</span></div>
+                <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:10px">일시·장소</span><span class="h2" style="font-size:10.5px">7/18 병점역 08-142</span></div>
+                <div style="display:flex;justify-content:space-between"><span class="g" style="font-size:10px">노선</span><span class="h2" style="font-size:10.5px">100번 · 20분 지연</span></div>
+                <div class="g" style="font-size:10px">본문 (근거·통계 자동 인용)</div>
+                <div class="ln l"></div><div class="ln l"></div><div class="ln m"></div>
+                <div class="g" style="font-size:10px">요구사항</div>
+                <div class="ln m"></div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap"><div class="pill">더 정중하게</div><div class="pill">근거 추가</div><div class="pill">영어로</div></div>
+              <div style="flex:1"></div>
+              <div style="display:flex;gap:6px"><div class="btn" style="flex:1">수정</div><div class="btn p" style="flex:2">화성시에 접수</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 민원보고서 대리 작성</div>
+        </div>
+
+        <!-- 지연 감지 + 똑버스 자동 호출 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2" style="flex:1">AI 똑버스 자동 호출</div><div class="aitag">AI</div></div>
+            <div style="position:relative;height:150px;overflow:hidden">
+              <div class="js-hmap" data-static="1" style="position:absolute;inset:0"></div>
+              <div style="position:absolute;top:8px;left:8px;background:rgba(25,31,40,.82);color:#fff;border-radius:8px;padding:5px 9px;font:700 9.5px var(--fnt)">기준 구역 반경 2.5km 모니터링</div>
+            </div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div class="aicard" style="display:flex;flex-direction:column;gap:5px">
+                <div class="aitag">지연 감지</div>
+                <div class="g" style="font-size:10.5px;line-height:1.5">동탄1동 반경 <b style="color:#333d4b">2.5km</b> 내 100번 지연으로 <b style="color:#ec7211">대기 18명</b> 감지</div>
+              </div>
+              <div class="aicard" style="display:flex;flex-direction:column;gap:5px">
+                <div class="aitag">AI 대응</div>
+                <div class="g" style="font-size:10.5px;line-height:1.5">최적 동선을 계산해 <b style="color:#333d4b">똑버스 1대 자동 호출</b> · 5개 정류장 경유</div>
+              </div>
+              <div style="flex:1"></div>
+              <div style="display:flex;gap:6px"><div class="btn" style="flex:1">동선 보기</div><div class="btn p" style="flex:1">똑버스 호출 승인</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 지연 감지 → 자동 호출</div>
+        </div>
+
+        <!-- 똑버스 배차 결과 -->
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2" style="flex:1">똑버스 배차</div><div class="aitag">AI</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:0;flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px"><span class="h1" style="font-size:15px">똑버스 H-3</span><span class="hl" style="font-size:10px">4분 뒤 도착</span></div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:10px;margin-bottom:10px;display:flex;justify-content:space-between"><span class="g" style="font-size:10px">탑승 예정</span><span class="h2" style="font-size:11px">18명 · AI 최적 동선</span></div>
+              <div class="g" style="font-size:10px;margin-bottom:6px">경유 정류장 (AI 편성)</div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#ec7211"></div></div><div style="flex:1;padding-bottom:10px;border-left:2px solid #ec7211;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">동탄1동 정류장 01-088</div><div class="g" style="font-size:9.5px">대기 7명 · 승차</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#ec7211"></div></div><div style="flex:1;padding-bottom:10px;border-left:2px solid #ec7211;margin-left:-8px;padding-left:15px"><div class="h2" style="font-size:11px">진안동 08-057</div><div class="g" style="font-size:9.5px">대기 6명</div></div></div>
+              <div style="display:flex;gap:9px"><div style="width:14px;display:flex;justify-content:center;padding-top:3px"><div class="dot" style="background:#191f28"></div></div><div style="flex:1;padding-left:15px;margin-left:-8px"><div class="h2" style="font-size:11px">병점역 환승센터 08-142</div><div class="g" style="font-size:9.5px">대기 5명 · 하차 연계</div></div></div>
+              <div style="flex:1"></div>
+              <div class="btn p">내 탑승 확정</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 똑버스 배차·경유 동선</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 3b 관리자용 AI -->
+    <div class="dv-opt" id="3b">
+      <div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a><span class="dv-oname">관리자용 AI (자동 분류 · 인사이트 · 답변 초안 · 똑버스 관제)</span></div>
+      <div class="row">
+
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="aitag" style="margin-left:8px">AI 트리아지</div></div>
+            <div style="display:flex;min-height:280px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi on">AI 자동 분류</div>
+                <div class="navi">기록 관리</div>
+                <div class="navi">AI 인사이트</div>
+                <div class="navi">경품/당첨</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div class="h1">AI 민원 분류 · 우선순위</div>
+                <div class="aicard" style="display:flex;gap:8px;align-items:center">
+                  <div class="aitag">AI</div>
+                  <div class="g" style="font-size:10.5px;flex:1">오늘 87건 중 <b style="color:#333d4b">64건 자동 분류 완료</b>, 중복 12건 병합, 긴급 3건 상단 고정</div>
+                </div>
+                <table class="wf">
+                  <tr><th>우선</th><th>유형(AI)</th><th>정류장/노선</th><th>중복</th><th>상태</th></tr>
+                  <tr><td class="hl">긴급</td><td>안전·시설</td><td>봉담터미널</td><td>+4</td><td class="hl">대기</td></tr>
+                  <tr><td>높음</td><td>배차·지연</td><td>동탄 100번</td><td>+8</td><td class="hl">대기</td></tr>
+                  <tr><td>보통</td><td>혼잡도</td><td>병점역 환승</td><td>+2</td><td>검토</td></tr>
+                  <tr><td>낮음</td><td>노선 건의</td><td>남양읍 100번</td><td>—</td><td>검토</td></tr>
+                </table>
+                <div style="display:flex;gap:8px;margin-top:2px"><div class="btn b" style="flex:1">병합 검토</div><div class="btn p" style="flex:1">일괄 접수</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">AI 자동 분류 · 트리아지</div>
+        </div>
+
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="aitag" style="margin-left:8px">AI 인사이트</div></div>
+            <div style="display:flex;min-height:280px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">AI 자동 분류</div>
+                <div class="navi">기록 관리</div>
+                <div class="navi on">AI 인사이트</div>
+                <div class="navi">경품/당첨</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div class="h1">주간 AI 리포트</div>
+                <div class="aicard" style="display:flex;flex-direction:column;gap:6px">
+                  <div class="aitag">AI 이상 감지</div>
+                  <div class="g" style="font-size:10.5px;line-height:1.6">병점역 환승센터 '혼잡도' 민원이 전주 대비 <b style="color:#ec7211">+180%</b> 급증. 출근 7–9시 집중. 배차 증편 검토 권장.</div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <div class="stat"><div class="n">324</div><div class="k">주간 기록</div></div>
+                  <div class="stat"><div class="n" style="color:#ec7211">+18%</div><div class="k">전주 대비</div></div>
+                  <div class="stat"><div class="n">2.4일</div><div class="k">평균 처리</div></div>
+                </div>
+                <div style="display:flex;gap:10px;flex:1">
+                  <div class="box" style="flex:1.4;min-height:120px">유형별 추이 차트</div>
+                  <div style="flex:1;border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:7px">
+                    <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:10.5px">참여자 인구통계</span><span class="g" style="font-size:8px">관리자 전용</span></div>
+                    <div style="display:flex;gap:4px;align-items:center"><span class="g" style="font-size:9px;width:24px">성별</span><div style="flex:1;height:11px;border-radius:6px;overflow:hidden;display:flex"><div style="width:54%;background:#2f6fed"></div><div style="width:46%;background:#ec7211"></div></div></div>
+                    <div style="display:flex;justify-content:space-between;font-size:8.5px;color:#8b95a1"><span style="color:#2f6fed;font-weight:700">남 54%</span><span style="color:#ec7211;font-weight:700">여 46%</span></div>
+                    <div class="g" style="font-size:9px;margin-top:2px">연령대</div>
+                    <div style="display:flex;align-items:center;gap:5px"><span class="g" style="font-size:8px;width:26px">20대</span><div style="flex:1;height:8px;border-radius:4px;background:#eef0f2;overflow:hidden"><div style="width:70%;height:100%;background:#ffb877"></div></div></div>
+                    <div style="display:flex;align-items:center;gap:5px"><span class="g" style="font-size:8px;width:26px">30대</span><div style="flex:1;height:8px;border-radius:4px;background:#eef0f2;overflow:hidden"><div style="width:85%;height:100%;background:#ec7211"></div></div></div>
+                    <div style="display:flex;align-items:center;gap:5px"><span class="g" style="font-size:8px;width:26px">40대+</span><div style="flex:1;height:8px;border-radius:4px;background:#eef0f2;overflow:hidden"><div style="width:45%;height:100%;background:#ffd9bd"></div></div></div>
+                    <div class="g" style="font-size:8px;margin-top:1px">가입 시 수집 · 누적 통계</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">AI 인사이트 리포트</div>
+        </div>
+
+        <div>
+          <div class="scr d" style="width:300px">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="aitag" style="margin-left:8px">AI 답변</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;min-height:280px">
+              <div class="h1">시민 답변 초안</div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px">
+                <div class="g" style="font-size:10px">민원 #1204 · 동탄 100번 배차</div>
+                <div class="ln l" style="margin-top:8px"></div><div class="ln m" style="margin-top:6px"></div>
+              </div>
+              <div class="aicard" style="display:flex;flex-direction:column;gap:7px">
+                <div class="aitag">AI 생성 답변</div>
+                <div class="ln l"></div><div class="ln l"></div><div class="ln m"></div>
+                <div class="g" style="font-size:9.5px">정중체 · 처리 결과 포함</div>
+              </div>
+              <div style="display:flex;gap:6px"><div class="pill">더 짧게</div><div class="pill">사과 포함</div><div class="pill">영어로</div></div>
+              <div style="flex:1"></div>
+              <div style="display:flex;gap:6px"><div class="btn" style="flex:1">수정</div><div class="btn p" style="flex:1">발송</div></div>
+            </div>
+          </div>
+          <div class="scr-cap">AI 답변 초안 생성</div>
+        </div>
+
+        <!-- AI 똑버스 관제 -->
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="aitag" style="margin-left:8px">똑버스 관제</div></div>
+            <div style="display:flex;min-height:280px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">AI 자동 분류</div>
+                <div class="navi on">똑버스 관제</div>
+                <div class="navi">지역 참여율</div>
+                <div class="navi">AI 인사이트</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><div class="h1">AI 똑버스 자동 호출 관제</div><div style="display:flex;gap:5px"><div class="pill on">실시간</div><div class="pill">이력</div></div></div>
+                <div class="aicard" style="display:flex;gap:8px;align-items:center"><div class="aitag">AI</div><div class="g" style="font-size:10.5px;flex:1">기준 구역 반경 <b style="color:#333d4b">2.5km</b> 지연 감지 → 최적 동선으로 <b style="color:#ec7211">똑버스 2대 자동 호출</b> · 승인 대기 1건</div></div>
+                <table class="wf">
+                  <tr><th>상태</th><th>기준 구역</th><th>감지 사유</th><th>대기</th><th>배차</th></tr>
+                  <tr><td class="hl">자동 호출</td><td>동탄1동</td><td>100번 20분 지연</td><td>18명</td><td>H-3 운행중</td></tr>
+                  <tr><td class="hl">승인 대기</td><td>병점2동</td><td>배차 결행</td><td>11명</td><td>AI 제안</td></tr>
+                  <tr><td>모니터링</td><td>봉담읍</td><td>혼잡 상승</td><td>6명</td><td>—</td></tr>
+                </table>
+                <div style="display:flex;gap:10px;flex:1">
+                  <div style="flex:1.4;border:1px solid #eef0f2;border-radius:10px;overflow:hidden;position:relative;min-height:110px"><div class="js-hmap" data-static="1" style="position:absolute;inset:0"></div><div style="position:absolute;top:6px;left:6px;background:rgba(25,31,40,.82);color:#fff;border-radius:7px;padding:4px 8px;font:700 8.5px var(--fnt);z-index:1">반경 2.5km 모니터링</div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                    <div class="stat"><div class="n" style="color:#ec7211">2</div><div class="k">자동 호출 운행</div></div>
+                    <div class="stat"><div class="n">35명</div><div class="k">대응 대기 인원</div></div>
+                    <div style="display:flex;gap:6px"><div class="btn b" style="flex:1">동선 보기</div><div class="btn p" style="flex:1">호출 승인</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">AI 똑버스 자동 호출 관제</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "<a class="dv-oid" href="#3a">3a</a> 음성 입력 화면 자세히" · "AI가 중복 민원 병합하는 화면" · "AI 비서를 <a class="dv-oid" href="#1a">1a</a> 지도 홈에 붙인 모습" · "관리자 AI 리포트를 이메일 형태로"</p>
+</section>
+
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">회원가입 · 마이페이지</span></div>
+  <p class="dv-tsub">요청하신 두 화면입니다. 폭넓은 연령대·외국인 사용자를 고려해 입력 단계를 단순화하고, 마이페이지는 기록·응모 내역과 설정을 한 곳에 모았습니다.</p>
+  <div class="dv-opts">
+
+    <!-- 2a 회원가입 -->
+    <div class="dv-opt" id="2a">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><span class="dv-oname">회원가입 (약관 → 정보입력 → 완료)</span></div>
+      <div class="row">
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">약관 동의</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="g" style="font-size:10px">1 / 3 단계</div>
+              <div style="display:flex;gap:8px;align-items:center;border:1px solid #d1d6db;border-radius:10px;padding:10px">
+                <div class="dot" style="border:1.5px solid #ec7211;background:#fff"></div>
+                <div class="h2" style="flex:1">전체 동의</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;padding:2px 4px"><div class="dot"></div><div class="g" style="font-size:11px;flex:1">(필수) 서비스 이용약관</div><div class="g" style="font-size:10px">보기</div></div>
+              <div style="display:flex;gap:8px;align-items:center;padding:2px 4px"><div class="dot"></div><div class="g" style="font-size:11px;flex:1">(필수) 개인정보 수집·이용</div><div class="g" style="font-size:10px">보기</div></div>
+              <div style="display:flex;gap:8px;align-items:center;padding:2px 4px"><div class="dot"></div><div class="g" style="font-size:11px;flex:1">(필수) 위치기반 서비스</div><div class="g" style="font-size:10px">보기</div></div>
+              <div style="display:flex;gap:8px;align-items:center;padding:2px 4px"><div class="dot"></div><div class="g" style="font-size:11px;flex:1">(선택) 마케팅 수신 동의</div><div class="g" style="font-size:10px">보기</div></div>
+              <div style="flex:1"></div>
+              <div class="btn p">다음</div>
+            </div>
+          </div>
+          <div class="scr-cap">1. 약관 동의</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">정보 입력</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div class="g" style="font-size:10px">2 / 3 단계</div>
+              <div style="display:flex;gap:10px;align-items:center;border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:10px">
+                <div class="avatar" style="width:44px;height:44px">아바타</div>
+                <div style="flex:1"><div class="g" style="font-size:9px">랜덤 닉네임 (자동 생성)</div><div class="h2" style="font-size:12px">느긋한통근러347</div></div>
+                <div class="pill">다시 생성</div>
+              </div>
+              <div class="field">이름</div>
+              <div class="field">아이디</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1">전화번호</div><div class="btn" style="width:60px">인증</div></div>
+              <div class="field">OTP 인증번호 입력</div>
+              <div class="field">비밀번호</div>
+              <div class="field">비밀번호 확인</div>
+              <div style="display:flex;gap:6px"><div style="flex:1"><div class="g" style="font-size:10px;margin-bottom:5px">생년월일</div><div class="field">2000 . 01 . 01</div></div><div style="flex:1"><div class="g" style="font-size:10px;margin-bottom:5px">성별</div><div style="display:flex;gap:5px"><div class="pill on" style="flex:1;justify-content:center">남</div><div class="pill" style="flex:1;justify-content:center">여</div></div></div></div>
+              <div class="g" style="font-size:9px">생년월일·성별은 통계용이며 다른 사용자에게 공개되지 않습니다</div>
+              <div class="g" style="font-size:10px">거주 지역</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1">화성시</div><div class="field" style="flex:1">읍·면·동 선택</div></div>
+              <div style="display:flex;gap:6px;align-items:center"><div class="g" style="font-size:10px;flex:1">사용 언어</div><div class="pill on">한국어</div><div class="pill">EN</div><div class="pill">中</div></div>
+              <div class="g" style="font-size:10px">추천인 코드 (선택)</div>
+              <div style="display:flex;gap:6px"><div class="field" style="flex:1;letter-spacing:.06em">예: HWS-2K9F</div><div class="btn" style="width:60px">확인</div></div>
+              <div class="g" style="font-size:9px;color:#ec7211">코드 입력 시 가입 축하 300P 지급</div>
+              <div style="flex:1"></div>
+              <div class="btn p">가입 완료</div>
+            </div>
+          </div>
+          <div class="scr-cap">2. 정보 입력</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:12px;flex:1;align-items:center;justify-content:center;text-align:center">
+              <div class="box" style="width:64px;height:64px;border-radius:50%">완료</div>
+              <div class="h1">가입이 완료되었습니다</div>
+              <div class="g" style="font-size:11px;max-width:170px;line-height:1.6">이제 우리 동네 교통을 기록하고 응모권을 모아보세요</div>
+              <div class="stat" style="flex:none;width:100%;text-align:center"><div class="n" style="color:#ec7211">응모권 +1</div><div class="k">가입 축하 지급</div></div>
+              <div style="flex:1"></div>
+              <div class="btn p" style="width:100%">지도로 시작하기</div>
+            </div>
+          </div>
+          <div class="scr-cap">3. 완료</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2b 마이페이지 -->
+    <div class="dv-opt" id="2b">
+      <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a><span class="dv-oname">마이페이지 (프로필 · 내역 · 설정)</span></div>
+      <div class="row">
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="h2" style="flex:1">마이페이지</div><div class="g" style="font-size:10px">설정</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:12px;flex:1">
+              <div style="display:flex;gap:11px;align-items:center">
+                <div class="avatar" style="width:52px;height:52px">아바타</div>
+                <div style="flex:1"><div class="h1" style="font-size:15px">느긋한통근러347</div><div class="g" style="font-size:10px">화성시 동탄1동 · 한국어</div></div>
+                <div class="pill">편집</div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <div class="stat"><div class="n">12</div><div class="k">내 기록</div></div>
+                <div class="stat"><div class="n" style="color:#ec7211">3</div><div class="k">응모권</div></div>
+                <div class="stat"><div class="n">1</div><div class="k">당첨</div></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="h2" style="font-size:11px">즐겨찾기</span><span class="g" style="font-size:9.5px">편집 ›</span></div>
+              <div style="display:flex;gap:6px"><div class="pill" style="flex:1;justify-content:center">집</div><div class="pill" style="flex:1;justify-content:center">회사</div><div class="pill" style="flex:1;justify-content:center">＋ 추가</div></div>
+              <div style="border:1px solid #ffd9bd;background:#fff9f4;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span class="h2" style="font-size:10.5px">자주 가는 동선 · 출근길</span><span class="hl" style="font-size:9.5px">★</span></div>
+                <div style="display:flex;gap:5px;align-items:center;font-size:9.5px;color:#8b95a1"><span class="pill" style="padding:2px 7px;font-size:8.5px">집</span>→ 100번 →<span class="pill" style="padding:2px 7px;font-size:8.5px">회사</span><span style="margin-left:auto">약 22분</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:10px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">자주 가는 장소</span><span class="g" style="font-size:11px">4곳 ›</span></div>
+                <div style="padding:10px 12px;display:flex;justify-content:space-between"><span class="h2" style="font-size:11px">저장한 정류장</span><span class="g" style="font-size:11px">6개 ›</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;border:1px solid #eef0f2;border-radius:12px;overflow:hidden">
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">내 기록 내역</span><span class="g" style="font-size:11px">12건</span></div>
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">응모 · 당첨 내역</span><span class="g" style="font-size:11px">4건</span></div>
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">포인트 · 교환 내역</span><span class="g" style="font-size:11px">320P ›</span></div>
+                <div style="padding:11px 12px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">문의하기</span><span class="g" style="font-size:11px">›</span></div>
+                <div style="padding:11px 12px;display:flex;justify-content:space-between"><span class="h2">알림 설정</span><span class="g" style="font-size:11px">›</span></div>
+              </div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6M9 13h6M9 17h3"></path></svg>내 기록</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">마이 홈</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">내 기록 내역</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:8px;flex:1">
+              <div style="display:flex;gap:6px"><div class="pill on">전체</div><div class="pill">처리중</div><div class="pill">완료</div></div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;gap:9px;align-items:center">
+                <div style="flex:1"><div class="h2" style="font-size:11px">동탄 100번 배차 지연</div><div class="g" style="font-size:9.5px;margin-top:3px">07.18 · 처리중</div></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;gap:9px;align-items:center">
+                <div style="flex:1"><div class="h2" style="font-size:11px">병점역 정류장 혼잡</div><div class="g" style="font-size:9.5px;margin-top:3px">07.15 · 완료</div></div>
+              </div>
+              <div style="border:1px solid #eef0f2;border-radius:10px;padding:10px;display:flex;gap:9px;align-items:center">
+                <div style="flex:1"><div class="h2" style="font-size:11px">봉담터미널 시설 건의</div><div class="g" style="font-size:9.5px;margin-top:3px">07.11 · 완료</div></div>
+              </div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6M9 13h6M9 17h3"></path></svg>내 기록</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">내 기록 내역</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">설정</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:0;flex:1">
+              <div style="padding:12px 4px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">프로필 편집</span><span class="g">›</span></div>
+              <div style="padding:12px 4px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">언어</span><span class="g" style="font-size:11px">한국어 ›</span></div>
+              <div style="padding:12px 4px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">알림</span><span class="g" style="font-size:11px">켜짐 ›</span></div>
+              <div style="padding:12px 4px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">개인정보 · 약관</span><span class="g">›</span></div>
+              <div style="padding:12px 4px;border-bottom:1px solid #f2f4f6;display:flex;justify-content:space-between"><span class="h2">고객센터 · 문의</span><span class="g">›</span></div>
+              <div style="flex:1"></div>
+              <div class="btn" style="color:#8b95a1">로그아웃</div>
+              <div class="g" style="font-size:10px;text-align:center;margin-top:8px">화성특례시 교통일지 v1.0</div>
+            </div>
+          </div>
+          <div class="scr-cap">설정</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "가입에 카카오·본인인증 간편가입 버전도" · "<a class="dv-oid" href="#2b">2b</a> 프로필 편집 화면 추가" · "당첨 내역 화면 자세히" · "관리자용 회원 관리 화면"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">전체 흐름 — 3가지 방향</span></div>
+  <p class="dv-tsub">화성특례시 시민 참여형 대중교통 일지 플랫폼. 각 방향은 <b>내비게이션 구조와 무게중심</b>이 다릅니다. 저해상도라 회색 위주 + 주황(주요 액션)·파랑(관리자·정보) 최소 사용. 화면 구성/흐름에 집중해 주세요.</p>
+  <div class="dv-opts">
+
+    <!-- ============ 1a ============ -->
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><span class="dv-oname">모바일 앱형 · 지도 중심 · 하단 탭</span></div>
+      <div class="row">
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:12px;flex:1">
+              <div class="logolock" style="margin:16px 0 2px"><div class="logomk">CI</div><div class="logotx"><b>화성특례시</b><span>HWASEONG</span></div></div>
+              <div class="h1" style="text-align:center">교통일지</div>
+              <div class="g" style="text-align:center;font-size:11px;margin-top:-6px">우리 동네 대중교통, 함께 기록해요</div>
+              <div style="flex:1"></div>
+              <div class="btn kko"><span class="kko-ic"></span>카카오로 시작하기</div>
+              <div class="btn b">전화번호로 로그인</div>
+              <div class="g" style="text-align:center;font-size:10px">외국인 사용자 · 다국어 지원</div>
+            </div>
+          </div>
+          <div class="scr-cap">로그인</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="field" style="flex:1;padding:6px 9px">정류장·노선 검색</div></div>
+            <div class="maparea" style="flex:1;min-height:250px;position:relative">
+              <div class="pin" style="top:60px;left:50px;background:#e8802b"></div>
+              <div class="pin" style="top:120px;left:130px;background:#3f7ecb"></div>
+              <div class="pin" style="top:170px;left:70px;background:#e8802b"></div>
+              <div class="anno" style="position:absolute;top:8px;right:8px">카카오맵</div>
+              <div class="pill on" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#e8802b;border-color:#c96a17">＋ 교통일지 기록</div>
+            </div>
+            <div class="tab">
+              <div class="act"><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div>
+              <div><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6M9 13h6M9 17h3"></path></svg>내 기록</div>
+              <div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div>
+              <div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div>
+            </div>
+          </div>
+          <div class="scr-cap">지도 홈</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">교통일지 작성</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="box" style="height:70px">선택 위치 미니맵</div>
+              <div class="g" style="font-size:10px">유형</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <div class="pill on">배차·지연</div><div class="pill">혼잡도</div><div class="pill">정류장 시설</div><div class="pill">노선 건의</div>
+              </div>
+              <div class="field">내용을 적어주세요…</div>
+              <div style="flex:1"></div>
+              <div class="btn p">기록 제출 · 응모권 +1</div>
+            </div>
+          </div>
+          <div class="scr-cap">기록 작성</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="tbar"><div class="dot"></div><div class="h2">이벤트 룰렛</div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:12px;flex:1;align-items:center">
+              <div class="g" style="font-size:11px">보유 응모권 <span class="hl">3장</span></div>
+              <div class="roulette"></div>
+              <div class="btn p" style="width:130px">돌리기 (1장)</div>
+              <div class="box" style="height:44px;width:100%">당첨 내역 리스트</div>
+            </div>
+            <div class="tab">
+              <div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6M9 13h6M9 17h3"></path></svg>내 기록</div>
+              <div class="act"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div>
+            </div>
+          </div>
+          <div class="scr-cap">룰렛 이벤트</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;flex:1">
+              <div style="display:flex;gap:10px;align-items:center">
+                <div class="avatar" style="width:46px;height:46px">아바타</div>
+                <div style="flex:1"><div class="h2">느긋한통근러347</div><div class="g" style="font-size:10px">화성시 동탄</div></div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <div class="stat"><div class="n">12</div><div class="k">내 기록</div></div>
+                <div class="stat"><div class="n">3</div><div class="k">응모권</div></div>
+                <div class="stat"><div class="n">1</div><div class="k">당첨</div></div>
+              </div>
+              <div class="ln l"></div><div class="ln m"></div><div class="ln l"></div><div class="ln s"></div>
+              <div class="g" style="font-size:10px;margin-top:4px">설정 · 언어 · 알림 · 로그아웃</div>
+            </div>
+            <div class="tab">
+              <div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M9 9h6M9 13h6M9 17h3"></path></svg>내 기록</div>
+              <div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div>
+            </div>
+          </div>
+          <div class="scr-cap">마이페이지</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ 1b ============ -->
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><span class="dv-oname">데이터 대시보드형 · 데스크톱 웹 (관리자 친화)</span></div>
+      <div class="row">
+
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="g" style="margin-left:8px;font-size:10px">gyotong-log.hwaseong.go.kr</div></div>
+            <div style="display:flex;min-height:280px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">교통일지</div>
+                <div class="navi on">지도 대시보드</div>
+                <div class="navi">기록 목록</div>
+                <div class="navi">이벤트</div>
+                <div class="navi">마이페이지</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:10px">
+                <div class="h1">지도 대시보드</div>
+                <div style="display:flex;gap:8px">
+                  <div class="stat"><div class="n">1,204</div><div class="k">누적 기록</div></div>
+                  <div class="stat"><div class="n">87</div><div class="k">오늘</div></div>
+                  <div class="stat"><div class="n">312</div><div class="k">참여 시민</div></div>
+                </div>
+                <div style="display:flex;gap:10px;flex:1">
+                  <div class="maparea" style="flex:1.5;min-height:150px;position:relative;border:1.5px solid #2b2b2b;border-radius:9px">
+                    <div class="pin" style="top:30px;left:60px;background:#e8802b"></div>
+                    <div class="pin" style="top:70px;left:130px;background:#3f7ecb"></div>
+                    <div class="pin" style="top:100px;left:80px;background:#e8802b"></div>
+                    <div class="anno" style="position:absolute;top:6px;right:8px">카카오맵 · 히트맵</div>
+                  </div>
+                  <div class="box" style="flex:1;min-height:150px">유형별 통계 차트</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">지도 대시보드</div>
+        </div>
+
+        <div>
+          <div class="scr d">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="anno" style="margin-left:8px">관리자</div></div>
+            <div style="display:flex;min-height:280px">
+              <div class="side">
+                <div class="h2" style="margin-bottom:4px">관리자</div>
+                <div class="navi">현황</div>
+                <div class="navi on">기록 관리</div>
+                <div class="navi">경품/당첨</div>
+                <div class="navi">사용자</div>
+              </div>
+              <div class="pad" style="flex:1;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="h1">기록 관리</div>
+                  <div style="display:flex;gap:6px"><div class="pill on">전체</div><div class="pill">대기</div><div class="pill">처리</div></div>
+                </div>
+                <table class="wf">
+                  <tr><th>번호</th><th>정류장/노선</th><th>유형</th><th>작성자</th><th>상태</th></tr>
+                  <tr><td>#1204</td><td>동탄1동 정류장</td><td>배차</td><td>홍*동</td><td class="hl">대기</td></tr>
+                  <tr><td>#1203</td><td>병점역 환승센터</td><td>혼잡</td><td>김*수</td><td>처리</td></tr>
+                  <tr><td>#1202</td><td>봉담 시외터미널</td><td>시설</td><td>Lee</td><td class="hl">대기</td></tr>
+                  <tr><td>#1201</td><td>남양읍 100번</td><td>노선</td><td>박*아</td><td>처리</td></tr>
+                </table>
+                <div style="display:flex;gap:8px;margin-top:2px">
+                  <div class="btn b" style="flex:1">상세보기</div><div class="btn p" style="flex:1">처리 완료</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scr-cap">관리자 · 기록 관리</div>
+        </div>
+
+        <div>
+          <div class="scr d" style="width:300px">
+            <div class="tbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:11px;min-height:280px">
+              <div class="h1">로그인</div>
+              <div class="logolock" style="justify-content:flex-start"><div class="logomk">CI</div><div class="logotx"><b>화성특례시</b><span>HWASEONG</span></div></div>
+              <div class="field">아이디 / 전화번호</div>
+              <div class="field">비밀번호</div>
+              <div class="btn p">로그인</div>
+              <div style="display:flex;gap:8px"><div class="btn kko" style="flex:1"><span class="kko-ic"></span>카카오</div><div class="btn" style="flex:1">회원가입</div></div>
+              <div class="g" style="font-size:10px;text-align:center">EN · 中 · VI 다국어</div>
+            </div>
+          </div>
+          <div class="scr-cap">로그인</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ 1c ============ -->
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><span class="dv-oname">카드/친근형 하이브리드 · 지도 + 피드</span></div>
+      <div class="row">
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div class="h1">안녕하세요</div>
+              <div class="g" style="font-size:11px;margin-top:-4px">화성 대중교통, 함께 만들어요</div>
+              <div class="box" style="height:96px">일러스트 / 온보딩 이미지</div>
+              <div style="display:flex;gap:5px;justify-content:center"><div class="dot" style="background:#e8802b;border-color:#e8802b"></div><div class="dot"></div><div class="dot"></div></div>
+              <div style="flex:1"></div>
+              <div class="btn p">시작하기</div>
+              <div class="btn">둘러보기</div>
+            </div>
+          </div>
+          <div class="scr-cap">온보딩</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="maparea" style="height:110px;position:relative">
+              <div class="pin" style="top:30px;left:70px;background:#e8802b"></div>
+              <div class="pin" style="top:60px;left:140px;background:#3f7ecb"></div>
+              <div class="anno" style="position:absolute;top:6px;right:8px">카카오맵</div>
+            </div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:9px;flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div class="h2">우리 동네 기록</div><div class="pill on">최신</div></div>
+              <div style="border:1.5px solid #2b2b2b;border-radius:9px;padding:8px;display:flex;gap:8px;align-items:center;background:#fff">
+                <div style="flex:1"><div class="h2" style="font-size:11px">동탄 100번 배차 지연</div><div class="ln s" style="margin-top:5px"></div></div>
+              </div>
+              <div style="border:1.5px solid #2b2b2b;border-radius:9px;padding:8px;display:flex;gap:8px;align-items:center;background:#fff">
+                <div style="flex:1"><div class="h2" style="font-size:11px">병점역 정류장 혼잡</div><div class="ln s" style="margin-top:5px"></div></div>
+              </div>
+            </div>
+            <div class="tab"><div class="act"><svg class="ico" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"></path><path d="M6 10v9h12v-9"></path></svg>홈</div><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">홈 · 지도+피드</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:12px;flex:1;align-items:center">
+              <div class="h1">행운의 룰렛</div>
+              <div class="g" style="font-size:11px;margin-top:-6px">기록하고 응모권 모으기</div>
+              <div class="roulette"></div>
+              <div class="btn p" style="width:150px">돌리기 · 응모권 3장</div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"></path><path d="M6 10v9h12v-9"></path></svg>홈</div><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">룰렛</div>
+        </div>
+
+        <div>
+          <div class="scr m">
+            <div class="notch"></div>
+            <div class="pad" style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <div style="display:flex;gap:10px;align-items:center">
+                <div class="avatar" style="width:44px;height:44px">아바타</div>
+                <div style="flex:1"><div class="h2">느긋한통근러347</div><div class="g" style="font-size:10px">열심 기록가</div></div>
+              </div>
+              <div class="box" style="height:40px">진행중 배지 / 레벨 바</div>
+              <div style="display:flex;gap:8px"><div class="stat"><div class="n">12</div><div class="k">기록</div></div><div class="stat"><div class="n">3</div><div class="k">응모권</div></div></div>
+              <div class="h2" style="margin-top:2px">내 기록 카드</div>
+              <div class="ln l"></div><div class="ln m"></div>
+            </div>
+            <div class="tab"><div><svg class="ico" viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"></path><path d="M6 10v9h12v-9"></path></svg>홈</div><div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>지도</div><div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8l5 3"></path></svg>룰렛</div><div class="act"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 3.5-6 7-6s7 2 7 6"></path></svg>마이</div></div>
+          </div>
+          <div class="scr-cap">마이페이지</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="dv-next">다음 시도해보기: "<a class="dv-oid" href="#1a">1a</a>로 가되 관리자 화면도 추가" · "<a class="dv-oid" href="#1b">1b</a> 관리자 대시보드를 더 자세히" · "<a class="dv-oid" href="#1c">1c</a> 룰렛 당첨 순간 화면 보여줘" · "기록 작성 흐름을 단계별로 쪼개줘" · "새로운 방향"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount(){ this._tryInit(); }
+  componentDidUpdate(){ this._tryInit(); }
+  _tryInit(){
+    if(!window.L){ setTimeout(()=>this._tryInit(), 200); return; }
+    let pending = false;
+    document.querySelectorAll('.js-hmap').forEach(el => {
+      if(el._hmDone) return;
+      if(!el.clientHeight){ pending = true; return; }
+      el._hmDone = true;
+      this._makeMap(el);
+    });
+    document.querySelectorAll('.js-rmap').forEach(el => {
+      if(el._hmDone) return;
+      if(!el.clientHeight){ pending = true; return; }
+      el._hmDone = true;
+      this._makeRouteMap(el);
+    });
+    document.querySelectorAll('.js-smap').forEach(el => {
+      if(el._hmDone) return;
+      if(!el.clientHeight){ pending = true; return; }
+      el._hmDone = true;
+      const sat = c => c>=75?'#2f9e44':c>=60?'#74b816':c>=45?'#f59f00':'#e03131';
+      this._makeMetricMap(el, [['동탄1동',82],['동탄2동',74],['병점1동',61],['병점2동',68],['진안동',55],['봉담읍',49],['남양읍',41],['향남읍',38],['우정읍',33]], sat, v=>v+'%');
+    });
+    document.querySelectorAll('.js-vmap').forEach(el => {
+      if(el._hmDone) return;
+      if(!el.clientHeight){ pending = true; return; }
+      el._hmDone = true;
+      const vul = c => c>=70?'#e03131':c>=45?'#f59f00':'#adb5bd';
+      this._makeMetricMap(el, [['우정읍',86],['향남읍',78],['남양읍',72],['봉담읍',48],['진안동',40],['병점1동',22],['병점2동',18],['동탄2동',12],['동탄1동',9]], vul, v=>v>=70?'취약':'');
+    });
+    if(pending) setTimeout(()=>this._tryInit(), 200);
+  }
+  _coords(name){ return ({'동탄1동':[37.201,127.075],'동탄2동':[37.212,127.098],'병점1동':[37.207,127.033],'병점2동':[37.196,127.037],'진안동':[37.192,127.046],'봉담읍':[37.209,126.965],'남양읍':[37.212,126.818],'향남읍':[37.135,126.918],'우정읍':[37.083,126.795]})[name]; }
+  _makeMetricMap(el, data, colorFn, labelFn){
+    const L = window.L;
+    const map = L.map(el, { zoomControl:false, scrollWheelZoom:false, dragging:false, doubleClickZoom:false, boxZoom:false, keyboard:false, attributionControl:true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:19 }).addTo(map);
+    const markers = data.map(([name,val]) => {
+      const m = L.circleMarker(this._coords(name), { radius: 8 + val*0.14, color:'#fff', weight:2, fillColor:colorFn(val), fillOpacity:0.82 });
+      const lab = labelFn(val);
+      if(lab) m.bindTooltip(lab, { permanent:true, direction:'center', className:'hm-tip' });
+      return m;
+    });
+    const grp = L.featureGroup(markers).addTo(map);
+    map.fitBounds(grp.getBounds().pad(0.12));
+    setTimeout(()=>map.invalidateSize(), 250);
+  }
+  _makeRouteMap(el){
+    const L = window.L;
+    const map = L.map(el, { zoomControl:false, scrollWheelZoom:false, dragging:false, doubleClickZoom:false, boxZoom:false, keyboard:false, attributionControl:true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:19 }).addTo(map);
+    const routes = [
+      { pts:[[37.207,127.033],[37.192,127.046],[37.201,127.075],[37.212,127.098]], color:'#ec7211', w:7 },
+      { pts:[[37.212,126.818],[37.209,126.965],[37.207,127.033]], color:'#f89b4a', w:5 },
+      { pts:[[37.135,126.918],[37.209,126.965]], color:'#ffb877', w:3 }
+    ];
+    const layers = routes.map(r => L.polyline(r.pts, { color:r.color, weight:r.w, opacity:0.85, lineCap:'round', lineJoin:'round' }));
+    const grp = L.featureGroup(layers).addTo(map);
+    map.fitBounds(grp.getBounds().pad(0.18));
+    setTimeout(()=>map.invalidateSize(), 250);
+  }
+  _makeMap(el){
+    const L = window.L;
+    const stat = el.dataset.static === '1';
+    const map = L.map(el, { zoomControl:false, scrollWheelZoom:false, dragging:!stat, doubleClickZoom:!stat, boxZoom:false, keyboard:false, attributionControl:true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:19 }).addTo(map);
+    const color = p => p>=70?'#ec7211':p>=55?'#f89b4a':p>=40?'#ffb877':'#ffd9bd';
+    const regions = [
+      ['동탄1동',37.201,127.075,72],['동탄2동',37.212,127.098,61],
+      ['병점1동',37.207,127.033,48],['병점2동',37.196,127.037,55],
+      ['진안동',37.192,127.046,33],['봉담읍',37.209,126.965,42],
+      ['남양읍',37.212,126.818,21],['향남읍',37.135,126.918,29],
+      ['우정읍',37.083,126.795,18]
+    ];
+    const markers = regions.map(([name,lat,lng,p]) =>
+      L.circleMarker([lat,lng], { radius: (stat?6:9) + p*(stat?0.14:0.22), color:'#fff', weight:2, fillColor:color(p), fillOpacity:0.82 })
+        .bindTooltip(stat ? p+'%' : name+' '+p+'%', { permanent:true, direction:'center', className:'hm-tip' })
+    );
+    const grp = L.featureGroup(markers).addTo(map);
+    map.fitBounds(grp.getBounds().pad(0.12));
+    setTimeout(()=>map.invalidateSize(), 250);
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>
