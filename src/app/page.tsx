@@ -9,6 +9,10 @@ import {
   SectionHeader,
 } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  KakaoMap,
+  type MapMarkerData,
+} from "@/components/kakao-map";
 
 const districtRanking = [
   {
@@ -52,29 +56,26 @@ const quickActions = [
   },
 ] as const;
 
-const markerData = [
+const mapMarkers: MapMarkerData[] = [
   {
-    label: "동탄1동",
-    value: 72,
-    position:
-      "left-[13%] top-[25%] sm:left-[22%]",
-    active: true,
+    id: "dongtan-1",
+    title: "동탄1동 참여율 72%",
+    latitude: 37.2069,
+    longitude: 127.0727,
   },
   {
-    label: "병점2동",
-    value: 55,
-    position:
-      "right-[10%] top-[38%] sm:right-[20%]",
-    active: false,
+    id: "dongtan-2",
+    title: "동탄2동 참여율 61%",
+    latitude: 37.1981,
+    longitude: 127.0705,
   },
   {
-    label: "동탄2동",
-    value: 61,
-    position:
-      "bottom-[25%] left-[38%] sm:left-[45%]",
-    active: false,
+    id: "byeongjeom-2",
+    title: "병점2동 참여율 55%",
+    latitude: 37.2074,
+    longitude: 127.0346,
   },
-] as const;
+];
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -128,16 +129,18 @@ function ParticipationMap() {
       padded={false}
       className="overflow-hidden"
     >
-      <div className="relative min-h-[360px] overflow-hidden bg-info-soft">
-        <div className="absolute inset-0 opacity-50">
-          <div className="absolute left-[8%] top-[12%] h-[75%] w-px rotate-12 bg-line" />
-          <div className="absolute left-[30%] top-[5%] h-[90%] w-px -rotate-12 bg-line" />
-          <div className="absolute right-[25%] top-[5%] h-[90%] w-px rotate-6 bg-line" />
-          <div className="absolute left-[5%] top-[30%] h-px w-[90%] -rotate-6 bg-line" />
-          <div className="absolute left-[5%] top-[60%] h-px w-[90%] rotate-3 bg-line" />
-        </div>
+      <div className="relative">
+        <KakaoMap
+          center={{
+            latitude: 37.1995,
+            longitude: 127.0645,
+          }}
+          markers={mapMarkers}
+          level={8}
+          height={380}
+        />
 
-        <div className="absolute left-4 top-4 rounded-control bg-surface/95 px-4 py-3 shadow-card">
+        <div className="pointer-events-none absolute left-4 top-4 rounded-control bg-surface/95 px-4 py-3 shadow-card backdrop-blur">
           <p className="text-xs text-muted">
             화성시 실시간 참여
           </p>
@@ -146,19 +149,6 @@ function ParticipationMap() {
             오늘 128건
           </p>
         </div>
-
-        <div className="absolute right-4 top-4">
-          <Badge variant="info">
-            지도 API 연결 예정
-          </Badge>
-        </div>
-
-        {markerData.map((marker) => (
-          <MapMarker
-            key={marker.label}
-            {...marker}
-          />
-        ))}
 
         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-card bg-surface/95 p-4 shadow-floating backdrop-blur sm:left-auto sm:w-80">
           <div className="min-w-0">
@@ -184,52 +174,6 @@ function ParticipationMap() {
         </div>
       </div>
     </Card>
-  );
-}
-
-type MapMarkerProps = {
-  label: string;
-  value: number;
-  position: string;
-  active: boolean;
-};
-
-function MapMarker({
-  label,
-  value,
-  position,
-  active,
-}: MapMarkerProps) {
-  return (
-    <div
-      className={`absolute ${position} flex flex-col items-center`}
-    >
-      <div
-        className={[
-          "rounded-control px-3 py-2 text-center shadow-card",
-          active
-            ? "bg-brand text-on-brand"
-            : "bg-surface text-main",
-        ].join(" ")}
-      >
-        <p className="text-xs font-semibold">
-          {label}
-        </p>
-
-        <p className="mt-0.5 text-sm font-bold">
-          {value}%
-        </p>
-      </div>
-
-      <span
-        className={[
-          "-mt-1 size-3 rotate-45",
-          active
-            ? "bg-brand"
-            : "bg-surface",
-        ].join(" ")}
-      />
-    </div>
   );
 }
 
