@@ -168,6 +168,31 @@ export default async function MyPage() {
           email={user.email}
         />
 
+        <Card>
+          <SectionHeader
+            title="내 서비스"
+            description="저장한 정보와 문의 내역을 관리하세요."
+          />
+
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <ButtonLink
+              href="/favorites"
+              variant="secondary"
+              fullWidth
+            >
+              즐겨찾기
+            </ButtonLink>
+
+            <ButtonLink
+              href="/inquiries"
+              variant="secondary"
+              fullWidth
+            >
+              1:1 문의
+            </ButtonLink>
+          </div>
+        </Card>
+
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.75fr)]">
           <div className="space-y-6">
             <AttendanceCard
