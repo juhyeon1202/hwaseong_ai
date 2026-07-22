@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  type FormEvent,
+  type ReactNode,
   useActionState,
   useEffect,
   useMemo,
@@ -10,6 +12,8 @@ import {
 
 import {
   createRouteRequest,
+  deleteRouteRequest,
+  updateRouteRequest,
   type RouteRequestActionState,
 } from "@/app/route-requests/actions";
 import {
@@ -25,8 +29,16 @@ export type RouteStopOption = {
   districtName: string | null;
 };
 
+export type RouteRequestEditData = {
+  id: string;
+  title: string;
+  description: string;
+  stops: RouteStopOption[];
+};
+
 type RouteRequestFormProps = {
   stops: RouteStopOption[];
+  initialRequest?: RouteRequestEditData;
 };
 
 const initialState: RouteRequestActionState = {
@@ -36,21 +48,33 @@ const initialState: RouteRequestActionState = {
 
 export function RouteRequestForm({
   stops,
+  initialRequest,
 }: RouteRequestFormProps) {
   const formRef =
     useRef<HTMLFormElement>(null);
 
+  const isEditMode =
+    Boolean(initialRequest);
+
+  const action = isEditMode
+    ? updateRouteRequest
+    : createRouteRequest;
+
   const [state, formAction, isPending] =
     useActionState(
-      createRouteRequest,
+      action,
       initialState,
     );
 
   const [search, setSearch] =
     useState("");
 
-  const [selectedStops, setSelectedStops] =
-    useState<RouteStopOption[]>([]);
+  const [
+    selectedStops,
+    setSelectedStops,
+  ] = useState<RouteStopOption[]>(
+    initialRequest?.stops ?? [],
+  );
 
   const filteredStops = useMemo(() => {
     const keyword =
@@ -62,7 +86,7 @@ export function RouteRequestForm({
 
     return stops
       .filter((stop) => {
-        const text = [
+        const searchableText = [
           stop.name,
           stop.stopNumber ?? "",
           stop.districtName ?? "",
@@ -70,13 +94,16 @@ export function RouteRequestForm({
           .join(" ")
           .toLowerCase();
 
-        return text.includes(keyword);
+        return searchableText.includes(
+          keyword,
+        );
       })
       .filter(
         (stop) =>
           !selectedStops.some(
-            (selected) =>
-              selected.id === stop.id,
+            (selectedStop) =>
+              selectedStop.id ===
+              stop.id,
           ),
       )
       .slice(0, 10);
@@ -87,21 +114,39 @@ export function RouteRequestForm({
   ]);
 
   useEffect(() => {
-    if (state.status === "success") {
+    if (
+      state.status === "success" &&
+      !isEditMode
+    ) {
       formRef.current?.reset();
       setSelectedStops([]);
       setSearch("");
     }
-  }, [state]);
+  }, [
+    state.status,
+    isEditMode,
+  ]);
 
   function addStop(
     stop: RouteStopOption,
   ) {
     setSelectedStops(
-      (currentStops) => [
-        ...currentStops,
-        stop,
-      ],
+      (currentStops) => {
+        const alreadySelected =
+          currentStops.some(
+            (currentStop) =>
+              currentStop.id === stop.id,
+          );
+
+        if (alreadySelected) {
+          return currentStops;
+        }
+
+        return [
+          ...currentStops,
+          stop,
+        ];
+      },
     );
 
     setSearch("");
@@ -118,11 +163,11 @@ export function RouteRequestForm({
   }
 
   function moveStop(
-    index: number,
+    currentIndex: number,
     direction: -1 | 1,
   ) {
     const targetIndex =
-      index + direction;
+      currentIndex + direction;
 
     if (
       targetIndex < 0 ||
@@ -138,14 +183,14 @@ export function RouteRequestForm({
           ...currentStops,
         ];
 
-        const temporary =
-          nextStops[index];
+        const currentStop =
+          nextStops[currentIndex];
 
-        nextStops[index] =
+        nextStops[currentIndex] =
           nextStops[targetIndex];
 
         nextStops[targetIndex] =
-          temporary;
+          currentStop;
 
         return nextStops;
       },
@@ -155,8 +200,16 @@ export function RouteRequestForm({
   return (
     <Card>
       <SectionHeader
-        title="희망 노선 제안"
-        description="필요한 정류장을 이동 순서대로 선택해 주세요."
+        title={
+          isEditMode
+            ? "희망 노선 수정"
+            : "희망 노선 제안"
+        }
+        description={
+          isEditMode
+            ? "노선 정보와 정류장 순서를 변경할 수 있습니다."
+            : "필요한 정류장을 이동 순서대로 선택해 주세요."
+        }
       />
 
       <form
@@ -164,12 +217,23 @@ export function RouteRequestForm({
         action={formAction}
         className="mt-5 space-y-5"
       >
+        {initialRequest && (
+          <input
+            type="hidden"
+            name="routeRequestId"
+            value={initialRequest.id}
+          />
+        )}
+
         <Field label="노선 제목">
           <input
             name="title"
             required
             minLength={2}
             maxLength={100}
+            defaultValue={
+              initialRequest?.title
+            }
             placeholder="예: 병점역-동탄역 출근 급행"
             className={inputClassName}
           />
@@ -182,6 +246,9 @@ export function RouteRequestForm({
             minLength={5}
             maxLength={3000}
             rows={4}
+            defaultValue={
+              initialRequest?.description
+            }
             placeholder="필요한 시간대와 노선이 필요한 이유를 작성해 주세요."
             className={`${inputClassName} resize-none py-3`}
           />
@@ -189,18 +256,27 @@ export function RouteRequestForm({
 
         <div>
           <label
-            htmlFor="stop-search"
+            htmlFor={
+              isEditMode
+                ? "edit-stop-search"
+                : "create-stop-search"
+            }
             className="text-sm font-semibold text-main"
           >
             정류장 검색
           </label>
 
           <p className="mt-1 text-xs text-muted">
-            정류장을 최소 5개 선택해야 합니다.
+            정류장을 이동 순서대로 최소
+            5개 선택해야 합니다.
           </p>
 
           <input
-            id="stop-search"
+            id={
+              isEditMode
+                ? "edit-stop-search"
+                : "create-stop-search"
+            }
             value={search}
             onChange={(event) =>
               setSearch(
@@ -231,13 +307,9 @@ export function RouteRequestForm({
                       </strong>
 
                       <span className="mt-1 block text-xs text-muted">
-                        {[
-                          stop.stopNumber,
-                          stop.districtName,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") ||
-                          "상세 정보 없음"}
+                        {formatStopDetail(
+                          stop,
+                        )}
                       </span>
                     </button>
                   </li>
@@ -249,7 +321,8 @@ export function RouteRequestForm({
           {search.trim().length >= 2 &&
             filteredStops.length === 0 && (
               <p className="mt-2 text-xs text-muted">
-                선택할 수 있는 정류장이 없습니다.
+                선택할 수 있는 정류장이
+                없습니다.
               </p>
             )}
         </div>
@@ -260,95 +333,53 @@ export function RouteRequestForm({
               선택한 정류장
             </h3>
 
-            <span className="text-xs font-semibold text-brand-text">
+            <span
+              className={[
+                "text-xs font-semibold",
+                selectedStops.length >= 5
+                  ? "text-success"
+                  : "text-brand-text",
+              ].join(" ")}
+            >
               {selectedStops.length}개
             </span>
           </div>
 
           {selectedStops.length === 0 ? (
-            <div className="mt-2 rounded-control border border-dashed border-line p-5 text-center text-sm text-muted">
-              아직 선택한 정류장이 없습니다.
+            <div className="mt-2 rounded-control border border-dashed border-line p-5 text-center">
+              <p className="text-sm text-muted">
+                아직 선택한 정류장이
+                없습니다.
+              </p>
             </div>
           ) : (
             <ol className="mt-2 space-y-2">
               {selectedStops.map(
                 (stop, index) => (
-                  <li
+                  <SelectedStopItem
                     key={stop.id}
-                    className="flex items-center gap-3 rounded-control bg-surface-muted p-3"
-                  >
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-pill bg-brand text-xs font-bold text-on-brand">
-                      {index + 1}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <strong className="block truncate text-sm text-main">
-                        {stop.name}
-                      </strong>
-
-                      <span className="block truncate text-xs text-muted">
-                        {stop.stopNumber ??
-                          "정류장 번호 없음"}
-                      </span>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      <OrderButton
-                        label="위로 이동"
-                        disabled={
-                          index === 0
-                        }
-                        onClick={() =>
-                          moveStop(
-                            index,
-                            -1,
-                          )
-                        }
-                      >
-                        ↑
-                      </OrderButton>
-
-                      <OrderButton
-                        label="아래로 이동"
-                        disabled={
-                          index ===
-                          selectedStops.length -
-                            1
-                        }
-                        onClick={() =>
-                          moveStop(
-                            index,
-                            1,
-                          )
-                        }
-                      >
-                        ↓
-                      </OrderButton>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeStop(
-                            stop.id,
-                          )
-                        }
-                        aria-label={`${stop.name} 삭제`}
-                        className="flex size-9 items-center justify-center rounded-control text-sm font-bold text-danger active:bg-danger-soft"
-                      >
-                        ×
-                      </button>
-                    </div>
-
-                    <input
-                      type="hidden"
-                      name="stopIds"
-                      value={stop.id}
-                    />
-                  </li>
+                    stop={stop}
+                    index={index}
+                    totalCount={
+                      selectedStops.length
+                    }
+                    onMove={moveStop}
+                    onRemove={removeStop}
+                  />
                 ),
               )}
             </ol>
           )}
+
+          {selectedStops.length > 0 &&
+            selectedStops.length < 5 && (
+              <p className="mt-2 text-xs text-warning">
+                정류장을{" "}
+                {5 -
+                  selectedStops.length}
+                개 더 선택해 주세요.
+              </p>
+            )}
         </div>
 
         {state.message && (
@@ -374,11 +405,91 @@ export function RouteRequestForm({
           }
         >
           {isPending
-            ? "등록 중..."
-            : "희망 노선 등록"}
+            ? "저장 중..."
+            : isEditMode
+              ? "수정 내용 저장"
+              : "희망 노선 등록"}
         </Button>
       </form>
     </Card>
+  );
+}
+
+type SelectedStopItemProps = {
+  stop: RouteStopOption;
+  index: number;
+  totalCount: number;
+  onMove: (
+    index: number,
+    direction: -1 | 1,
+  ) => void;
+  onRemove: (stopId: number) => void;
+};
+
+function SelectedStopItem({
+  stop,
+  index,
+  totalCount,
+  onMove,
+  onRemove,
+}: SelectedStopItemProps) {
+  return (
+    <li className="flex items-center gap-3 rounded-control bg-surface-muted p-3">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-pill bg-brand text-xs font-bold text-on-brand">
+        {index + 1}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <strong className="block truncate text-sm text-main">
+          {stop.name}
+        </strong>
+
+        <span className="mt-1 block truncate text-xs text-muted">
+          {formatStopDetail(stop)}
+        </span>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        <OrderButton
+          label={`${stop.name} 위로 이동`}
+          disabled={index === 0}
+          onClick={() =>
+            onMove(index, -1)
+          }
+        >
+          ↑
+        </OrderButton>
+
+        <OrderButton
+          label={`${stop.name} 아래로 이동`}
+          disabled={
+            index === totalCount - 1
+          }
+          onClick={() =>
+            onMove(index, 1)
+          }
+        >
+          ↓
+        </OrderButton>
+
+        <button
+          type="button"
+          onClick={() =>
+            onRemove(stop.id)
+          }
+          aria-label={`${stop.name} 삭제`}
+          className="flex size-9 items-center justify-center rounded-control text-sm font-bold text-danger active:bg-danger-soft"
+        >
+          ×
+        </button>
+      </div>
+
+      <input
+        type="hidden"
+        name="stopIds"
+        value={stop.id}
+      />
+    </li>
   );
 }
 
@@ -386,7 +497,7 @@ type OrderButtonProps = {
   label: string;
   disabled: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function OrderButton({
@@ -399,18 +510,60 @@ function OrderButton({
     <button
       type="button"
       aria-label={label}
+      title={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex size-9 items-center justify-center rounded-control text-sm font-bold text-secondary active:bg-surface disabled:opacity-30"
+      className="flex size-9 items-center justify-center rounded-control text-sm font-bold text-secondary active:bg-surface disabled:cursor-not-allowed disabled:opacity-30"
     >
       {children}
     </button>
   );
 }
 
+type DeleteRouteRequestButtonProps = {
+  routeRequestId: string;
+};
+
+export function DeleteRouteRequestButton({
+  routeRequestId,
+}: DeleteRouteRequestButtonProps) {
+  function confirmDelete(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    const confirmed = window.confirm(
+      "이 희망 노선을 삭제할까요? 정류장과 투표 정보도 함께 삭제되며 복구할 수 없습니다.",
+    );
+
+    if (!confirmed) {
+      event.preventDefault();
+    }
+  }
+
+  return (
+    <form
+      action={deleteRouteRequest}
+      onSubmit={confirmDelete}
+    >
+      <input
+        type="hidden"
+        name="routeRequestId"
+        value={routeRequestId}
+      />
+
+      <Button
+        type="submit"
+        variant="danger"
+        fullWidth
+      >
+        희망 노선 삭제
+      </Button>
+    </form>
+  );
+}
+
 type FieldProps = {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function Field({
@@ -426,6 +579,17 @@ function Field({
       {children}
     </label>
   );
+}
+
+function formatStopDetail(
+  stop: RouteStopOption,
+) {
+  return [
+    stop.stopNumber,
+    stop.districtName,
+  ]
+    .filter(Boolean)
+    .join(" · ") || "상세 정보 없음";
 }
 
 const inputClassName = [

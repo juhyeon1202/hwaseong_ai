@@ -1,3 +1,9 @@
 {
-  "/page": "app/page.js"
+  "/(protected)/journal/page": "app/(protected)/journal/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/callback/route": "app/auth/callback/route.js",
+  "/auth/page": "app/auth/page.js",
+  "/page": "app/page.js",
+  "/report/page": "app/report/page.js",
+  "/route/page": "app/route/page.js"
 }
