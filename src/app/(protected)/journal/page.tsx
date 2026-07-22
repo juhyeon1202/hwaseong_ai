@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
 
 import { AppShell } from "@/components/app-shell";
+
 import {
   DeleteJournalButton,
   JournalForm,
   type JournalFormData,
+  type JournalInitialValues,
 } from "@/components/journal-form";
+
 import {
   Badge,
   Card,
   EmptyState,
   SectionHeader,
 } from "@/components/ui";
+
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,6 +54,15 @@ type Journal = {
     | null;
 };
 
+type JournalPageProps = {
+  searchParams: Promise<{
+    origin?: string;
+    destination?: string;
+    duration?: string;
+    mode?: string;
+  }>;
+};
+
 const categoryLabels = {
   commute: "출근",
   return: "귀가",
@@ -66,8 +79,20 @@ const modeLabels = {
   other: "기타",
 } as const;
 
-export default async function JournalPage() {
+const allowedModes = new Set([
+  "walk",
+  "bus",
+  "subway",
+  "taxi",
+  "drt",
+  "other",
+]);
+
+export default async function JournalPage({
+  searchParams,
+}: JournalPageProps) {
   const user = await requireUser();
+  const params = await searchParams;
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -98,6 +123,9 @@ export default async function JournalPage() {
   const journals =
     (data as Journal[] | null) ?? [];
 
+  const initialValues =
+    createInitialValues(params);
+
   return (
     <AppShell user={user}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)]">
@@ -110,7 +138,8 @@ export default async function JournalPage() {
           {error ? (
             <Card>
               <p className="text-sm text-danger">
-                교통일지를 불러오지 못했습니다.
+                교통일지를 불러오지
+                못했습니다.
               </p>
             </Card>
           ) : journals.length === 0 ? (
@@ -120,21 +149,88 @@ export default async function JournalPage() {
             />
           ) : (
             <ol className="space-y-3">
-              {journals.map((journal) => (
-                <JournalItem
-                  key={journal.id}
-                  journal={journal}
-                />
-              ))}
+              {journals.map(
+                (journal) => (
+                  <JournalItem
+                    key={journal.id}
+                    journal={journal}
+                  />
+                ),
+              )}
             </ol>
           )}
         </section>
 
         <section>
-          <JournalForm />
+          <JournalForm
+            initialValues={
+              initialValues
+            }
+          />
         </section>
       </div>
     </AppShell>
+  );
+}
+
+function createInitialValues(
+  params: Awaited<
+    JournalPageProps["searchParams"]
+  >,
+): JournalInitialValues | undefined {
+  const origin =
+    sanitizeText(params.origin, 100);
+
+  const destination =
+    sanitizeText(
+      params.destination,
+      100,
+    );
+
+  const duration =
+    Number(params.duration);
+
+  const mode =
+    params.mode &&
+    allowedModes.has(params.mode)
+      ? params.mode
+      : "other";
+
+  const hasRouteInformation =
+    Boolean(origin) ||
+    Boolean(destination) ||
+    Number.isFinite(duration);
+
+  if (!hasRouteInformation) {
+    return undefined;
+  }
+
+  return {
+    category: "other",
+    originLabel: origin,
+    destinationLabel: destination,
+    durationMinutes:
+      Number.isInteger(duration) &&
+      duration >= 1 &&
+      duration <= 1440
+        ? duration
+        : 1,
+    mode,
+    routeNumber: "",
+    sentiment: "satisfied",
+    reasonCodes: [],
+    memo: "",
+  };
+}
+
+function sanitizeText(
+  value: string | undefined,
+  maxLength: number,
+) {
+  return (
+    value
+      ?.trim()
+      .slice(0, maxLength) ?? ""
   );
 }
 
@@ -173,9 +269,11 @@ function JournalItem({
       <Card>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="brand">
-            {categoryLabels[
-              journal.category
-            ]}
+            {
+              categoryLabels[
+                journal.category
+              ]
+            }
           </Badge>
 
           {segment && (
@@ -227,13 +325,15 @@ function JournalItem({
           {journal.total_minutes !==
             null && (
             <span>
-              이동 {journal.total_minutes}분
+              이동{" "}
+              {journal.total_minutes}분
             </span>
           )}
 
           {segment?.route_number && (
             <span>
-              노선 {segment.route_number}
+              노선{" "}
+              {segment.route_number}
             </span>
           )}
         </div>
