@@ -18,12 +18,10 @@ type KakaoMapProps = {
     latitude: number;
     longitude: number;
   };
-
   markers?: MapMarkerData[];
   level?: number;
   height?: number | string;
   className?: string;
-
   onMarkerClick?: (
     marker: MapMarkerData,
   ) => void;
@@ -31,9 +29,12 @@ type KakaoMapProps = {
 
 type KakaoLatLng = object;
 type KakaoMapInstance = object;
+type KakaoMarkerInstance = object;
 
 type KakaoMapsApi = {
-  load: (callback: () => void) => void;
+  load: (
+    callback: () => void,
+  ) => void;
 
   LatLng: new (
     latitude: number,
@@ -52,7 +53,7 @@ type KakaoMapsApi = {
     map: KakaoMapInstance;
     position: KakaoLatLng;
     title?: string;
-  }) => object;
+  }) => KakaoMarkerInstance;
 
   event: {
     addListener: (
@@ -71,18 +72,29 @@ declare global {
   }
 }
 
-const SCRIPT_ID = "kakao-map-sdk";
+const SCRIPT_ID =
+  "kakao-map-sdk";
 
 let sdkPromise:
   | Promise<KakaoMapsApi>
   | null = null;
 
 function loadKakaoMapSdk() {
+  if (typeof window === "undefined") {
+    return Promise.reject(
+      new Error(
+        "지도는 브라우저에서만 표시할 수 있습니다.",
+      ),
+    );
+  }
+
   if (window.kakao?.maps) {
     return new Promise<KakaoMapsApi>(
       (resolve) => {
         window.kakao!.maps.load(() => {
-          resolve(window.kakao!.maps);
+          resolve(
+            window.kakao!.maps,
+          );
         });
       },
     );
@@ -108,7 +120,7 @@ function loadKakaoMapSdk() {
           return;
         }
 
-        function initialize() {
+        function initializeSdk() {
           if (!window.kakao?.maps) {
             reject(
               new Error(
@@ -118,25 +130,31 @@ function loadKakaoMapSdk() {
             return;
           }
 
-          window.kakao.maps.load(() => {
-            resolve(window.kakao!.maps);
-          });
+          window.kakao.maps.load(
+            () => {
+              resolve(
+                window.kakao!.maps,
+              );
+            },
+          );
         }
 
         const existingScript =
           document.getElementById(
             SCRIPT_ID,
-          ) as HTMLScriptElement | null;
+          ) as
+            | HTMLScriptElement
+            | null;
 
         if (existingScript) {
           if (window.kakao?.maps) {
-            initialize();
+            initializeSdk();
             return;
           }
 
           existingScript.addEventListener(
             "load",
-            initialize,
+            initializeSdk,
             {
               once: true,
             },
@@ -160,18 +178,24 @@ function loadKakaoMapSdk() {
         }
 
         const script =
-          document.createElement("script");
+          document.createElement(
+            "script",
+          );
 
         script.id = SCRIPT_ID;
         script.async = true;
-        script.src =
-          "https://dapi.kakao.com/v2/maps/sdk.js" +
-          `?appkey=${encodeURIComponent(javascriptKey)}` +
-          "&autoload=false";
+
+        script.src = [
+          "https://dapi.kakao.com/v2/maps/sdk.js",
+          `?appkey=${encodeURIComponent(
+            javascriptKey,
+          )}`,
+          "&autoload=false",
+        ].join("");
 
         script.addEventListener(
           "load",
-          initialize,
+          initializeSdk,
           {
             once: true,
           },
@@ -191,9 +215,14 @@ function loadKakaoMapSdk() {
           },
         );
 
-        document.head.appendChild(script);
+        document.head.appendChild(
+          script,
+        );
       },
-    );
+    ).catch((error) => {
+      sdkPromise = null;
+      throw error;
+    });
 
   return sdkPromise;
 }
@@ -209,15 +238,22 @@ export function KakaoMap({
   const containerRef =
     useRef<HTMLDivElement>(null);
 
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] =
-    useState(true);
+  const [error, setError] =
+    useState("");
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
     async function initializeMap() {
-      if (!containerRef.current) {
+      const container =
+        containerRef.current;
+
+      if (!container) {
         return;
       }
 
@@ -229,49 +265,69 @@ export function KakaoMap({
           await loadKakaoMapSdk();
 
         if (
-          !isMounted ||
+          !active ||
           !containerRef.current
         ) {
           return;
         }
 
-        const map = new maps.Map(
-          containerRef.current,
-          {
-            center: new maps.LatLng(
-              center.latitude,
-              center.longitude,
-            ),
-            level,
+        const map =
+          new maps.Map(
+            containerRef.current,
+            {
+              center:
+                new maps.LatLng(
+                  center.latitude,
+                  center.longitude,
+                ),
+              level,
+            },
+          );
+
+        markers.forEach(
+          (markerData) => {
+            if (
+              !Number.isFinite(
+                markerData.latitude,
+              ) ||
+              !Number.isFinite(
+                markerData.longitude,
+              )
+            ) {
+              return;
+            }
+
+            const marker =
+              new maps.Marker({
+                map,
+                position:
+                  new maps.LatLng(
+                    markerData.latitude,
+                    markerData.longitude,
+                  ),
+                title:
+                  markerData.title,
+              });
+
+            if (onMarkerClick) {
+              maps.event.addListener(
+                marker,
+                "click",
+                () => {
+                  onMarkerClick(
+                    markerData,
+                  );
+                },
+              );
+            }
           },
         );
 
-        markers.forEach((markerData) => {
-          const marker =
-            new maps.Marker({
-              map,
-              position:
-                new maps.LatLng(
-                  markerData.latitude,
-                  markerData.longitude,
-                ),
-              title: markerData.title,
-            });
-
-          if (onMarkerClick) {
-            maps.event.addListener(
-              marker,
-              "click",
-              () => {
-                onMarkerClick(markerData);
-              },
-            );
-          }
-        });
-
-        setIsLoading(false);
+        if (active) {
+          setIsLoading(false);
+        }
       } catch (error) {
-        if (!isMounted) {
+        if (!active) {
           return;
         }
 
@@ -288,10 +344,11 @@ export function KakaoMap({
     void initializeMap();
 
     return () => {
-      isMounted = false;
+      active = false;
 
       if (containerRef.current) {
-        containerRef.current.innerHTML = "";
+        containerRef.current.innerHTML =
+          "";
       }
     };
   }, [
@@ -304,29 +361,47 @@ export function KakaoMap({
 
   return (
     <div
-      className={`relative overflow-hidden bg-info-soft ${className}`}
-      style={{
-        height,
-      }}
+      className={[
+        "relative overflow-hidden bg-info-soft",
+        className,
+      ].join(" ")}
+      style={{ height }}
     >
       <div
         ref={containerRef}
         className="h-full w-full"
-        aria-label="카카오맵"
+        aria-label="카카오 지도"
       />
 
       {isLoading && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface-muted">
-          <p className="text-sm font-medium text-muted">
-            지도를 불러오는 중...
-          </p>
+          <div className="text-center">
+            <span
+              aria-hidden="true"
+              className="mx-auto block size-8 animate-spin rounded-full border-4 border-line border-t-info"
+            />
+
+            <p className="mt-3 text-sm font-medium text-muted">
+              지도를 불러오는 중...
+            </p>
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface-muted p-6">
+        <div
+          role="alert"
+          className="absolute inset-0 flex items-center justify-center bg-surface-muted p-6"
+        >
           <div className="max-w-sm text-center">
-            <p className="font-bold text-main">
+            <span
+              aria-hidden="true"
+              className="mx-auto flex size-12 items-center justify-center rounded-pill bg-danger-soft text-xl font-bold text-danger"
+            >
+              !
+            </span>
+
+            <p className="mt-4 font-bold text-main">
               지도를 표시하지 못했습니다
             </p>
 
@@ -335,7 +410,8 @@ export function KakaoMap({
             </p>
 
             <p className="mt-3 text-xs leading-5 text-muted">
-              카카오 JavaScript 키와 허용 도메인을
+              카카오 JavaScript 키와
+              JavaScript SDK 허용 도메인을
               확인해 주세요.
             </p>
           </div>

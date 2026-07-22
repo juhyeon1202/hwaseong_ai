@@ -3,12 +3,14 @@
 import {
   revalidatePath,
 } from "next/cache";
+
 import { redirect } from "next/navigation";
 
 import {
   requireAdmin,
   requireUser,
 } from "@/lib/auth";
+
 import { createClient } from "@/lib/supabase/server";
 
 export type RouteRequestActionState = {
@@ -44,17 +46,20 @@ export async function createRouteRequest(
     return parsed.state;
   }
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
-  const { error } = await supabase.rpc(
-    "create_route_request",
-    {
-      p_title: parsed.title,
-      p_description:
-        parsed.description,
-      p_stop_ids: parsed.stopIds,
-    },
-  );
+  const { error } =
+    await supabase.rpc(
+      "create_route_request",
+      {
+        p_title: parsed.title,
+        p_description:
+          parsed.description,
+        p_stop_ids:
+          parsed.stopIds,
+      },
+    );
 
   if (error) {
     return errorState(
@@ -63,7 +68,15 @@ export async function createRouteRequest(
     );
   }
 
-  revalidatePath("/route-requests");
+  revalidatePath(
+    "/route-requests",
+  );
+
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  revalidatePath("/admin");
 
   return successState(
     "희망 노선이 등록되었습니다.",
@@ -94,19 +107,22 @@ export async function updateRouteRequest(
     return parsed.state;
   }
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
-  const { error } = await supabase.rpc(
-    "update_route_request",
-    {
-      p_route_request_id:
-        routeRequestId,
-      p_title: parsed.title,
-      p_description:
-        parsed.description,
-      p_stop_ids: parsed.stopIds,
-    },
-  );
+  const { error } =
+    await supabase.rpc(
+      "update_route_request",
+      {
+        p_route_request_id:
+          routeRequestId,
+        p_title: parsed.title,
+        p_description:
+          parsed.description,
+        p_stop_ids:
+          parsed.stopIds,
+      },
+    );
 
   if (error) {
     return errorState(
@@ -115,10 +131,19 @@ export async function updateRouteRequest(
     );
   }
 
-  revalidatePath("/route-requests");
+  revalidatePath(
+    "/route-requests",
+  );
+
   revalidatePath(
     `/route-requests/${routeRequestId}`,
   );
+
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  revalidatePath("/admin");
 
   return successState(
     "희망 노선이 수정되었습니다.",
@@ -141,7 +166,8 @@ export async function deleteRouteRequest(
     );
   }
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   const { error } = await supabase
     .from("route_requests")
@@ -155,7 +181,16 @@ export async function deleteRouteRequest(
     );
   }
 
-  revalidatePath("/route-requests");
+  revalidatePath(
+    "/route-requests",
+  );
+
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  revalidatePath("/admin");
+
   redirect("/route-requests");
 }
 
@@ -175,12 +210,17 @@ export async function toggleRouteVote(
     );
   }
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
   const { data: existingVote } =
     await supabase
-      .from("route_request_votes")
-      .select("route_request_id")
+      .from(
+        "route_request_votes",
+      )
+      .select(
+        "route_request_id",
+      )
       .eq(
         "route_request_id",
         routeRequestId,
@@ -189,14 +229,17 @@ export async function toggleRouteVote(
       .maybeSingle();
 
   if (existingVote) {
-    const { error } = await supabase
-      .from("route_request_votes")
-      .delete()
-      .eq(
-        "route_request_id",
-        routeRequestId,
-      )
-      .eq("user_id", user.id);
+    const { error } =
+      await supabase
+        .from(
+          "route_request_votes",
+        )
+        .delete()
+        .eq(
+          "route_request_id",
+          routeRequestId,
+        )
+        .eq("user_id", user.id);
 
     if (error) {
       throw new Error(
@@ -204,13 +247,16 @@ export async function toggleRouteVote(
       );
     }
   } else {
-    const { error } = await supabase
-      .from("route_request_votes")
-      .insert({
-        route_request_id:
-          routeRequestId,
-        user_id: user.id,
-      });
+    const { error } =
+      await supabase
+        .from(
+          "route_request_votes",
+        )
+        .insert({
+          route_request_id:
+            routeRequestId,
+          user_id: user.id,
+        });
 
     if (error) {
       throw new Error(
@@ -219,10 +265,19 @@ export async function toggleRouteVote(
     }
   }
 
-  revalidatePath("/route-requests");
+  revalidatePath(
+    "/route-requests",
+  );
+
   revalidatePath(
     `/route-requests/${routeRequestId}`,
   );
+
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  revalidatePath("/admin");
 }
 
 export async function updateRouteRequestStatus(
@@ -236,7 +291,9 @@ export async function updateRouteRequestStatus(
       ?.toString();
 
   const status =
-    formData.get("status")?.toString();
+    formData
+      .get("status")
+      ?.toString();
 
   const allowedStatuses = [
     "open",
@@ -249,14 +306,30 @@ export async function updateRouteRequestStatus(
   if (
     !routeRequestId ||
     !status ||
-    !allowedStatuses.includes(status)
+    !allowedStatuses.includes(
+      status,
+    )
   ) {
     throw new Error(
       "올바른 상태 정보가 필요합니다.",
     );
   }
 
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
+
+  const { data: routeRequest } =
+    await supabase
+      .from("route_requests")
+      .select("id, status")
+      .eq("id", routeRequestId)
+      .maybeSingle();
+
+  if (!routeRequest) {
+    throw new Error(
+      "상태를 변경할 희망 노선을 찾지 못했습니다.",
+    );
+  }
 
   const { error } = await supabase
     .from("route_requests")
@@ -271,10 +344,19 @@ export async function updateRouteRequestStatus(
     );
   }
 
-  revalidatePath("/route-requests");
+  revalidatePath(
+    "/route-requests",
+  );
+
   revalidatePath(
     `/route-requests/${routeRequestId}`,
   );
+
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  revalidatePath("/admin");
 }
 
 function parseRouteRequest(
@@ -294,7 +376,9 @@ function parseRouteRequest(
 
   const stopIds = formData
     .getAll("stopIds")
-    .map((value) => Number(value))
+    .map((value) =>
+      Number(value),
+    )
     .filter(
       (value) =>
         Number.isInteger(value) &&
@@ -320,7 +404,7 @@ function parseRouteRequest(
     return {
       success: false,
       state: errorState(
-        "노선 설명은 5자 이상 입력해 주세요.",
+        "노선 설명은 5자 이상 3000자 이하로 입력해 주세요.",
       ),
     };
   }

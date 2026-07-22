@@ -7,7 +7,7 @@ const KAKAO_PLACE_API =
   "https://dapi.kakao.com/v2/local/search/keyword.json";
 
 const KAKAO_TRANSIT_API =
-  "https://dapi.kakao.com/v2/routing/publictransport";
+  "https://dapi.kakao.com/v2/routing/publictraffic";
 
 export const dynamic = "force-dynamic";
 
