@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { CurrentUser } from "@/lib/auth";
+import {
+  signOut,
+  type CurrentUser,
+} from "@/lib/auth";
 
 type AppShellProps = {
   children: ReactNode;
@@ -89,16 +92,36 @@ function AppHeader({
 
         <div className="flex items-center gap-2">
           {user ? (
-            <Link
-              href={
-                user.role === "admin"
-                  ? "/admin"
-                  : "/mypage"
-              }
-              className="flex min-h-10 items-center rounded-control bg-brand-soft px-3 text-sm font-semibold text-brand-text"
-            >
-              {user.nickname}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href={
+                  user.role === "admin"
+                    ? "/admin"
+                    : "/mypage"
+                }
+                className="flex min-h-10 items-center rounded-control bg-brand-soft px-3 text-sm font-semibold text-brand-text"
+              >
+                {user.nickname}
+              </Link>
+
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="hidden min-h-10 items-center rounded-control px-3 text-sm font-medium text-muted hover:bg-surface-muted hover:text-main sm:flex"
+                >
+                  로그아웃
+                </button>
+
+                <button
+                  type="submit"
+                  aria-label="로그아웃"
+                  title="로그아웃"
+                  className="flex size-10 items-center justify-center rounded-control text-muted active:bg-surface-muted sm:hidden"
+                >
+                  ↪
+                </button>
+              </form>
+            </div>
           ) : (
             <>
               <Link
