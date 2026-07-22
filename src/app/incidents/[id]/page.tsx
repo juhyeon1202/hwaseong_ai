@@ -20,7 +20,6 @@ type IncidentPageProps = {
 
 type Incident = {
   id: number;
-  stop_id: number;
   kind:
     | "full_pass"
     | "dispatch_delay"
@@ -32,16 +31,12 @@ type Incident = {
     | "medium"
     | "high";
   status:
-    | "detected"
-    | "reviewing"
     | "notified"
     | "resolved";
   citizen_guidance: string | null;
   ai_summary: string | null;
   window_started_at: string;
   window_ended_at: string;
-  created_at: string;
-
   transit_stops:
     | {
         name: string;
@@ -93,7 +88,6 @@ export default async function IncidentPage({
     .select(
       `
         id,
-        stop_id,
         kind,
         route_number,
         report_count,
@@ -103,7 +97,6 @@ export default async function IncidentPage({
         ai_summary,
         window_started_at,
         window_ended_at,
-        created_at,
         transit_stops (
           name,
           stop_number,
@@ -165,11 +158,12 @@ export default async function IncidentPage({
 
           <p className="mt-2 text-sm text-secondary">
             {reportLabels[incident.kind]}
+
             {incident.route_number
               ? ` · ${incident.route_number}번`
               : ""}
-            {" · "}
-            신고 {incident.report_count}건
+
+            {` · 신고 ${incident.report_count}건`}
           </p>
         </header>
 
