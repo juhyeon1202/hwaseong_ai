@@ -1,4 +1,17 @@
 {
-  "node": {},
+  "node": {
+    "003b2f519a291c3af4fb5f72f33f28524ad074922b": {
+      "workers": {
+        "app/page": {
+          "moduleId": "[project]/.next-internal/server/app/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/auth.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "src/lib/auth.ts"
+        }
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "src/lib/auth.ts"
+    }
+  },
   "edge": {}
 }

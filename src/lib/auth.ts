@@ -69,3 +69,20 @@ export async function requireAdmin() {
 
   return user;
 }
+
+export async function signOut() {
+  "use server";
+
+  const supabase = await createClient();
+
+  const { error } =
+    await supabase.auth.signOut();
+
+  if (error) {
+    throw new Error(
+      "로그아웃 처리에 실패했습니다.",
+    );
+  }
+
+  redirect("/");
+}

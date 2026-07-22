@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { AppShell } from "@/components/app-shell";
 import { requireAdmin } from "@/lib/auth";
 
 type AdminLayoutProps = {
@@ -9,7 +10,11 @@ type AdminLayoutProps = {
 export default async function AdminLayout({
   children,
 }: AdminLayoutProps) {
-  await requireAdmin();
+  const user = await requireAdmin();
 
-  return children;
+  return (
+    <AppShell user={user}>
+      {children}
+    </AppShell>
+  );
 }
