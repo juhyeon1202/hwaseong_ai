@@ -150,7 +150,8 @@ export default async function RouteRequestsPage() {
           {routeResult.error ? (
             <Card>
               <p className="text-sm text-danger">
-                희망 노선을 불러오지 못했습니다.
+                희망 노선을 불러오지
+                못했습니다.
               </p>
             </Card>
           ) : routes.length === 0 ? (
@@ -181,7 +182,15 @@ export default async function RouteRequestsPage() {
             stopResult.error ? (
               <Card>
                 <p className="text-sm text-danger">
-                  정류장 목록을 불러오지 못했습니다.
+                  정류장 목록을 불러오지
+                  못했습니다.
+                </p>
+              </Card>
+            ) : stops.length === 0 ? (
+              <Card>
+                <p className="text-sm text-muted">
+                  등록된 정류장이 없어 희망
+                  노선을 작성할 수 없습니다.
                 </p>
               </Card>
             ) : (
@@ -190,25 +199,7 @@ export default async function RouteRequestsPage() {
               />
             )
           ) : (
-            <Card>
-              <Badge>로그인 필요</Badge>
-
-              <h2 className="mt-4 text-lg font-bold text-main">
-                필요한 노선을 제안해 보세요
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-muted">
-                로그인하면 희망 노선을 등록하고 다른 시민의 제안에 투표할 수 있습니다.
-              </p>
-
-              <ButtonLink
-                href="/auth?mode=login"
-                fullWidth
-                className="mt-5"
-              >
-                로그인
-              </ButtonLink>
-            </Card>
+            <LoginRequiredCard />
           )}
         </aside>
       </div>
@@ -227,6 +218,9 @@ function RouteRequestItem({
   userLoggedIn,
   voted,
 }: RouteRequestItemProps) {
+  const votingAvailable =
+    route.status === "open";
+
   return (
     <li>
       <Card>
@@ -261,43 +255,81 @@ function RouteRequestItem({
           </strong>
         </div>
 
-        <div className="mt-5">
-          {userLoggedIn ? (
-            <form
-              action={toggleRouteVote}
-            >
-              <input
-                type="hidden"
-                name="routeRequestId"
-                value={route.id}
-              />
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <ButtonLink
+            href={`/route-requests/${route.id}`}
+            variant="secondary"
+            fullWidth
+          >
+            상세 보기
+          </ButtonLink>
 
-              <Button
-                type="submit"
-                variant={
-                  voted
-                    ? "secondary"
-                    : "primary"
-                }
+          {votingAvailable ? (
+            userLoggedIn ? (
+              <form
+                action={toggleRouteVote}
+              >
+                <input
+                  type="hidden"
+                  name="routeRequestId"
+                  value={route.id}
+                />
+
+                <Button
+                  type="submit"
+                  variant={
+                    voted
+                      ? "secondary"
+                      : "primary"
+                  }
+                  fullWidth
+                >
+                  {voted
+                    ? "투표 취소"
+                    : "이 노선에 투표"}
+                </Button>
+              </form>
+            ) : (
+              <ButtonLink
+                href="/auth?mode=login"
                 fullWidth
               >
-                {voted
-                  ? "투표 취소"
-                  : "이 노선에 투표"}
-              </Button>
-            </form>
+                로그인하고 투표
+              </ButtonLink>
+            )
           ) : (
-            <ButtonLink
-              href="/auth?mode=login"
-              variant="secondary"
-              fullWidth
-            >
-              로그인하고 투표
-            </ButtonLink>
+            <div className="flex min-h-11 items-center justify-center rounded-control bg-surface-muted px-4 text-sm font-semibold text-muted">
+              투표 종료
+            </div>
           )}
         </div>
       </Card>
     </li>
+  );
+}
+
+function LoginRequiredCard() {
+  return (
+    <Card>
+      <Badge>로그인 필요</Badge>
+
+      <h2 className="mt-4 text-lg font-bold text-main">
+        필요한 노선을 제안해 보세요
+      </h2>
+
+      <p className="mt-2 text-sm leading-6 text-muted">
+        로그인하면 희망 노선을 등록하고 다른
+        시민의 제안에 투표할 수 있습니다.
+      </p>
+
+      <ButtonLink
+        href="/auth?mode=login"
+        fullWidth
+        className="mt-5"
+      >
+        로그인
+      </ButtonLink>
+    </Card>
   );
 }
 
@@ -316,9 +348,7 @@ function StatusBadge({
     );
   }
 
-  if (
-    status === "reviewing"
-  ) {
+  if (status === "reviewing") {
     return (
       <Badge variant="warning">
         {statusLabels[status]}
