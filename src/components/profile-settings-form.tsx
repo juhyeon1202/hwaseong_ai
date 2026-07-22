@@ -62,11 +62,18 @@ export function ProfileSettingsForm({
   );
 
   useEffect(() => {
-    if (
-      state.status === "success"
-    ) {
-      setIsOpen(false);
+    if (state.status !== "success") {
+      return;
     }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        setIsOpen(false);
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [state.status]);
 
   return (

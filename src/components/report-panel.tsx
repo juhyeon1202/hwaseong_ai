@@ -334,11 +334,25 @@ export function ReportPanel() {
     ]);
 
   useEffect(() => {
-    void loadStops();
+    const timeoutId =
+      window.setTimeout(() => {
+        void loadStops();
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [loadStops]);
 
   useEffect(() => {
-    void loadSummary();
+    const timeoutId =
+      window.setTimeout(() => {
+        void loadSummary();
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [loadSummary]);
 
   useEffect(() => {

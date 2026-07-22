@@ -367,7 +367,7 @@ begin
       st_makepoint(p_lng, p_lat),
       4326
     )::geography,
-    50
+    500
   )
   into v_is_near
   from public.transit_stops s
@@ -378,7 +378,7 @@ begin
   end if;
 
   if v_is_near is not true then
-    raise exception '정류장 반경 50m 안에서만 신고할 수 있습니다.';
+    raise exception '정류장 반경 500m 안에서만 신고할 수 있습니다.';
   end if;
 
   insert into public.anonymous_reports (
@@ -1878,3 +1878,692 @@ commit;
     Vercel 서버 환경변수에 저장해야 합니다.
   - service_role 키는 절대로 브라우저 코드에 넣지 않습니다.
 */
+
+-- 지도에서 정류장 위치를 표시하기 위한 위도·경도 조회 View
+
+create or replace view public.transit_stop_map
+with (security_invoker = true)
+as
+select
+  id,
+  external_id,
+  name,
+  stop_number,
+  district_name,
+  extensions.st_y(
+    location::extensions.geometry
+  ) as latitude,
+  extensions.st_x(
+    location::extensions.geometry
+  ) as longitude
+from public.transit_stops;
+
+-- 비로그인 사용자와 로그인 사용자에게 정류장 조회 허용
+
+grant select
+on public.transit_stop_map
+to anon, authenticated;
+
+-- View 생성 결과 확인
+
+select *
+from public.transit_stop_map
+order by id;
+
+-- 최근 10분 신고가 임계치를 넘은 정류장을 사건으로 생성하는 함수
+
+create or replace function public.detect_report_incidents(
+  p_threshold integer default 5,
+  p_window_minutes integer default 10
+)
+returns table (
+  created_incident_id bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- 비정상적인 임계치 입력 방지
+  if p_threshold < 1 then
+    raise exception '신고 임계치는 1 이상이어야 합니다.';
+  end if;
+
+  if p_window_minutes < 1 then
+    raise exception '집계 시간은 1분 이상이어야 합니다.';
+  end if;
+
+  -- 관리자 또는 서버 service_role만 실행 가능
+  if auth.role() <> 'service_role'
+     and not public.is_admin() then
+    raise exception '관리자 권한이 필요합니다.';
+  end if;
+
+  return query
+
+  with report_groups as (
+    select
+      reports.stop_id,
+      reports.kind,
+      reports.route_number,
+      count(*)::integer as report_count,
+      min(reports.occurred_at) as first_report_at,
+      max(reports.occurred_at) as latest_report_at
+
+    from public.anonymous_reports as reports
+
+    where reports.occurred_at >=
+      now() - make_interval(
+        mins => p_window_minutes
+      )
+
+    group by
+      reports.stop_id,
+      reports.kind,
+      reports.route_number
+
+    having count(*) >= p_threshold
+  ),
+
+  inserted_incidents as (
+    insert into public.incidents (
+      stop_id,
+      kind,
+      route_number,
+      window_started_at,
+      window_ended_at,
+      report_count,
+      severity,
+      status,
+      ai_summary,
+      citizen_guidance,
+      admin_recommendation,
+      evidence,
+      model_name,
+      requires_review
+    )
+
+    select
+      report_groups.stop_id,
+      report_groups.kind,
+      report_groups.route_number,
+      report_groups.first_report_at,
+      report_groups.latest_report_at,
+      report_groups.report_count,
+
+      case
+        when report_groups.report_count
+          >= p_threshold * 3
+          then 'high'
+
+        when report_groups.report_count
+          >= p_threshold * 2
+          then 'medium'
+
+        else 'low'
+      end,
+
+      'detected',
+
+      case report_groups.kind
+        when 'full_pass'
+          then format(
+            '최근 %s분간 만차 통과 신고 %s건이 감지되었습니다.',
+            p_window_minutes,
+            report_groups.report_count
+          )
+
+        when 'dispatch_delay'
+          then format(
+            '최근 %s분간 배차 지연 신고 %s건이 감지되었습니다.',
+            p_window_minutes,
+            report_groups.report_count
+          )
+
+        when 'transfer_failure'
+          then format(
+            '최근 %s분간 환승 실패 신고 %s건이 감지되었습니다.',
+            p_window_minutes,
+            report_groups.report_count
+          )
+      end,
+
+      case report_groups.kind
+        when 'full_pass'
+          then '인근 정류장과 대체 노선을 확인해 주세요.'
+
+        when 'dispatch_delay'
+          then '실시간 도착정보와 다른 노선을 확인해 주세요.'
+
+        when 'transfer_failure'
+          then '대체 환승 정류장과 다음 연결편을 확인해 주세요.'
+      end,
+
+      case report_groups.kind
+        when 'full_pass'
+          then '현장 혼잡도 확인 후 예비 차량 또는 대체 수송 투입을 검토해 주세요.'
+
+        when 'dispatch_delay'
+          then '해당 노선 운행 상태와 배차 간격을 확인해 주세요.'
+
+        when 'transfer_failure'
+          then '노선 간 환승 시간과 배차 연계 개선을 검토해 주세요.'
+      end,
+
+      jsonb_build_object(
+        'windowMinutes',
+        p_window_minutes,
+        'threshold',
+        p_threshold,
+        'reportCount',
+        report_groups.report_count,
+        'firstReportAt',
+        report_groups.first_report_at,
+        'latestReportAt',
+        report_groups.latest_report_at,
+        'source',
+        'anonymous_reports'
+      ),
+
+      'rule-based-prototype',
+      true
+
+    from report_groups
+
+    where not exists (
+      select 1
+      from public.incidents as existing
+
+      where existing.stop_id =
+        report_groups.stop_id
+
+        and existing.kind =
+          report_groups.kind
+
+        and existing.route_number
+          is not distinct from
+          report_groups.route_number
+
+        and existing.status <> 'resolved'
+
+        and existing.created_at >=
+          now() - make_interval(
+            mins => p_window_minutes
+          )
+    )
+
+    returning id
+  )
+
+  select inserted_incidents.id
+  from inserted_incidents;
+end;
+$$;
+
+-- 관리자와 서버에서 사건 감지 함수 실행 허용
+
+grant execute
+on function public.detect_report_incidents(
+  integer,
+  integer
+)
+to authenticated, service_role;
+
+-- 시민은 시민용 알림만 조회하고 관리자는 모든 알림을 조회하도록 제한
+
+drop policy if exists
+  "alerts_public_read"
+on public.alerts;
+
+drop policy if exists
+  "alerts_citizen_public_read"
+on public.alerts;
+
+create policy "alerts_citizen_public_read"
+on public.alerts
+for select
+to anon, authenticated
+using (
+  audience = 'citizen'
+  or public.is_admin()
+);
+
+-- 시민에게 공개된 교통 사건만 조회하도록 제한
+drop policy if exists "incidents_public_read"
+on public.incidents;
+
+drop policy if exists "incidents_citizen_read"
+on public.incidents;
+
+create policy "incidents_citizen_read"
+on public.incidents
+for select
+to anon, authenticated
+using (
+  status in ('notified', 'resolved')
+  or public.is_admin()
+);
+
+
+-- 시민용 알림만 조회하도록 제한
+drop policy if exists "alerts_public_read"
+on public.alerts;
+
+drop policy if exists "alerts_citizen_read"
+on public.alerts;
+
+create policy "alerts_citizen_read"
+on public.alerts
+for select
+to anon, authenticated
+using (
+  audience = 'citizen'
+  or public.is_admin()
+);
+
+
+-- 희망 노선 내용과 정류장 순서를 함께 수정
+create or replace function public.update_route_request(
+  p_route_request_id uuid,
+  p_title text,
+  p_description text,
+  p_stop_ids bigint[]
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_author_id uuid;
+  v_status public.route_request_status;
+  v_stop_id bigint;
+  v_order integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  select author_id, status
+  into v_author_id, v_status
+  from public.route_requests
+  where id = p_route_request_id;
+
+  if v_author_id is null then
+    raise exception '존재하지 않는 희망 노선입니다.';
+  end if;
+
+  if v_author_id <> auth.uid()
+     and not public.is_admin() then
+    raise exception '수정 권한이 없습니다.';
+  end if;
+
+  if not public.is_admin()
+     and v_status not in ('draft', 'open') then
+    raise exception '검토가 시작된 노선은 수정할 수 없습니다.';
+  end if;
+
+  if char_length(trim(p_title)) < 2
+     or char_length(trim(p_title)) > 100 then
+    raise exception '제목은 2자 이상 100자 이하로 입력해 주세요.';
+  end if;
+
+  if char_length(trim(p_description)) < 5
+     or char_length(trim(p_description)) > 3000 then
+    raise exception '내용은 5자 이상 3000자 이하로 입력해 주세요.';
+  end if;
+
+  if coalesce(array_length(p_stop_ids, 1), 0) < 5 then
+    raise exception '정류장을 최소 5개 선택해 주세요.';
+  end if;
+
+  if (
+    select count(distinct value)
+    from unnest(p_stop_ids) as value
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '같은 정류장을 중복해서 선택할 수 없습니다.';
+  end if;
+
+  if (
+    select count(*)
+    from public.transit_stops
+    where id = any(p_stop_ids)
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '존재하지 않는 정류장이 포함되어 있습니다.';
+  end if;
+
+  update public.route_requests
+  set
+    title = trim(p_title),
+    description = trim(p_description)
+  where id = p_route_request_id;
+
+  delete from public.route_request_stops
+  where route_request_id = p_route_request_id;
+
+  foreach v_stop_id in array p_stop_ids loop
+    v_order := v_order + 1;
+
+    insert into public.route_request_stops (
+      route_request_id,
+      stop_id,
+      stop_order
+    )
+    values (
+      p_route_request_id,
+      v_stop_id,
+      v_order
+    );
+  end loop;
+end;
+$$;
+
+grant execute on function public.update_route_request(
+  uuid,
+  text,
+  text,
+  bigint[]
+) to authenticated;
+
+
+-- 공개 게시글 조회 수 증가
+create or replace function public.increment_post_view(
+  p_post_id uuid
+)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.posts
+  set view_count = view_count + 1
+  where id = p_post_id
+    and is_hidden = false;
+$$;
+
+grant execute on function public.increment_post_view(
+  uuid
+) to anon, authenticated;
+
+
+-- 포인트를 차감하고 룰렛 보상을 지급
+create or replace function public.draw_reward()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_ticket_cost integer := 300;
+  v_current_points integer;
+  v_probability_total numeric;
+  v_random_value numeric;
+  v_reward public.reward_catalog%rowtype;
+  v_draw_id uuid := gen_random_uuid();
+  v_reward_points integer := 0;
+  v_remaining_points integer;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  select points
+  into v_current_points
+  from public.profiles
+  where id = auth.uid()
+  for update;
+
+  if v_current_points is null then
+    raise exception '회원 프로필을 찾을 수 없습니다.';
+  end if;
+
+  if v_current_points < v_ticket_cost then
+    raise exception '룰렛 참여 포인트가 부족합니다.';
+  end if;
+
+  perform id
+  from public.reward_catalog
+  where is_active = true
+    and (
+      stock is null
+      or stock > 0
+    )
+  for update;
+
+  select sum(probability)
+  into v_probability_total
+  from public.reward_catalog
+  where is_active = true
+    and (
+      stock is null
+      or stock > 0
+    );
+
+  if coalesce(v_probability_total, 0) <= 0 then
+    raise exception '현재 받을 수 있는 보상이 없습니다.';
+  end if;
+
+  v_random_value :=
+    random() * v_probability_total;
+
+  select reward.*
+  into v_reward
+  from (
+    select
+      r.*,
+      sum(r.probability) over (
+        order by r.id
+      ) as cumulative_probability
+    from public.reward_catalog r
+    where r.is_active = true
+      and (
+        r.stock is null
+        or r.stock > 0
+      )
+  ) reward
+  where reward.cumulative_probability
+    >= v_random_value
+  order by reward.cumulative_probability
+  limit 1;
+
+  if v_reward.id is null then
+    raise exception '보상 추첨에 실패했습니다.';
+  end if;
+
+  if v_reward.reward_type = 'points' then
+    v_reward_points :=
+      v_reward.reward_value;
+  end if;
+
+  insert into public.point_ledger (
+    user_id,
+    amount,
+    reason,
+    reference_key
+  )
+  values (
+    auth.uid(),
+    -v_ticket_cost,
+    'reward_draw',
+    v_draw_id::text
+  );
+
+  if v_reward.stock is not null then
+    update public.reward_catalog
+    set stock = stock - 1
+    where id = v_reward.id;
+  end if;
+
+  insert into public.reward_draws (
+    id,
+    user_id,
+    reward_id,
+    ticket_cost,
+    reward_points
+  )
+  values (
+    v_draw_id,
+    auth.uid(),
+    v_reward.id,
+    v_ticket_cost,
+    v_reward_points
+  );
+
+  if v_reward_points > 0 then
+    insert into public.point_ledger (
+      user_id,
+      amount,
+      reason,
+      reference_key
+    )
+    values (
+      auth.uid(),
+      v_reward_points,
+      'reward',
+      v_draw_id::text
+    );
+  end if;
+
+  select points
+  into v_remaining_points
+  from public.profiles
+  where id = auth.uid();
+
+  return jsonb_build_object(
+    'drawId', v_draw_id,
+    'rewardId', v_reward.id,
+    'rewardName', v_reward.name,
+    'rewardDescription', v_reward.description,
+    'rewardType', v_reward.reward_type,
+    'rewardValue', v_reward.reward_value,
+    'rewardPoints', v_reward_points,
+    'ticketCost', v_ticket_cost,
+    'remainingPoints', v_remaining_points,
+    'isSimulated',
+      v_reward.reward_type <> 'points'
+  );
+end;
+$$;
+
+grant execute on function public.draw_reward()
+to authenticated;
+
+
+
+
+-- user01 테스트 포인트 지급
+insert into public.point_ledger (
+  user_id,
+  amount,
+  reason,
+  reference_key
+)
+select
+  id,
+  10000,
+  'admin_adjustment',
+  'roulette-test-001'
+from auth.users
+where email = 'wngus031202@naver.com';
+
+-- admin@test.com 계정을 관리자로 변경
+update public.profiles
+set role = 'admin'
+where id = (
+  select id
+  from auth.users
+  where email = 'admin@admin.com'
+);
+
+-- 관리자 계정 및 권한 확인
+select
+  u.id,
+  u.email,
+  p.role
+from auth.users as u
+join public.profiles as p
+  on p.id = u.id
+where u.email = 'admin@admin.com';
+
+
+-- 나래학교.더샵레이크 정류장 더미 데이터 추가
+insert into public.transit_stops (
+  external_id,
+  city_code,
+  name,
+  stop_number,
+  district_name,
+  location,
+  source
+)
+values (
+  'DEMO-36493',
+  '31240',
+  '나래학교.더샵레이크',
+  '36493',
+  '산척동',
+  st_setsrid(
+    st_makepoint(127.10667, 37.17618),
+    4326
+  )::geography,
+  'demo'
+)
+on conflict (external_id) do update
+set
+  name = excluded.name,
+  stop_number = excluded.stop_number,
+  district_name = excluded.district_name,
+  location = excluded.location,
+  source = excluded.source;
+
+
+
+-- 지정한 이메일 회원을 관리자로 변경
+update public.profiles
+set role = 'admin'
+where id = (
+  select id
+  from auth.users
+  where email = 'admin@admin.com'
+);
+
+-- 관리자 계정 확인
+select
+  p.id,
+  u.email,
+  p.nickname,
+  p.role,
+  p.created_at
+from public.profiles p
+join auth.users u
+  on u.id = p.id
+where p.role = 'admin';
+
+
+-- 일반 사용자가 자신의 role을 admin으로 변경하지 못하도록 차단
+create or replace function public.protect_profile_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if
+    new.role is distinct from old.role
+    and not public.is_admin()
+  then
+    raise exception '관리자만 회원 권한을 변경할 수 있습니다.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_protect_role
+on public.profiles;
+
+create trigger profiles_protect_role
+before update on public.profiles
+for each row
+execute function public.protect_profile_role();
+

@@ -119,13 +119,22 @@ export function RouteRequestForm({
 
   useEffect(() => {
     if (
-      state.status === "success" &&
-      !isEditMode
+      state.status !== "success" ||
+      isEditMode
     ) {
-      formRef.current?.reset();
-      setSelectedStops([]);
-      setSearch("");
+      return;
     }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        formRef.current?.reset();
+        setSelectedStops([]);
+        setSearch("");
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [
     state.status,
     isEditMode,

@@ -90,7 +90,7 @@ function AppHeader({
           className="flex min-w-0 items-center gap-3"
         >
           <Image
-            src="/images/hwaseong-logo.png"
+            src="/hwaseong-logo.jpg"
             alt="화성특례시"
             width={164}
             height={48}
@@ -421,7 +421,7 @@ function AppFooter() {
         <div>
           <div className="flex items-center gap-4">
             <Image
-              src="/images/hwaseong-logo.png"
+              src="/hwaseong-logo.jpg"
               alt="화성특례시"
               width={164}
               height={48}

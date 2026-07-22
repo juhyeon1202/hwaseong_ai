@@ -36,6 +36,9 @@ export async function drawReward(
   _previousState: RewardActionState,
   _formData: FormData,
 ): Promise<RewardActionState> {
+  void _previousState;
+  void _formData;
+
   await requireUser();
 
   const supabase = await createClient();

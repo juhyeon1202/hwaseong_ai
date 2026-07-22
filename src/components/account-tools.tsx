@@ -62,10 +62,19 @@ export function FavoriteForm({
     );
 
   useEffect(() => {
-    if (state.status === "success") {
-      formRef.current?.reset();
-      setFavoriteType("place");
+    if (state.status !== "success") {
+      return;
     }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        formRef.current?.reset();
+        setFavoriteType("place");
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [state.status]);
 
   return (
