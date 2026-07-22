@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  revalidatePath,
+} from "next/cache";
 
 import {
-  respondToInquiry,
-} from "@/app/(protected)/account-actions";
+  AdminWorkQueue,
+} from "@/components/admin-work-queue";
 
 import {
   Badge,
   Button,
   Card,
   EmptyState,
+  ProgressBar,
   SectionHeader,
 } from "@/components/ui";
 
@@ -17,514 +21,351 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "1:1 문의 관리",
+  title: "관리자 대시보드",
 };
 
-type InquiryStatus =
-  | "waiting"
-  | "in_progress"
-  | "completed";
+type ReportKind =
+  | "full_pass"
+  | "dispatch_delay"
+  | "transfer_failure";
 
-type Inquiry = {
-  id: string;
-  user_id: string;
-  title: string;
-  content: string;
-  status: InquiryStatus;
-  admin_response: string | null;
-  responded_at: string | null;
+type IncidentStatus =
+  | "detected"
+  | "reviewing"
+  | "notified"
+  | "resolved";
+
+type StopReportSummary = {
+  stop_id: number;
+  stop_name: string;
+  stop_number: string | null;
+  district_name: string | null;
+  kind: ReportKind;
+  route_number: string | null;
+  report_count: number;
+  latest_report_at: string;
+};
+
+type Incident = {
+  id: number;
+  kind: ReportKind;
+  route_number: string | null;
+  report_count: number;
+  severity:
+    | "low"
+    | "medium"
+    | "high";
+  status: IncidentStatus;
+  ai_summary: string | null;
+  admin_recommendation:
+    | string
+    | null;
+  requires_review: boolean;
   created_at: string;
-  updated_at: string;
+  transit_stops:
+    | {
+        name: string;
+        stop_number: string | null;
+        district_name: string | null;
+      }
+    | {
+        name: string;
+        stop_number: string | null;
+        district_name: string | null;
+      }[]
+    | null;
 };
 
-type Profile = {
-  id: string;
-  nickname: string;
-};
-
-type AdminInquiriesPageProps = {
-  searchParams: Promise<{
-    status?: string;
-  }>;
+const reportLabels: Record<
+  ReportKind,
+  string
+> = {
+  full_pass: "만차 통과",
+  dispatch_delay: "배차 지연",
+  transfer_failure: "환승 실패",
 };
 
 const statusLabels: Record<
-  InquiryStatus,
+  IncidentStatus,
   string
 > = {
-  waiting: "답변 대기",
-  in_progress: "확인 중",
-  completed: "답변 완료",
+  detected: "감지",
+  reviewing: "검토 중",
+  notified: "알림 완료",
+  resolved: "해결",
 };
 
-const allowedStatuses =
-  new Set<InquiryStatus>([
-    "waiting",
-    "in_progress",
-    "completed",
-  ]);
+async function runIncidentDetection() {
+  "use server";
 
-export default async function AdminInquiriesPage({
-  searchParams,
-}: AdminInquiriesPageProps) {
   await requireAdmin();
 
-  const params = await searchParams;
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
 
-  const selectedStatus =
-    params.status &&
-    allowedStatuses.has(
-      params.status as InquiryStatus,
-    )
-      ? (params.status as InquiryStatus)
-      : null;
+  const { error } =
+    await supabase.rpc(
+      "detect_report_incidents",
+      {
+        p_threshold: 5,
+        p_window_minutes: 10,
+      },
+    );
 
-  let inquiryQuery = supabase
-    .from("inquiries")
-    .select(
-      `
-        id,
-        user_id,
-        title,
-        content,
-        status,
-        admin_response,
-        responded_at,
-        created_at,
-        updated_at
-      `,
-    )
-    .order("created_at", {
-      ascending: false,
-    });
-
-  if (selectedStatus) {
-    inquiryQuery = inquiryQuery.eq(
-      "status",
-      selectedStatus,
+  if (error) {
+    throw new Error(
+      `사건 감지에 실패했습니다: ${error.message}`,
     );
   }
+
+  revalidatePath("/admin");
+  revalidatePath(
+    "/admin/incidents",
+  );
+}
+
+export default async function AdminPage() {
+  await requireAdmin();
+
+  const supabase =
+    await createClient();
+
+  const today = new Date();
+
+  today.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
 
   const [
-    inquiriesResult,
-    waitingResult,
-    progressResult,
-    completedResult,
+    todayReportsResult,
+    activeIncidentsResult,
+    reviewIncidentsResult,
+    stopSummaryResult,
+    incidentsResult,
   ] = await Promise.all([
-    inquiryQuery,
-
     supabase
-      .from("inquiries")
+      .from("anonymous_reports")
       .select("*", {
         count: "exact",
         head: true,
       })
-      .eq("status", "waiting"),
+      .gte(
+        "occurred_at",
+        today.toISOString(),
+      ),
 
     supabase
-      .from("inquiries")
+      .from("incidents")
       .select("*", {
         count: "exact",
         head: true,
       })
-      .eq("status", "in_progress"),
+      .neq(
+        "status",
+        "resolved",
+      ),
 
     supabase
-      .from("inquiries")
+      .from("incidents")
       .select("*", {
         count: "exact",
         head: true,
       })
-      .eq("status", "completed"),
+      .eq(
+        "requires_review",
+        true,
+      )
+      .in("status", [
+        "detected",
+        "reviewing",
+      ]),
+
+    supabase
+      .from("stop_report_10m")
+      .select(
+        `
+          stop_id,
+          stop_name,
+          stop_number,
+          district_name,
+          kind,
+          route_number,
+          report_count,
+          latest_report_at
+        `,
+      )
+      .order("report_count", {
+        ascending: false,
+      })
+      .limit(5),
+
+    supabase
+      .from("incidents")
+      .select(
+        `
+          id,
+          kind,
+          route_number,
+          report_count,
+          severity,
+          status,
+          ai_summary,
+          admin_recommendation,
+          requires_review,
+          created_at,
+          transit_stops (
+            name,
+            stop_number,
+            district_name
+          )
+        `,
+      )
+      .order("created_at", {
+        ascending: false,
+      })
+      .limit(5),
   ]);
 
-  const inquiries =
-    (inquiriesResult.data as
-      | Inquiry[]
-      | null) ?? [];
+  const todayReportCount =
+    todayReportsResult.count ?? 0;
 
-  const userIds = Array.from(
-    new Set(
-      inquiries.map(
-        (inquiry) => inquiry.user_id,
-      ),
-    ),
-  );
+  const activeIncidentCount =
+    activeIncidentsResult.count ?? 0;
 
-  let profiles: Profile[] = [];
+  const reviewIncidentCount =
+    reviewIncidentsResult.count ?? 0;
 
-  if (userIds.length > 0) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, nickname")
-      .in("id", userIds);
+  const stopSummaries =
+    (stopSummaryResult.data ??
+      []) as StopReportSummary[];
 
-    profiles =
-      (data as Profile[] | null) ?? [];
-  }
+  const incidents =
+    (incidentsResult.data ??
+      []) as Incident[];
 
-  const nicknameByUserId =
-    new Map(
-      profiles.map((profile) => [
-        profile.id,
-        profile.nickname,
-      ]),
-    );
-
-  const counts = {
-    all:
-      (waitingResult.count ?? 0) +
-      (progressResult.count ?? 0) +
-      (completedResult.count ?? 0),
-    waiting:
-      waitingResult.count ?? 0,
-    inProgress:
-      progressResult.count ?? 0,
-    completed:
-      completedResult.count ?? 0,
-  };
-
-  const hasError = Boolean(
-    inquiriesResult.error ||
-      waitingResult.error ||
-      progressResult.error ||
-      completedResult.error,
-  );
+  const hasQueryError = [
+    todayReportsResult.error,
+    activeIncidentsResult.error,
+    reviewIncidentsResult.error,
+    stopSummaryResult.error,
+    incidentsResult.error,
+  ].some(Boolean);
 
   return (
     <div className="space-y-8">
-      <header>
-        <Badge variant="info">
-          관리자
-        </Badge>
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <Badge variant="info">
+            관리자
+          </Badge>
 
-        <h1 className="mt-3 text-2xl font-bold text-main sm:text-3xl">
-          1:1 문의 관리
-        </h1>
+          <h1 className="mt-3 text-2xl font-bold text-main sm:text-3xl">
+            교통 현황 대시보드
+          </h1>
 
-        <p className="mt-2 text-sm leading-6 text-secondary">
-          시민이 등록한 문의를 확인하고 처리
-          상태와 답변을 관리합니다.
-        </p>
+          <p className="mt-2 text-sm leading-6 text-secondary">
+            시민 익명 신고와 AI 감지
+            사건, 관리자 처리 업무를
+            실시간으로 확인합니다.
+          </p>
+        </div>
+
+        <form
+          action={
+            runIncidentDetection
+          }
+        >
+          <Button
+            type="submit"
+            className="bg-info hover:opacity-90"
+          >
+            지금 사건 감지 실행
+          </Button>
+        </form>
       </header>
 
+      {hasQueryError && (
+        <div
+          role="alert"
+          className="rounded-card border border-danger bg-danger-soft p-4 text-sm text-danger"
+        >
+          일부 관리자 데이터를 불러오지
+          못했습니다. Supabase 테이블과
+          관리자 권한을 확인해 주세요.
+        </div>
+      )}
+
       <section
-        aria-label="문의 처리 현황"
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        aria-label="관리자 주요 통계"
+        className="grid gap-3 sm:grid-cols-3"
       >
-        <InquiryStatCard
-          label="전체 문의"
-          count={counts.all}
-          description="누적 등록 문의"
-          variant="info"
+        <StatCard
+          label="오늘 익명 신고"
+          value={todayReportCount}
+          unit="건"
+          description="오늘 00시 이후 접수"
+          variant="brand"
         />
 
-        <InquiryStatCard
-          label="답변 대기"
-          count={counts.waiting}
-          description="아직 확인하지 않은 문의"
+        <StatCard
+          label="현재 감지 사건"
+          value={activeIncidentCount}
+          unit="건"
+          description="해결되지 않은 사건"
           variant="danger"
         />
 
-        <InquiryStatCard
-          label="확인 중"
-          count={counts.inProgress}
-          description="관리자가 처리 중인 문의"
+        <StatCard
+          label="관리자 검토 대기"
+          value={reviewIncidentCount}
+          unit="건"
+          description="AI 생성 결과 검토 필요"
           variant="warning"
         />
-
-        <InquiryStatCard
-          label="답변 완료"
-          count={counts.completed}
-          description="답변이 완료된 문의"
-          variant="success"
-        />
       </section>
 
-      <section className="space-y-4">
-        <SectionHeader
-          title="문의 목록"
-          description={
-            selectedStatus
-              ? `${statusLabels[selectedStatus]} 문의만 표시합니다.`
-              : "모든 문의를 최신순으로 표시합니다."
-          }
+      <AdminWorkQueue />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.8fr)]">
+        <StopReportRanking
+          summaries={stopSummaries}
         />
 
-        <InquiryFilters
-          selectedStatus={
-            selectedStatus
-          }
-          counts={counts}
+        <IncidentList
+          incidents={incidents}
         />
-
-        {hasError ? (
-          <Card>
-            <p
-              role="alert"
-              className="text-sm text-danger"
-            >
-              문의 데이터를 불러오지
-              못했습니다. 관리자 권한과
-              Supabase 정책을 확인해 주세요.
-            </p>
-          </Card>
-        ) : inquiries.length === 0 ? (
-          <EmptyState
-            title="해당하는 문의가 없습니다"
-            description="선택한 상태에 등록된 문의가 없습니다."
-            action={
-              selectedStatus ? (
-                <Link
-                  href="/admin/inquiries"
-                  className="inline-flex min-h-11 items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-secondary"
-                >
-                  전체 문의 보기
-                </Link>
-              ) : undefined
-            }
-          />
-        ) : (
-          <ol className="space-y-4">
-            {inquiries.map(
-              (inquiry) => (
-                <InquiryItem
-                  key={inquiry.id}
-                  inquiry={inquiry}
-                  nickname={
-                    nicknameByUserId.get(
-                      inquiry.user_id,
-                    ) ?? "사용자"
-                  }
-                />
-              ),
-            )}
-          </ol>
-        )}
-      </section>
+      </div>
     </div>
   );
 }
 
-function InquiryFilters({
-  selectedStatus,
-  counts,
-}: {
-  selectedStatus: InquiryStatus | null;
-  counts: {
-    all: number;
-    waiting: number;
-    inProgress: number;
-    completed: number;
-  };
-}) {
-  const filters = [
-    {
-      href: "/admin/inquiries",
-      label: "전체",
-      count: counts.all,
-      active: selectedStatus === null,
-    },
-    {
-      href:
-        "/admin/inquiries?status=waiting",
-      label: "답변 대기",
-      count: counts.waiting,
-      active:
-        selectedStatus === "waiting",
-    },
-    {
-      href:
-        "/admin/inquiries?status=in_progress",
-      label: "확인 중",
-      count: counts.inProgress,
-      active:
-        selectedStatus ===
-        "in_progress",
-    },
-    {
-      href:
-        "/admin/inquiries?status=completed",
-      label: "답변 완료",
-      count: counts.completed,
-      active:
-        selectedStatus ===
-        "completed",
-    },
-  ];
-
-  return (
-    <nav
-      aria-label="문의 상태 필터"
-      className="flex gap-2 overflow-x-auto pb-1"
-    >
-      {filters.map((filter) => (
-        <Link
-          key={filter.href}
-          href={filter.href}
-          aria-current={
-            filter.active
-              ? "page"
-              : undefined
-          }
-          className={[
-            "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-pill border px-4 text-sm font-semibold transition-colors",
-            filter.active
-              ? "border-info bg-info text-white"
-              : "border-line bg-surface text-secondary hover:bg-info-soft",
-          ].join(" ")}
-        >
-          {filter.label}
-
-          <span
-            className={[
-              "rounded-pill px-2 py-0.5 text-xs",
-              filter.active
-                ? "bg-white/20 text-white"
-                : "bg-surface-muted text-muted",
-            ].join(" ")}
-          >
-            {filter.count}
-          </span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-function InquiryItem({
-  inquiry,
-  nickname,
-}: {
-  inquiry: Inquiry;
-  nickname: string;
-}) {
-  return (
-    <li>
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge
-            status={inquiry.status}
-          />
-
-          <span className="text-xs font-semibold text-secondary">
-            {nickname}
-          </span>
-
-          <span className="ml-auto text-xs text-muted">
-            {formatDateTime(
-              inquiry.created_at,
-            )}
-          </span>
-        </div>
-
-        <h2 className="mt-4 text-lg font-bold text-main">
-          {inquiry.title}
-        </h2>
-
-        <p className="mt-3 whitespace-pre-wrap rounded-control bg-surface-muted p-4 text-sm leading-6 text-secondary">
-          {inquiry.content}
-        </p>
-
-        <form
-          action={respondToInquiry}
-          className="mt-5 space-y-4 border-t border-line-light pt-5"
-        >
-          <input
-            type="hidden"
-            name="inquiryId"
-            value={inquiry.id}
-          />
-
-          <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-main">
-                처리 상태
-              </span>
-
-              <select
-                name="status"
-                defaultValue={
-                  inquiry.status
-                }
-                className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-main outline-none focus:border-info"
-              >
-                <option value="waiting">
-                  답변 대기
-                </option>
-
-                <option value="in_progress">
-                  확인 중
-                </option>
-
-                <option value="completed">
-                  답변 완료
-                </option>
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-semibold text-main">
-                관리자 답변
-              </span>
-
-              <textarea
-                name="response"
-                rows={5}
-                maxLength={3000}
-                defaultValue={
-                  inquiry.admin_response ??
-                  ""
-                }
-                placeholder="시민에게 전달할 답변을 입력해 주세요."
-                className="w-full resize-y rounded-control border border-line bg-surface px-3 py-3 text-sm leading-6 text-main outline-none placeholder:text-muted focus:border-info"
-              />
-            </label>
-          </div>
-
-          {inquiry.responded_at && (
-            <p className="text-xs text-muted">
-              최근 답변:{" "}
-              {formatDateTime(
-                inquiry.responded_at,
-              )}
-            </p>
-          )}
-
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              className="w-full bg-info hover:opacity-90 sm:w-auto"
-            >
-              처리 상태 및 답변 저장
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </li>
-  );
-}
-
-function InquiryStatCard({
-  label,
-  count,
-  description,
-  variant,
-}: {
+type StatCardProps = {
   label: string;
-  count: number;
+  value: number;
+  unit: string;
   description: string;
   variant:
-    | "info"
+    | "brand"
     | "danger"
-    | "warning"
-    | "success";
-}) {
-  const styles = {
-    info: {
-      card: "border-info/30 bg-info-soft",
-      value: "text-info",
+    | "warning";
+};
+
+function StatCard({
+  label,
+  value,
+  unit,
+  description,
+  variant,
+}: StatCardProps) {
+  const variants = {
+    brand: {
+      card:
+        "border-brand-line bg-brand-softer",
+      value:
+        "text-brand-text",
     },
     danger: {
       card:
@@ -536,27 +377,28 @@ function InquiryStatCard({
         "border-warning/30 bg-warning-soft",
       value: "text-warning",
     },
-    success: {
-      card:
-        "border-success/30 bg-success-soft",
-      value: "text-success",
-    },
   };
 
   return (
     <Card
-      className={styles[variant].card}
+      className={
+        variants[variant].card
+      }
     >
       <p className="text-sm font-medium text-secondary">
         {label}
       </p>
 
       <p
-        className={`mt-3 text-3xl font-bold ${styles[variant].value}`}
+        className={[
+          "mt-3 text-3xl font-bold",
+          variants[variant].value,
+        ].join(" ")}
       >
-        {count.toLocaleString()}
+        {value.toLocaleString()}
+
         <span className="ml-1 text-base">
-          건
+          {unit}
         </span>
       </p>
 
@@ -567,39 +409,270 @@ function InquiryStatCard({
   );
 }
 
-function StatusBadge({
-  status,
+function StopReportRanking({
+  summaries,
 }: {
-  status: InquiryStatus;
+  summaries: StopReportSummary[];
 }) {
-  if (status === "completed") {
+  const maximumCount = Math.max(
+    ...summaries.map(
+      (summary) =>
+        summary.report_count,
+    ),
+    1,
+  );
+
+  return (
+    <Card>
+      <SectionHeader
+        title="최근 10분 신고 집중 정류장"
+        description="정류장·불편 유형별 실시간 집계"
+        action={
+          <Badge variant="info">
+            실시간
+          </Badge>
+        }
+      />
+
+      {summaries.length === 0 ? (
+        <div className="mt-5">
+          <EmptyState
+            title="최근 신고가 없습니다"
+            description="최근 10분간 접수된 익명 신고가 없습니다."
+          />
+        </div>
+      ) : (
+        <ol className="mt-5 space-y-5">
+          {summaries.map(
+            (
+              summary,
+              index,
+            ) => {
+              const progress =
+                (summary.report_count /
+                  maximumCount) *
+                100;
+
+              return (
+                <li
+                  key={[
+                    summary.stop_id,
+                    summary.kind,
+                    summary.route_number,
+                  ].join("-")}
+                  className="grid grid-cols-[32px_1fr_48px] items-center gap-3"
+                >
+                  <span
+                    className={[
+                      "flex size-8 items-center justify-center rounded-pill text-xs font-bold",
+                      index === 0
+                        ? "bg-brand text-on-brand"
+                        : "bg-surface-muted text-secondary",
+                    ].join(" ")}
+                  >
+                    {index + 1}
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="mb-2">
+                      <p className="truncate text-sm font-semibold text-main">
+                        {
+                          summary.stop_name
+                        }
+                      </p>
+
+                      <p className="mt-1 truncate text-xs text-muted">
+                        {summary.stop_number ??
+                          "정류장 번호 없음"}
+                        {" · "}
+                        {
+                          reportLabels[
+                            summary.kind
+                          ]
+                        }
+                        {summary.route_number
+                          ? ` · ${summary.route_number}번`
+                          : ""}
+                      </p>
+                    </div>
+
+                    <ProgressBar
+                      value={progress}
+                      variant={
+                        summary.kind ===
+                        "full_pass"
+                          ? "danger"
+                          : "brand"
+                      }
+                    />
+                  </div>
+
+                  <strong className="text-right text-sm text-main">
+                    {
+                      summary.report_count
+                    }
+                    건
+                  </strong>
+                </li>
+              );
+            },
+          )}
+        </ol>
+      )}
+    </Card>
+  );
+}
+
+function IncidentList({
+  incidents,
+}: {
+  incidents: Incident[];
+}) {
+  return (
+    <Card>
+      <SectionHeader
+        title="최근 AI 감지 사건"
+        description="검토가 필요한 교통 상황"
+        action={
+          <Link
+            href="/admin/incidents"
+            className="text-xs font-semibold text-info"
+          >
+            전체 보기
+          </Link>
+        }
+      />
+
+      {incidents.length === 0 ? (
+        <div className="mt-5">
+          <EmptyState
+            title="감지된 사건이 없습니다"
+            description="신고 임계치를 넘으면 AI 사건이 생성됩니다."
+          />
+        </div>
+      ) : (
+        <ul className="mt-5 space-y-3">
+          {incidents.map(
+            (incident) => {
+              const stop =
+                Array.isArray(
+                  incident.transit_stops,
+                )
+                  ? incident
+                      .transit_stops[0]
+                  : incident.transit_stops;
+
+              return (
+                <li
+                  key={incident.id}
+                >
+                  <Link
+                    href={`/admin/incidents/${incident.id}`}
+                    className="block rounded-card border border-line p-4 transition-colors hover:bg-surface-muted"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-main">
+                          {stop?.name ??
+                            "정류장 정보 없음"}
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted">
+                          {
+                            reportLabels[
+                              incident.kind
+                            ]
+                          }
+
+                          {incident.route_number
+                            ? ` · ${incident.route_number}번`
+                            : ""}
+
+                          {" · "}
+
+                          {
+                            incident.report_count
+                          }
+                          건
+                        </p>
+                      </div>
+
+                      <IncidentBadge
+                        status={
+                          incident.status
+                        }
+                        requiresReview={
+                          incident.requires_review
+                        }
+                      />
+                    </div>
+
+                    <p className="mt-3 line-clamp-2 text-xs leading-5 text-secondary">
+                      {incident.ai_summary ??
+                        incident.admin_recommendation ??
+                        "AI 분석 결과를 기다리고 있습니다."}
+                    </p>
+
+                    <p className="mt-3 text-[11px] text-muted">
+                      {formatDateTime(
+                        incident.created_at,
+                      )}
+                    </p>
+                  </Link>
+                </li>
+              );
+            },
+          )}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function IncidentBadge({
+  status,
+  requiresReview,
+}: {
+  status: IncidentStatus;
+  requiresReview: boolean;
+}) {
+  if (requiresReview) {
     return (
-      <Badge variant="success">
-        {statusLabels[status]}
+      <Badge variant="warning">
+        검토 필요
       </Badge>
     );
   }
 
-  if (status === "in_progress") {
+  if (status === "resolved") {
     return (
-      <Badge variant="warning">
-        {statusLabels[status]}
+      <Badge variant="success">
+        해결
+      </Badge>
+    );
+  }
+
+  if (status === "notified") {
+    return (
+      <Badge variant="info">
+        알림 완료
       </Badge>
     );
   }
 
   return (
-    <Badge variant="danger">
+    <Badge variant="brand">
       {statusLabels[status]}
     </Badge>
   );
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(
+  value: string,
+) {
   return new Intl.DateTimeFormat(
     "ko-KR",
     {
-      year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
