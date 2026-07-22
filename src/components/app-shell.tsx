@@ -207,11 +207,19 @@ function HeaderAccount({
           />
 
           {user.role === "admin" && (
-            <MenuLink
-              href="/admin"
-              label="관리자 페이지"
-              variant="admin"
-            />
+            <>
+              <MenuLink
+                href="/admin"
+                label="관리자 대시보드"
+                variant="admin"
+              />
+
+              <MenuLink
+                href="/admin/inquiries"
+                label="관리자 문의 관리"
+                variant="admin"
+              />
+            </>
           )}
         </div>
 

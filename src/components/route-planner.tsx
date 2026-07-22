@@ -966,7 +966,7 @@ function getJournalMode(
     return "subway";
   }
 
-  return "mixed";
+  return "other";
 }
 
 function getRouteTypeLabel(

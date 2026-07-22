@@ -12,7 +12,9 @@ import {
   updateJournal,
   type JournalActionState,
 } from "@/app/(protected)/journal/actions";
+
 import {
+  Badge,
   Button,
   Card,
   SectionHeader,
@@ -31,8 +33,14 @@ export type JournalFormData = {
   memo: string;
 };
 
+export type JournalInitialValues =
+  Partial<
+    Omit<JournalFormData, "id">
+  >;
+
 type JournalFormProps = {
   journal?: JournalFormData;
+  initialValues?: JournalInitialValues;
   compact?: boolean;
 };
 
@@ -66,6 +74,7 @@ const reasons = [
 
 export function JournalForm({
   journal,
+  initialValues,
   compact = false,
 }: JournalFormProps) {
   const formRef =
@@ -74,6 +83,9 @@ export function JournalForm({
   const action = journal
     ? updateJournal
     : createJournal;
+
+  const values =
+    journal ?? initialValues;
 
   const [state, formAction, isPending] =
     useActionState(
@@ -104,12 +116,28 @@ export function JournalForm({
         />
       )}
 
+      {initialValues &&
+        !journal && (
+          <div className="rounded-control border border-info/30 bg-info-soft p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="info">
+                경로 정보 연결됨
+              </Badge>
+
+              <span className="text-xs text-secondary">
+                경로 찾기에서 선택한 정보가
+                자동으로 입력되었습니다.
+              </span>
+            </div>
+          </div>
+        )}
+
       <Field label="이동 목적">
         <select
           name="category"
           required
           defaultValue={
-            journal?.category ?? ""
+            values?.category ?? ""
           }
           className={inputClassName}
         >
@@ -142,7 +170,7 @@ export function JournalForm({
             required
             maxLength={100}
             defaultValue={
-              journal?.originLabel
+              values?.originLabel ?? ""
             }
             placeholder="예: 병점역"
             className={inputClassName}
@@ -155,7 +183,8 @@ export function JournalForm({
             required
             maxLength={100}
             defaultValue={
-              journal?.destinationLabel
+              values?.destinationLabel ??
+              ""
             }
             placeholder="예: 동탄역"
             className={inputClassName}
@@ -169,7 +198,7 @@ export function JournalForm({
             name="mode"
             required
             defaultValue={
-              journal?.mode ?? ""
+              values?.mode ?? ""
             }
             className={inputClassName}
           >
@@ -198,7 +227,7 @@ export function JournalForm({
             </option>
 
             <option value="other">
-              기타
+              복합 이동 또는 기타
             </option>
           </select>
         </Field>
@@ -212,7 +241,8 @@ export function JournalForm({
               min={1}
               max={1440}
               defaultValue={
-                journal?.durationMinutes
+                values?.durationMinutes ??
+                ""
               }
               placeholder="30"
               className={`${inputClassName} pr-12`}
@@ -233,7 +263,7 @@ export function JournalForm({
           name="routeNumber"
           maxLength={30}
           defaultValue={
-            journal?.routeNumber
+            values?.routeNumber ?? ""
           }
           placeholder="예: 1001번"
           className={inputClassName}
@@ -250,8 +280,9 @@ export function JournalForm({
             value="satisfied"
             label="만족했어요"
             defaultChecked={
-              journal?.sentiment ===
-              "satisfied"
+              values?.sentiment ===
+                "satisfied" ||
+              !values?.sentiment
             }
           />
 
@@ -259,7 +290,7 @@ export function JournalForm({
             value="dissatisfied"
             label="불편했어요"
             defaultChecked={
-              journal?.sentiment ===
+              values?.sentiment ===
               "dissatisfied"
             }
             danger
@@ -273,7 +304,8 @@ export function JournalForm({
         </legend>
 
         <p className="mt-1 text-xs text-muted">
-          해당하는 항목을 모두 선택할 수 있습니다.
+          해당하는 항목을 모두 선택할 수
+          있습니다.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -286,9 +318,11 @@ export function JournalForm({
                 type="checkbox"
                 name="reasonCodes"
                 value={reason.value}
-                defaultChecked={journal?.reasonCodes.includes(
-                  reason.value,
-                )}
+                defaultChecked={
+                  values?.reasonCodes?.includes(
+                    reason.value,
+                  ) ?? false
+                }
                 className="peer sr-only"
               />
 
@@ -305,7 +339,9 @@ export function JournalForm({
           name="memo"
           rows={4}
           maxLength={500}
-          defaultValue={journal?.memo}
+          defaultValue={
+            values?.memo ?? ""
+          }
           placeholder="이동 중 기억에 남는 점을 적어 주세요."
           className={`${inputClassName} resize-none py-3`}
         />

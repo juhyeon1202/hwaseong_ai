@@ -314,6 +314,7 @@ export async function respondToInquiry(
   }
 
   revalidatePath("/inquiries");
+  revalidatePath("/admin/inquiries");
 }
 
 function successState(
