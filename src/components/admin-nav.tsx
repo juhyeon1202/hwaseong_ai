@@ -17,6 +17,12 @@ const adminMenus = [
     icon: "incident",
   },
   {
+    href: "/admin/route-requests",
+    label: "희망 노선",
+    description: "시민 제안 검토",
+    icon: "route",
+  },
+  {
     href: "/admin/inquiries",
     label: "1:1 문의",
     description: "시민 문의 답변",
@@ -166,6 +172,37 @@ function AdminMenuIcon({
         <path d="M12 9v4" />
 
         <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+
+  if (icon === "route") {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle
+          cx="6"
+          cy="18"
+          r="2"
+        />
+
+        <circle
+          cx="18"
+          cy="6"
+          r="2"
+        />
+
+        <path d="M8 18h3a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3" />
+
+        <path d="m14 15 2 2-2 2" />
       </svg>
     );
   }
