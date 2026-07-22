@@ -15,6 +15,10 @@ import {
   SectionHeader,
 } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import {
+  KakaoMap,
+  type MapMarkerData,
+} from "@/components/kakao-map";
 
 type ReportKind =
   | "full_pass"
@@ -23,9 +27,12 @@ type ReportKind =
 
 type TransitStop = {
   id: number;
+  external_id: string;
   name: string;
   stop_number: string | null;
   district_name: string | null;
+  latitude: number;
+  longitude: number;
 };
 
 type ReportSummary = {
@@ -131,13 +138,88 @@ export function ReportPanel() {
       (stop) => stop.id === selectedStopId,
     ) ?? null;
 
+  const stopMarkers =
+    useMemo<MapMarkerData[]>(() => {
+      const markers: MapMarkerData[] =
+        stops.map((stop) => ({
+          id: stop.id,
+          latitude: stop.latitude,
+          longitude: stop.longitude,
+          title: stop.stop_number
+            ? `${stop.name} (${stop.stop_number})`
+            : stop.name,
+        }));
+
+      if (coordinates) {
+        markers.push({
+          id: "current-location",
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+          title: "현재 위치",
+        });
+      }
+
+      return markers;
+    }, [coordinates, stops]);
+
+  const mapCenter = useMemo(() => {
+    if (coordinates) {
+      return {
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+      };
+    }
+
+  if (selectedStop) {
+    return {
+      latitude: selectedStop.latitude,
+      longitude: selectedStop.longitude,
+    };
+  }
+
+  return {
+    latitude: 37.1995,
+    longitude: 127.0645,
+  };
+}, [coordinates, selectedStop]);
+
+const handleMarkerClick =
+  useCallback(
+    (marker: MapMarkerData) => {
+      if (
+        marker.id === "current-location"
+      ) {
+        return;
+      }
+
+      setSelectedStopId(
+        Number(marker.id),
+      );
+
+      setMessage(
+        `${marker.title} 정류장을 선택했습니다.`,
+      );
+
+      setIsError(false);
+    },
+    [],
+  );
+
   const loadStops = useCallback(async () => {
     setIsLoadingStops(true);
 
     const { data, error } = await supabase
-      .from("transit_stops")
+      .from("transit_stop_map")
       .select(
-        "id, name, stop_number, district_name",
+        `
+          id,
+          external_id,
+          name,
+          stop_number,
+          district_name,
+          latitude,
+          longitude
+        `,
       )
       .order("name")
       .limit(100);
@@ -374,6 +456,21 @@ export function ReportPanel() {
           description="현재 신고할 정류장을 선택하세요."
         />
 
+        <div className="mt-5 overflow-hidden rounded-card border border-line">
+          <KakaoMap
+            center={mapCenter}
+            markers={stopMarkers}
+            level={5}
+            height={300}
+            onMarkerClick={handleMarkerClick}
+          />
+        </div>
+
+        <p className="mt-3 text-xs leading-5 text-muted">
+          지도 마커를 누르거나 아래 목록에서 정류장을
+          선택할 수 있습니다.
+        </p>
+
         <div className="mt-5 space-y-4">
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-main">
@@ -459,7 +556,15 @@ export function ReportPanel() {
               <Badge variant="success">
                 위치 확인됨
               </Badge>
-            ) : null
+            ) : locationStatus === "loading" ? (
+              <Badge variant="info">
+                확인 중
+              </Badge>
+            ) : (
+              <Badge variant="warning">
+                위치 필요
+              </Badge>
+            )
           }
         />
 
