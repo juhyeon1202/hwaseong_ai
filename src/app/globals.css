@@ -1,26 +1,150 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 기본 배경 */
+  --app-background: #f4f5f7;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8f9fa;
+
+  /* 텍스트 */
+  --app-text: #191f28;
+  --app-text-secondary: #4e5968;
+  --app-text-muted: #8b95a1;
+  --app-text-on-brand: #ffffff;
+
+  /* 선 */
+  --app-border: #e5e8eb;
+  --app-border-light: #eef0f2;
+
+  /* 브랜드 */
+  --app-brand: #ec7211;
+  --app-brand-hover: #d9650e;
+  --app-brand-text: #c96a17;
+  --app-brand-soft: #fff2e8;
+  --app-brand-softer: #fff9f4;
+  --app-brand-border: #ffd9bd;
+
+  /* 상태 */
+  --app-danger: #e03131;
+  --app-danger-soft: #fff1f1;
+
+  --app-warning: #f59f00;
+  --app-warning-soft: #fff9db;
+
+  --app-success: #2f9e44;
+  --app-success-soft: #ebfbee;
+
+  --app-info: #2f6fed;
+  --app-info-soft: #edf3ff;
+
+  /* 외부 서비스 */
+  --app-kakao: #fee500;
+  --app-kakao-text: #191919;
+
+  /* 크기 */
+  --app-header-height: 64px;
+  --app-bottom-nav-height: 68px;
+  --app-content-width: 1152px;
+
+  /* 그림자 */
+  --app-shadow-card:
+    0 6px 20px rgba(0, 20, 60, 0.05);
+
+  --app-shadow-floating:
+    0 12px 30px rgba(0, 20, 60, 0.12);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* 색상 클래스 */
+  --color-page: var(--app-background);
+  --color-surface: var(--app-surface);
+  --color-surface-muted: var(--app-surface-muted);
+
+  --color-main: var(--app-text);
+  --color-secondary: var(--app-text-secondary);
+  --color-muted: var(--app-text-muted);
+  --color-on-brand: var(--app-text-on-brand);
+
+  --color-line: var(--app-border);
+  --color-line-light: var(--app-border-light);
+
+  --color-brand: var(--app-brand);
+  --color-brand-hover: var(--app-brand-hover);
+  --color-brand-text: var(--app-brand-text);
+  --color-brand-soft: var(--app-brand-soft);
+  --color-brand-softer: var(--app-brand-softer);
+  --color-brand-line: var(--app-brand-border);
+
+  --color-danger: var(--app-danger);
+  --color-danger-soft: var(--app-danger-soft);
+
+  --color-warning: var(--app-warning);
+  --color-warning-soft: var(--app-warning-soft);
+
+  --color-success: var(--app-success);
+  --color-success-soft: var(--app-success-soft);
+
+  --color-info: var(--app-info);
+  --color-info-soft: var(--app-info-soft);
+
+  --color-kakao: var(--app-kakao);
+  --color-kakao-text: var(--app-kakao-text);
+
+  /* 모서리 클래스 */
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-pill: 9999px;
+
+  /* 그림자 클래스 */
+  --shadow-card: var(--app-shadow-card);
+  --shadow-floating: var(--app-shadow-floating);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--app-background);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--app-background);
+  color: var(--app-text);
+  font-family:
+    Pretendard,
+    "Pretendard Variable",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--app-brand-soft);
+  color: var(--app-brand-text);
 }
