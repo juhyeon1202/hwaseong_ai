@@ -1,9 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import {
   FormEvent,
+  useMemo,
   useState,
 } from "react";
+
+import {
+  KakaoMap,
+  type MapMarkerData,
+} from "@/components/kakao-map";
 
 import {
   Badge,
@@ -62,6 +69,11 @@ export function RoutePlanner() {
   const [routes, setRoutes] =
     useState<TransitRoute[]>([]);
 
+  const [
+    selectedRouteId,
+    setSelectedRouteId,
+  ] = useState<number | null>(null);
+
   const [landingUrl, setLandingUrl] =
     useState<string | null>(null);
 
@@ -70,6 +82,101 @@ export function RoutePlanner() {
 
   const [errorMessage, setErrorMessage] =
     useState("");
+
+  const markers =
+    useMemo<MapMarkerData[]>(() => {
+      const nextMarkers: MapMarkerData[] =
+        [];
+
+      if (startPlace) {
+        nextMarkers.push({
+          id: `start-${startPlace.id}`,
+          title: `출발 · ${startPlace.name}`,
+          latitude:
+            startPlace.latitude,
+          longitude:
+            startPlace.longitude,
+        });
+      }
+
+      if (endPlace) {
+        nextMarkers.push({
+          id: `end-${endPlace.id}`,
+          title: `도착 · ${endPlace.name}`,
+          latitude: endPlace.latitude,
+          longitude:
+            endPlace.longitude,
+        });
+      }
+
+      return nextMarkers;
+    }, [startPlace, endPlace]);
+
+  const mapCenter = useMemo(() => {
+    if (startPlace && endPlace) {
+      return {
+        latitude:
+          (startPlace.latitude +
+            endPlace.latitude) /
+          2,
+        longitude:
+          (startPlace.longitude +
+            endPlace.longitude) /
+          2,
+      };
+    }
+
+    if (startPlace) {
+      return {
+        latitude: startPlace.latitude,
+        longitude:
+          startPlace.longitude,
+      };
+    }
+
+    if (endPlace) {
+      return {
+        latitude: endPlace.latitude,
+        longitude: endPlace.longitude,
+      };
+    }
+
+    return {
+      latitude: 37.1995,
+      longitude: 126.8312,
+    };
+  }, [startPlace, endPlace]);
+
+  const selectedRoute =
+    routes.find(
+      (route) =>
+        route.id === selectedRouteId,
+    ) ?? null;
+
+  function changeStartPlace(
+    place: Place,
+  ) {
+    setStartPlace(place);
+    resetResults();
+  }
+
+  function changeEndPlace(place: Place) {
+    setEndPlace(place);
+    resetResults();
+  }
+
+  function swapPlaces() {
+    setStartPlace(endPlace);
+    setEndPlace(startPlace);
+    resetResults();
+  }
+
+  function resetResults() {
+    setRoutes([]);
+    setLandingUrl(null);
+    setSelectedRouteId(null);
+    setErrorMessage("");
+  }
 
   async function findRoutes() {
     if (!startPlace || !endPlace) {
@@ -82,6 +189,7 @@ export function RoutePlanner() {
     setIsSearching(true);
     setErrorMessage("");
     setRoutes([]);
+    setSelectedRouteId(null);
 
     try {
       const params =
@@ -104,7 +212,9 @@ export function RoutePlanner() {
       );
 
       const result =
-        (await response.json()) as RouteResponse;
+        await readJsonResponse<RouteResponse>(
+          response,
+        );
 
       if (!response.ok) {
         throw new Error(
@@ -113,10 +223,17 @@ export function RoutePlanner() {
         );
       }
 
-      setRoutes(result.routes);
+      const nextRoutes =
+        result.routes ?? [];
+
+      setRoutes(nextRoutes);
       setLandingUrl(result.landingUrl);
 
-      if (result.routes.length === 0) {
+      if (nextRoutes.length > 0) {
+        setSelectedRouteId(
+          nextRoutes[0].id,
+        );
+      } else {
         setErrorMessage(
           getRouteStatusMessage(
             result.status,
@@ -136,61 +253,145 @@ export function RoutePlanner() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <SectionHeader
-          title="출발지와 도착지"
-          description="장소를 검색한 후 대중교통 경로를 확인하세요."
-        />
-
-        <div className="mt-5 space-y-4">
-          <PlaceSearch
-            label="출발지"
-            placeholder="예: 병점역"
-            selectedPlace={startPlace}
-            onSelect={setStartPlace}
-            allowCurrentLocation
+      <div className="grid gap-5 lg:grid-cols-[380px_minmax(0,1fr)]">
+        <Card className="h-fit">
+          <SectionHeader
+            title="출발지와 도착지"
+            description="장소를 검색하고 대중교통 경로를 확인하세요."
           />
 
-          <PlaceSearch
-            label="도착지"
-            placeholder="예: 동탄역"
-            selectedPlace={endPlace}
-            onSelect={setEndPlace}
-          />
+          <div className="mt-5 space-y-4">
+            <PlaceSearch
+              label="출발지"
+              placeholder="예: 병점역"
+              selectedPlace={startPlace}
+              onSelect={
+                changeStartPlace
+              }
+              allowCurrentLocation
+            />
 
-          {errorMessage && (
-            <p
-              role="alert"
-              className="rounded-control bg-danger-soft p-3 text-sm text-danger"
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={swapPlaces}
+                aria-label="출발지와 도착지 바꾸기"
+                className="inline-flex min-h-10 items-center gap-2 rounded-pill border border-line bg-surface px-4 text-xs font-semibold text-secondary hover:bg-surface-muted"
+              >
+                출발지·도착지 바꾸기
+              </button>
+            </div>
+
+            <PlaceSearch
+              label="도착지"
+              placeholder="예: 동탄역"
+              selectedPlace={endPlace}
+              onSelect={changeEndPlace}
+            />
+
+            {errorMessage && (
+              <p
+                role="alert"
+                className="rounded-control bg-danger-soft p-3 text-sm leading-6 text-danger"
+              >
+                {errorMessage}
+              </p>
+            )}
+
+            <Button
+              fullWidth
+              onClick={findRoutes}
+              disabled={
+                isSearching ||
+                !startPlace ||
+                !endPlace
+              }
+              className="bg-info hover:opacity-90"
             >
-              {errorMessage}
-            </p>
-          )}
+              {isSearching
+                ? "경로 검색 중..."
+                : "대중교통 경로 찾기"}
+            </Button>
+          </div>
+        </Card>
 
-          <Button
-            fullWidth
-            onClick={findRoutes}
-            disabled={
-              isSearching ||
-              !startPlace ||
-              !endPlace
+        <Card
+          padded={false}
+          className="overflow-hidden"
+        >
+          <div className="border-b border-line-light px-5 py-4">
+            <p className="font-bold text-main">
+              경로 지도
+            </p>
+
+            <p className="mt-1 text-xs text-muted">
+              검색한 출발지와 도착지가
+              지도에 표시됩니다.
+            </p>
+          </div>
+
+          <KakaoMap
+            center={mapCenter}
+            markers={markers}
+            level={
+              startPlace && endPlace
+                ? 8
+                : 9
             }
-          >
-            {isSearching
-              ? "경로 검색 중..."
-              : "대중교통 경로 찾기"}
-          </Button>
-        </div>
-      </Card>
+            height={430}
+          />
+
+          <div className="flex flex-wrap gap-4 border-t border-line-light px-5 py-3 text-xs text-muted">
+            <span>
+              <strong className="text-info">
+                출발
+              </strong>
+              {" "}
+              {startPlace?.name ??
+                "선택 전"}
+            </span>
+
+            <span>
+              <strong className="text-brand-text">
+                도착
+              </strong>
+              {" "}
+              {endPlace?.name ??
+                "선택 전"}
+            </span>
+          </div>
+        </Card>
+      </div>
+
+      {isSearching && (
+        <Card>
+          <div className="space-y-3">
+            <div className="h-5 w-32 animate-pulse rounded bg-line-light" />
+            <div className="h-24 animate-pulse rounded-control bg-surface-muted" />
+            <div className="h-24 animate-pulse rounded-control bg-surface-muted" />
+          </div>
+        </Card>
+      )}
+
+      {!isSearching &&
+        startPlace &&
+        endPlace &&
+        routes.length === 0 &&
+        !errorMessage && (
+          <EmptyState
+            title="경로를 검색해 주세요"
+            description="출발지와 도착지를 확인한 후 대중교통 경로 찾기 버튼을 눌러 주세요."
+          />
+        )}
 
       {routes.length > 0 && (
         <section className="space-y-4">
           <SectionHeader
-            title="추천 경로"
-            description={`${routes.length}개의 대중교통 경로를 찾았습니다.`}
+            title="추천 대중교통 경로"
+            description={`${routes.length}개의 경로를 찾았습니다. 이용할 경로를 선택해 주세요.`}
           />
 
-          <div className="space-y-3">
+          <div className="grid gap-4 lg:grid-cols-2">
             {routes.map(
               (route, index) => (
                 <RouteCard
@@ -199,17 +400,68 @@ export function RoutePlanner() {
                   recommended={
                     index === 0
                   }
+                  selected={
+                    selectedRouteId ===
+                    route.id
+                  }
+                  onSelect={() =>
+                    setSelectedRouteId(
+                      route.id,
+                    )
+                  }
                 />
               ),
             )}
           </div>
+
+          {selectedRoute &&
+            startPlace &&
+            endPlace && (
+              <Card className="border-info bg-info-soft">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <Badge variant="info">
+                      선택한 경로
+                    </Badge>
+
+                    <p className="mt-3 font-bold text-main">
+                      {startPlace.name}
+                      {" → "}
+                      {endPlace.name}
+                    </p>
+
+                    <p className="mt-1 text-sm text-secondary">
+                      예상 소요시간{" "}
+                      {formatMinutes(
+                        selectedRoute.totalTime,
+                      )}
+                      {" · "}
+                      환승{" "}
+                      {selectedRoute.transfers}
+                      회
+                    </p>
+                  </div>
+
+                  <Link
+                    href={createJournalUrl(
+                      startPlace,
+                      endPlace,
+                      selectedRoute,
+                    )}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-control bg-brand px-5 text-sm font-semibold text-on-brand hover:bg-brand-hover"
+                  >
+                    이 경로로 교통일지 작성
+                  </Link>
+                </div>
+              </Card>
+            )}
 
           {landingUrl && (
             <a
               href={landingUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-secondary"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-info hover:bg-info-soft"
             >
               카카오맵에서 자세히 보기
             </a>
@@ -276,10 +528,11 @@ function PlaceSearch({
         `/api/kakao?${params.toString()}`,
       );
 
-      const result = (await response.json()) as {
-        places?: Place[];
-        message?: string;
-      };
+      const result =
+        await readJsonResponse<{
+          places?: Place[];
+          message?: string;
+        }>(response);
 
       if (!response.ok) {
         throw new Error(
@@ -319,7 +572,7 @@ function PlaceSearch({
   function useCurrentLocation() {
     if (!navigator.geolocation) {
       setMessage(
-        "현재 위치를 사용할 수 없는 브라우저입니다.",
+        "현재 위치를 지원하지 않는 브라우저입니다.",
       );
       return;
     }
@@ -329,7 +582,7 @@ function PlaceSearch({
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const currentPlace: Place = {
+        selectPlace({
           id: "current-location",
           name: "현재 위치",
           address:
@@ -338,15 +591,15 @@ function PlaceSearch({
             position.coords.latitude,
           longitude:
             position.coords.longitude,
-        };
+        });
 
-        selectPlace(currentPlace);
         setIsLoading(false);
       },
       () => {
         setMessage(
-          "위치 권한을 허용해 주세요.",
+          "브라우저의 위치 권한을 허용해 주세요.",
         );
+
         setIsLoading(false);
       },
       {
@@ -367,7 +620,7 @@ function PlaceSearch({
           <button
             type="button"
             onClick={useCurrentLocation}
-            className="min-h-9 text-xs font-semibold text-brand-text"
+            className="min-h-9 text-xs font-semibold text-info"
           >
             현재 위치 사용
           </button>
@@ -384,7 +637,7 @@ function PlaceSearch({
             setQuery(event.target.value)
           }
           placeholder={placeholder}
-          className="min-h-11 min-w-0 flex-1 rounded-control border border-line bg-surface px-3 text-sm text-main outline-none focus:border-brand"
+          className="min-h-11 min-w-0 flex-1 rounded-control border border-line bg-surface px-3 text-sm text-main outline-none focus:border-info"
         />
 
         <Button
@@ -400,7 +653,7 @@ function PlaceSearch({
       </form>
 
       {selectedPlace && (
-        <div className="mt-2 rounded-control bg-brand-softer p-3">
+        <div className="mt-2 rounded-control bg-info-soft p-3">
           <p className="text-sm font-semibold text-main">
             {selectedPlace.name}
           </p>
@@ -412,13 +665,16 @@ function PlaceSearch({
       )}
 
       {message && (
-        <p className="mt-2 text-xs text-danger">
+        <p
+          role="alert"
+          className="mt-2 text-xs text-danger"
+        >
           {message}
         </p>
       )}
 
       {places.length > 0 && (
-        <ul className="mt-2 overflow-hidden rounded-control border border-line bg-surface">
+        <ul className="mt-2 max-h-64 overflow-y-auto rounded-control border border-line bg-surface">
           {places.map((place) => (
             <li
               key={place.id}
@@ -429,15 +685,14 @@ function PlaceSearch({
                 onClick={() =>
                   selectPlace(place)
                 }
-                className="min-h-14 w-full px-4 py-3 text-left active:bg-surface-muted"
+                className="min-h-14 w-full px-4 py-3 text-left hover:bg-info-soft"
               >
                 <strong className="block text-sm text-main">
                   {place.name}
                 </strong>
 
                 <span className="mt-1 block text-xs text-muted">
-                  {place.address ||
-                    "주소 정보 없음"}
+                  {place.address}
                 </span>
               </button>
             </li>
@@ -451,14 +706,25 @@ function PlaceSearch({
 type RouteCardProps = {
   route: TransitRoute;
   recommended: boolean;
+  selected: boolean;
+  onSelect: () => void;
 };
 
 function RouteCard({
   route,
   recommended,
+  selected,
+  onSelect,
 }: RouteCardProps) {
   return (
-    <Card>
+    <Card
+      className={[
+        "transition-colors",
+        selected
+          ? "border-info ring-2 ring-info/20"
+          : "",
+      ].join(" ")}
+    >
       <div className="flex flex-wrap items-center gap-2">
         {recommended && (
           <Badge variant="brand">
@@ -478,6 +744,10 @@ function RouteCard({
           )}
         </strong>
       </div>
+
+      <RouteSegmentBar
+        steps={route.steps}
+      />
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         <RouteInfo
@@ -502,51 +772,125 @@ function RouteCard({
         />
       </div>
 
-      <ol className="mt-5 space-y-3">
-        {route.steps.map(
-          (step, index) => (
-            <li
-              key={`${route.id}-${index}`}
-              className="flex gap-3"
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-pill bg-surface-muted text-xs font-bold text-secondary">
-                {index + 1}
-              </span>
+      <details className="mt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-secondary">
+          세부 이동 경로 보기
+        </summary>
 
-              <div className="min-w-0 pt-1">
-                <p className="text-sm font-semibold text-main">
-                  {step.vehicles.length >
-                  0
-                    ? step.vehicles.join(
-                        ", ",
-                      )
-                    : getStepTypeLabel(
-                        step.type,
-                      )}
-                </p>
+        <ol className="mt-4 space-y-3">
+          {route.steps.map(
+            (step, index) => (
+              <li
+                key={`${route.id}-${index}`}
+                className="flex gap-3"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-pill bg-surface-muted text-xs font-bold text-secondary">
+                  {index + 1}
+                </span>
 
-                <p className="mt-1 text-xs leading-5 text-muted">
-                  {step.guidance}
-                  {` · ${formatMinutes(step.time)}`}
-                </p>
-              </div>
-            </li>
-          ),
-        )}
-      </ol>
+                <div className="min-w-0 pt-1">
+                  <p className="text-sm font-semibold text-main">
+                    {step.vehicles
+                      .length > 0
+                      ? step.vehicles.join(
+                          ", ",
+                        )
+                      : getStepTypeLabel(
+                          step.type,
+                        )}
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    {step.guidance}
+                    {" · "}
+                    {formatMinutes(
+                      step.time,
+                    )}
+                    {" · "}
+                    {formatDistance(
+                      step.distance,
+                    )}
+                  </p>
+                </div>
+              </li>
+            ),
+          )}
+        </ol>
+      </details>
+
+      <Button
+        fullWidth
+        variant={
+          selected
+            ? "primary"
+            : "secondary"
+        }
+        onClick={onSelect}
+        className="mt-5"
+      >
+        {selected
+          ? "선택된 경로"
+          : "이 경로 선택"}
+      </Button>
     </Card>
   );
 }
 
-type RouteInfoProps = {
-  label: string;
-  value: string;
-};
+function RouteSegmentBar({
+  steps,
+}: {
+  steps: TransitStep[];
+}) {
+  const visibleSteps = steps.filter(
+    (step) => step.time > 0,
+  );
+
+  const totalTime =
+    visibleSteps.reduce(
+      (sum, step) =>
+        sum + step.time,
+      0,
+    ) || 1;
+
+  return (
+    <div
+      className="mt-4 flex h-2 overflow-hidden rounded-pill bg-line-light"
+      aria-hidden="true"
+    >
+      {visibleSteps.map(
+        (step, index) => (
+          <span
+            key={`${step.type}-${index}`}
+            className={
+              step.type === "BUS"
+                ? "bg-info"
+                : step.type ===
+                    "SUBWAY"
+                  ? "bg-success"
+                  : "bg-line"
+            }
+            style={{
+              width: `${Math.max(
+                4,
+                (step.time /
+                  totalTime) *
+                  100,
+              )}%`,
+            }}
+          />
+        ),
+      )}
+    </div>
+  );
+}
 
 function RouteInfo({
   label,
   value,
-}: RouteInfoProps) {
+}: {
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-control bg-surface-muted p-3">
       <p className="text-xs text-muted">
@@ -558,6 +902,71 @@ function RouteInfo({
       </p>
     </div>
   );
+}
+
+async function readJsonResponse<T>(
+  response: Response,
+): Promise<T> {
+  const text = await response.text();
+
+  if (!text) {
+    throw new Error(
+      "서버에서 빈 응답을 받았습니다.",
+    );
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    if (response.status === 404) {
+      throw new Error(
+        "경로 API 주소를 찾지 못했습니다. API 파일 위치를 확인해 주세요.",
+      );
+    }
+
+    throw new Error(
+      "서버가 올바른 JSON 응답을 반환하지 않았습니다.",
+    );
+  }
+}
+
+function createJournalUrl(
+  start: Place,
+  end: Place,
+  route: TransitRoute,
+) {
+  const params =
+    new URLSearchParams({
+      origin: start.name,
+      destination: end.name,
+      duration: String(
+        Math.max(
+          1,
+          Math.round(
+            route.totalTime / 60,
+          ),
+        ),
+      ),
+      mode: getJournalMode(
+        route.type,
+      ),
+    });
+
+  return `/journal?${params.toString()}`;
+}
+
+function getJournalMode(
+  type: TransitRoute["type"],
+) {
+  if (type === "BUS") {
+    return "bus";
+  }
+
+  if (type === "SUBWAY") {
+    return "subway";
+  }
+
+  return "mixed";
 }
 
 function getRouteTypeLabel(
@@ -599,7 +1008,7 @@ function formatMinutes(seconds: number) {
 
 function formatDistance(meters: number) {
   if (meters < 1000) {
-    return `${meters}m`;
+    return `${Math.round(meters)}m`;
   }
 
   return `${(meters / 1000).toFixed(1)}km`;
@@ -612,14 +1021,12 @@ function getRouteStatusMessage(
     return "출발지와 도착지가 같습니다.";
   }
 
-  if (
-    status === "STARTNODES_NULL"
-  ) {
-    return "출발지 주변에서 경로를 찾지 못했습니다.";
+  if (status === "STARTNODES_NULL") {
+    return "출발지 주변에서 대중교통 경로를 찾지 못했습니다.";
   }
 
   if (status === "ENDNODES_NULL") {
-    return "도착지 주변에서 경로를 찾지 못했습니다.";
+    return "도착지 주변에서 대중교통 경로를 찾지 못했습니다.";
   }
 
   return "이동 가능한 대중교통 경로를 찾지 못했습니다.";
