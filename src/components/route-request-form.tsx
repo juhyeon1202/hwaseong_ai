@@ -22,6 +22,10 @@ import {
   SectionHeader,
 } from "@/components/ui";
 
+import {
+  RouteStopMap,
+} from "@/components/route-stop-map";
+
 export type RouteStopOption = {
   id: number;
   name: string;
@@ -380,6 +384,15 @@ export function RouteRequestForm({
                 개 더 선택해 주세요.
               </p>
             )}
+          {selectedStops.length > 0 && (
+            <div className="mt-4">
+              <RouteStopMap
+                stopIds={selectedStops.map(
+                  (stop) => stop.id,
+                )}
+              />
+            </div>
+          )}
         </div>
 
         {state.message && (
