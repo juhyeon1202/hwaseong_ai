@@ -4,15 +4,17 @@ import { cookies } from "next/headers";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabasePublishableKey =
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error("Supabase 공개 환경변수가 설정되지 않았습니다.");
+  if (!url || !key) {
+    throw new Error(
+      "Supabase 환경변수가 설정되지 않았습니다.",
+    );
   }
 
-  return createServerClient(supabaseUrl, supabasePublishableKey, {
+  return createServerClient(url, key, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -20,11 +22,13 @@ export async function createClient() {
 
       setAll(cookiesToSet) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
+          cookiesToSet.forEach(
+            ({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            },
+          );
         } catch {
-          // Server Component에서는 쿠키 변경이 제한될 수 있음
+          // 세션 갱신은 src/proxy.ts에서도 처리합니다.
         }
       },
     },
