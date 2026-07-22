@@ -27,6 +27,9 @@ export async function checkAttendance(
   _previousState: AttendanceActionState,
   _formData: FormData,
 ): Promise<AttendanceActionState> {
+  void _previousState;
+  void _formData;
+
   await requireUser();
 
   const supabase = await createClient();

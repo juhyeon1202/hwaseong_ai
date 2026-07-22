@@ -249,6 +249,9 @@ export function KakaoMap({
   useEffect(() => {
     let active = true;
 
+    const cleanupContainer =
+      containerRef.current;
+
     async function initializeMap() {
       const container =
         containerRef.current;
@@ -346,9 +349,8 @@ export function KakaoMap({
     return () => {
       active = false;
 
-      if (containerRef.current) {
-        containerRef.current.innerHTML =
-          "";
+      if (cleanupContainer) {
+        cleanupContainer.innerHTML = "";
       }
     };
   }, [
