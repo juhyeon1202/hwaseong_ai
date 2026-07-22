@@ -11,6 +11,9 @@ import {
 } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import {
+  ProfileSettingsForm,
+} from "@/components/profile-settings-form";
 
 export const metadata: Metadata = {
   title: "마이페이지",
@@ -166,6 +169,15 @@ export default async function MyPage() {
         <ProfileHeader
           profile={profile}
           email={user.email}
+        />
+
+        <ProfileSettingsForm
+          currentNickname={
+            profile.nickname
+          }
+          currentHomeDistrict={
+            profile.home_district
+          }
         />
 
         <Card>
