@@ -9,10 +9,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 export type AccountActionState = {
-  status:
-    | "idle"
-    | "success"
-    | "error";
+  status: "idle" | "success" | "error";
   message: string;
 };
 
@@ -24,64 +21,41 @@ export async function createFavorite(
   const supabase = await createClient();
 
   const favoriteType =
-    formData
-      .get("favoriteType")
-      ?.toString();
+    formData.get("favoriteType")?.toString();
 
   const customLabel =
-    formData
-      .get("label")
-      ?.toString()
-      .trim() ?? "";
+    formData.get("label")?.toString().trim() ?? "";
 
   let label = customLabel;
   let stopId: number | null = null;
   let routeId: number | null = null;
-  let placePayload: Record<
-    string,
-    string
-  > = {};
+  let placePayload: Record<string, string> = {};
 
   if (favoriteType === "place") {
     const address =
-      formData
-        .get("address")
-        ?.toString()
-        .trim() ?? "";
+      formData.get("address")?.toString().trim() ?? "";
 
     if (label.length < 1) {
-      return errorState(
-        "장소 이름을 입력해 주세요.",
-      );
+      return errorState("장소 이름을 입력해 주세요.");
     }
 
     placePayload = {
       address,
     };
-  } else if (
-    favoriteType === "stop"
-  ) {
+  } else if (favoriteType === "stop") {
     stopId = Number(
-      formData
-        .get("stopId")
-        ?.toString(),
+      formData.get("stopId")?.toString(),
     );
 
-    if (
-      !Number.isInteger(stopId) ||
-      stopId < 1
-    ) {
-      return errorState(
-        "정류장을 선택해 주세요.",
-      );
+    if (!Number.isInteger(stopId) || stopId < 1) {
+      return errorState("정류장을 선택해 주세요.");
     }
 
-    const { data: stop } =
-      await supabase
-        .from("transit_stops")
-        .select("name")
-        .eq("id", stopId)
-        .single();
+    const { data: stop } = await supabase
+      .from("transit_stops")
+      .select("name")
+      .eq("id", stopId)
+      .single();
 
     if (!stop) {
       return errorState(
@@ -90,30 +64,20 @@ export async function createFavorite(
     }
 
     label = stop.name;
-  } else if (
-    favoriteType === "route"
-  ) {
+  } else if (favoriteType === "route") {
     routeId = Number(
-      formData
-        .get("routeId")
-        ?.toString(),
+      formData.get("routeId")?.toString(),
     );
 
-    if (
-      !Number.isInteger(routeId) ||
-      routeId < 1
-    ) {
-      return errorState(
-        "버스 노선을 선택해 주세요.",
-      );
+    if (!Number.isInteger(routeId) || routeId < 1) {
+      return errorState("버스 노선을 선택해 주세요.");
     }
 
-    const { data: route } =
-      await supabase
-        .from("bus_routes")
-        .select("route_number")
-        .eq("id", routeId)
-        .single();
+    const { data: route } = await supabase
+      .from("bus_routes")
+      .select("route_number")
+      .eq("id", routeId)
+      .single();
 
     if (!route) {
       return errorState(
@@ -132,13 +96,11 @@ export async function createFavorite(
     .from("favorites")
     .insert({
       user_id: user.id,
-      favorite_type:
-        favoriteType,
+      favorite_type: favoriteType,
       label,
       stop_id: stopId,
       route_id: routeId,
-      place_payload:
-        placePayload,
+      place_payload: placePayload,
     });
 
   if (error) {
@@ -160,9 +122,7 @@ export async function deleteFavorite(
   const user = await requireUser();
 
   const favoriteId =
-    formData
-      .get("favoriteId")
-      ?.toString();
+    formData.get("favoriteId")?.toString();
 
   if (!favoriteId) {
     throw new Error(
@@ -194,30 +154,18 @@ export async function createInquiry(
   const user = await requireUser();
 
   const title =
-    formData
-      .get("title")
-      ?.toString()
-      .trim() ?? "";
+    formData.get("title")?.toString().trim() ?? "";
 
   const content =
-    formData
-      .get("content")
-      ?.toString()
-      .trim() ?? "";
+    formData.get("content")?.toString().trim() ?? "";
 
-  if (
-    title.length < 2 ||
-    title.length > 100
-  ) {
+  if (title.length < 2 || title.length > 100) {
     return errorState(
       "문의 제목은 2자 이상 100자 이하로 입력해 주세요.",
     );
   }
 
-  if (
-    content.length < 5 ||
-    content.length > 3000
-  ) {
+  if (content.length < 5 || content.length > 3000) {
     return errorState(
       "문의 내용은 5자 이상 3000자 이하로 입력해 주세요.",
     );
@@ -248,24 +196,123 @@ export async function createInquiry(
   );
 }
 
+export async function updateInquiry(
+  formData: FormData,
+): Promise<AccountActionState> {
+  const user = await requireUser();
+
+  const inquiryId =
+    formData.get("inquiryId")?.toString();
+
+  const title =
+    formData.get("title")?.toString().trim() ?? "";
+
+  const content =
+    formData.get("content")?.toString().trim() ?? "";
+
+  if (!inquiryId) {
+    return errorState(
+      "수정할 문의 정보가 없습니다.",
+    );
+  }
+
+  if (title.length < 2 || title.length > 100) {
+    return errorState(
+      "문의 제목은 2자 이상 100자 이하로 입력해 주세요.",
+    );
+  }
+
+  if (content.length < 5 || content.length > 3000) {
+    return errorState(
+      "문의 내용은 5자 이상 3000자 이하로 입력해 주세요.",
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("inquiries")
+    .update({
+      title,
+      content,
+    })
+    .eq("id", inquiryId)
+    .eq("user_id", user.id)
+    .eq("status", "waiting")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return errorState(
+      "문의를 수정하지 못했습니다.",
+    );
+  }
+
+  if (!data) {
+    return errorState(
+      "답변 대기 상태인 본인 문의만 수정할 수 있습니다.",
+    );
+  }
+
+  return successState(
+    "문의 내용이 수정되었습니다.",
+  );
+}
+
+export async function deleteInquiry(
+  formData: FormData,
+): Promise<AccountActionState> {
+  const user = await requireUser();
+
+  const inquiryId =
+    formData.get("inquiryId")?.toString();
+
+  if (!inquiryId) {
+    return errorState(
+      "삭제할 문의 정보가 없습니다.",
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("inquiries")
+    .delete()
+    .eq("id", inquiryId)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return errorState(
+      "문의를 삭제하지 못했습니다.",
+    );
+  }
+
+  if (!data) {
+    return errorState(
+      "삭제할 문의를 찾지 못했거나 삭제 권한이 없습니다.",
+    );
+  }
+
+  return successState(
+    "문의가 삭제되었습니다.",
+  );
+}
+
 export async function respondToInquiry(
   formData: FormData,
 ) {
   const admin = await requireAdmin();
 
   const inquiryId =
-    formData
-      .get("inquiryId")
-      ?.toString();
+    formData.get("inquiryId")?.toString();
 
   const status =
     formData.get("status")?.toString();
 
   const response =
-    formData
-      .get("response")
-      ?.toString()
-      .trim() ?? "";
+    formData.get("response")?.toString().trim() ?? "";
 
   const validStatuses = [
     "waiting",
@@ -298,14 +345,11 @@ export async function respondToInquiry(
     .from("inquiries")
     .update({
       status,
-      admin_response:
-        response || null,
-      responded_by:
-        response ? admin.id : null,
-      responded_at:
-        response
-          ? new Date().toISOString()
-          : null,
+      admin_response: response || null,
+      responded_by: response ? admin.id : null,
+      responded_at: response
+        ? new Date().toISOString()
+        : null,
     })
     .eq("id", inquiryId);
 
@@ -314,7 +358,7 @@ export async function respondToInquiry(
       "문의 답변을 저장하지 못했습니다.",
     );
   }
-  
+
   revalidatePath("/inquiries");
   revalidatePath("/admin");
   revalidatePath("/admin/inquiries");

@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { toggleRouteVote } from "@/app/route-requests/actions";
+import {
+  RouteVoteButton,
+} from "@/components/route-vote-button";
+
 import {
   CommentForm,
-  DeleteCommentButton,
+  EditableCommentContent,
 } from "@/components/comment-panel";
 import {
-  DeletePostButton,
-  PostForm,
-  type PostEditData,
+  PostManageModal,
+} from "@/components/post-manage-modal";
+import type {
+  PostEditData,
 } from "@/components/post-form";
 import { ReportPostButton } from "@/components/report-post-button";
 import type { RouteStopOption } from "@/components/route-stop-types";
@@ -396,16 +400,21 @@ export default async function CommunityPostPage({
                 </Badge>
               )}
 
-              {canReport && (
-                <div className="ml-auto">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {canManagePost && (
+                  <PostManageModal
+                    post={editData}
+                    stops={editableStops}
+                  />
+                )}
+
+                {canReport && (
                   <ReportPostButton
                     postId={post.id}
-                    alreadyReported={
-                      alreadyReported
-                    }
+                    alreadyReported={alreadyReported}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <h1 className="mt-5 text-2xl font-bold text-main sm:text-3xl">
@@ -467,32 +476,10 @@ export default async function CommunityPostPage({
                 </div>
 
                 {user ? (
-                  <form
-                    action={
-                      toggleRouteVote
-                    }
-                  >
-                    <input
-                      type="hidden"
-                      name="routeRequestId"
-                      value={
-                        routeRequestId
-                      }
-                    />
-
-                    <Button
-                      type="submit"
-                      variant={
-                        voted
-                          ? "secondary"
-                          : "primary"
-                      }
-                    >
-                      {voted
-                        ? "투표 취소"
-                        : "이 노선에 투표"}
-                    </Button>
-                  </form>
+                  <RouteVoteButton
+                    routeRequestId={routeRequestId}
+                    voted={voted}
+                  />
                 ) : (
                   <ButtonLink href="/auth?mode=login">
                     로그인하고 투표
@@ -560,36 +547,6 @@ export default async function CommunityPostPage({
             )}
           </div>
         </Card>
-
-        {canManagePost && (
-          <details>
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-brand-text">
-              게시글 관리
-            </summary>
-
-            <div className="mt-4 space-y-4">
-              <PostForm
-                initialPost={editData}
-                stops={
-                  editableStops
-                }
-              />
-
-              <Card>
-                <SectionHeader
-                  title="게시글 삭제"
-                  description="게시글과 댓글이 모두 삭제되며 복구할 수 없습니다."
-                />
-
-                <div className="mt-5">
-                  <DeletePostButton
-                    postId={post.id}
-                  />
-                </div>
-              </Card>
-            </div>
-          </details>
-        )}
       </div>
   );
 }
@@ -627,18 +584,13 @@ function CommentItem({
         </span>
       </div>
 
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-secondary">
-        {comment.content}
-      </p>
-
-      {canDelete && (
-        <div className="mt-2 flex justify-end">
-          <DeleteCommentButton
-            commentId={comment.id}
-            postId={postId}
-          />
-        </div>
-      )}
+      <EditableCommentContent
+        commentId={comment.id}
+        postId={postId}
+        content={comment.content}
+        canEdit={canDelete}
+        canDelete={canDelete}
+      />
     </li>
   );
 }

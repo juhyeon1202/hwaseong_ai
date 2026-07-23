@@ -492,9 +492,9 @@ export default async function AdminIncidentsPage({
 
         <form
           method="get"
-          className="mt-5 grid gap-4 lg:grid-cols-[minmax(220px,1fr)_repeat(3,minmax(140px,0.45fr))_auto]"
+          className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-12"
         >
-          <div>
+          <div className="md:col-span-2 xl:col-span-4">
             <label
               htmlFor="incident-search"
               className="text-xs font-bold text-secondary"
@@ -506,107 +506,66 @@ export default async function AdminIncidentsPage({
               id="incident-search"
               type="search"
               name="q"
-              defaultValue={
-                keyword
-              }
+              defaultValue={keyword}
               placeholder="정류장명 또는 사건 번호"
               className="mt-2 min-h-11 w-full rounded-control border border-line bg-surface px-4 text-sm text-main outline-none transition-colors placeholder:text-muted focus:border-brand"
             />
           </div>
 
-          <FilterSelect
-            id="incident-status"
-            name="status"
-            label="처리 상태"
-            defaultValue={
-              status ??
-              ""
-            }
-          >
-            <option value="">
-              전체 상태
-            </option>
+          <div className="xl:col-span-2">
+            <FilterSelect
+              id="incident-status"
+              name="status"
+              label="처리 상태"
+              defaultValue={status ?? ""}
+            >
+              <option value="">전체 상태</option>
+              <option value="detected">감지됨</option>
+              <option value="reviewing">검토 중</option>
+              <option value="notified">시민 안내</option>
+              <option value="resolved">해결 완료</option>
+            </FilterSelect>
+          </div>
 
-            <option value="detected">
-              감지됨
-            </option>
+          <div className="xl:col-span-2">
+            <FilterSelect
+              id="incident-severity"
+              name="severity"
+              label="위험도"
+              defaultValue={severity ?? ""}
+            >
+              <option value="">전체 위험도</option>
+              <option value="high">긴급</option>
+              <option value="medium">주의</option>
+              <option value="low">일반</option>
+            </FilterSelect>
+          </div>
 
-            <option value="reviewing">
-              검토 중
-            </option>
+          <div className="xl:col-span-2">
+            <FilterSelect
+              id="incident-kind"
+              name="kind"
+              label="신고 유형"
+              defaultValue={kind ?? ""}
+            >
+              <option value="">전체 유형</option>
+              <option value="full_pass">만차 통과</option>
+              <option value="dispatch_delay">배차 지연</option>
+              <option value="transfer_failure">환승 실패</option>
+            </FilterSelect>
+          </div>
 
-            <option value="notified">
-              시민 안내
-            </option>
-
-            <option value="resolved">
-              해결 완료
-            </option>
-          </FilterSelect>
-
-          <FilterSelect
-            id="incident-severity"
-            name="severity"
-            label="위험도"
-            defaultValue={
-              severity ??
-              ""
-            }
-          >
-            <option value="">
-              전체 위험도
-            </option>
-
-            <option value="high">
-              긴급
-            </option>
-
-            <option value="medium">
-              주의
-            </option>
-
-            <option value="low">
-              일반
-            </option>
-          </FilterSelect>
-
-          <FilterSelect
-            id="incident-kind"
-            name="kind"
-            label="신고 유형"
-            defaultValue={
-              kind ??
-              ""
-            }
-          >
-            <option value="">
-              전체 유형
-            </option>
-
-            <option value="full_pass">
-              만차 통과
-            </option>
-
-            <option value="dispatch_delay">
-              배차 지연
-            </option>
-
-            <option value="transfer_failure">
-              환승 실패
-            </option>
-          </FilterSelect>
-
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2 md:col-span-2 xl:col-span-2">
             <button
               type="submit"
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-control bg-brand px-5 text-sm font-bold text-on-brand transition-colors hover:bg-brand-hover"
+              className="inline-flex min-h-11 flex-1 whitespace-nowrap items-center justify-center rounded-control bg-brand px-4 text-sm font-bold text-on-brand transition-colors hover:bg-brand-hover"
             >
               검색
             </button>
 
             <Link
               href="/admin/incidents"
-              className="inline-flex min-h-11 items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-secondary hover:bg-surface-muted"
+              className="inline-flex min-h-11 flex-1 whitespace-nowrap items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-secondary transition-colors hover:bg-surface-muted"
             >
               초기화
             </Link>

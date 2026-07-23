@@ -328,10 +328,7 @@ function PostCard({
 }: {
   item: CommunityPostItem;
 }) {
-  const href =
-    item.itemType === "route"
-      ? `/route-requests/${item.id}`
-      : `/community/${item.id}`;
+  const href = `/community/${item.id}`;
 
   return (
     <li>

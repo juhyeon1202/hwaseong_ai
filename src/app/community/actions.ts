@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import {
   requireAdmin,
@@ -154,14 +153,14 @@ export async function updatePost(
 
 export async function deletePost(
   formData: FormData,
-) {
+): Promise<PostActionState> {
   const user = await requireUser();
 
   const postId =
     formData.get("postId")?.toString();
 
   if (!postId) {
-    throw new Error(
+    return errorState(
       "삭제할 게시글 정보가 없습니다.",
     );
   }
@@ -180,22 +179,25 @@ export async function deletePost(
     );
   }
 
-  const { error } = await query;
+  const { data, error } = await query
+    .select("id")
+    .maybeSingle();
 
   if (error) {
-    throw new Error(
+    return errorState(
       "게시글을 삭제하지 못했습니다.",
     );
   }
 
-  revalidatePath("/community");
-  // route_suggestion 게시글이면 연결된 route_requests가
-  // on delete cascade로 함께 삭제되므로 같이 재검증합니다.
-  revalidatePath("/route-requests");
-  revalidatePath(
-    "/admin/route-requests",
+  if (!data) {
+    return errorState(
+      "게시글을 찾지 못했거나 삭제 권한이 없습니다.",
+    );
+  }
+
+  return successState(
+    "게시글이 삭제되었습니다.",
   );
-  redirect("/community");
 }
 
 export async function createComment(
@@ -257,21 +259,83 @@ export async function createComment(
   );
 }
 
-export async function deleteComment(
+export async function updateComment(
   formData: FormData,
-) {
+): Promise<CommentActionState> {
   const user = await requireUser();
 
   const commentId =
-    formData
-      .get("commentId")
-      ?.toString();
+    formData.get("commentId")?.toString();
+
+  const postId =
+    formData.get("postId")?.toString();
+
+  const content =
+    formData.get("content")?.toString().trim() ?? "";
+
+  if (!commentId || !postId) {
+    return errorState(
+      "수정할 댓글 정보가 없습니다.",
+    );
+  }
+
+  if (content.length < 1 || content.length > 1000) {
+    return errorState(
+      "댓글은 1자 이상 1000자 이하로 작성해 주세요.",
+    );
+  }
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("post_comments")
+    .update({
+      content,
+    })
+    .eq("id", commentId)
+    .eq("post_id", postId);
+
+  if (user.role !== "admin") {
+    query = query.eq(
+      "author_id",
+      user.id,
+    );
+  }
+
+  const { data, error } = await query
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return errorState(
+      "댓글을 수정하지 못했습니다.",
+    );
+  }
+
+  if (!data) {
+    return errorState(
+      "댓글을 찾지 못했거나 수정 권한이 없습니다.",
+    );
+  }
+
+  return successState(
+    "댓글이 수정되었습니다.",
+  );
+}
+
+export async function deleteComment(
+  formData: FormData,
+): Promise<CommentActionState> {
+  const user = await requireUser();
+
+  const commentId =
+    formData.get("commentId")?.toString();
 
   const postId =
     formData.get("postId")?.toString();
 
   if (!commentId || !postId) {
-    throw new Error(
+    return errorState(
       "삭제할 댓글 정보가 없습니다.",
     );
   }
@@ -281,7 +345,8 @@ export async function deleteComment(
   let query = supabase
     .from("post_comments")
     .delete()
-    .eq("id", commentId);
+    .eq("id", commentId)
+    .eq("post_id", postId);
 
   if (user.role !== "admin") {
     query = query.eq(
@@ -290,16 +355,24 @@ export async function deleteComment(
     );
   }
 
-  const { error } = await query;
+  const { data, error } = await query
+    .select("id")
+    .maybeSingle();
 
   if (error) {
-    throw new Error(
+    return errorState(
       "댓글을 삭제하지 못했습니다.",
     );
   }
 
-  revalidatePath(
-    `/community/${postId}`,
+  if (!data) {
+    return errorState(
+      "댓글을 찾지 못했거나 삭제 권한이 없습니다.",
+    );
+  }
+
+  return successState(
+    "댓글이 삭제되었습니다.",
   );
 }
 
@@ -619,13 +692,13 @@ function parseRouteSuggestionForm(
   }
 
   if (
-    stopIds.length <
+    stopIds.length !==
     minRouteSuggestionStops
   ) {
     return {
       success: false,
       state: errorState(
-        `정류장을 최소 ${minRouteSuggestionStops}개 선택해 주세요.`,
+        `정류장을 정확히 ${minRouteSuggestionStops}개 선택해 주세요.`,
       ),
     };
   }

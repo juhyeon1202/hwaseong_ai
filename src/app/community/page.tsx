@@ -34,6 +34,7 @@ type PostRow = {
 
 type RouteRow = {
   id: string;
+  post_id: string | null;
   author_id: string;
   title: string;
   description: string;
@@ -63,6 +64,7 @@ export default async function CommunityPage() {
     stopResult,
     commentResult,
   ] = await Promise.all([
+    // 일반 게시글 및 노선 제안 원문
     supabase
       .from("posts")
       .select(
@@ -86,13 +88,13 @@ export default async function CommunityPage() {
       })
       .limit(30),
 
+    // 노선 제안 투표 및 정류장 요약
     supabase
-      .from(
-        "route_request_summary",
-      )
+      .from("route_request_summary")
       .select(
         `
           id,
+          post_id,
           author_id,
           title,
           description,
@@ -211,23 +213,33 @@ export default async function CommunityPage() {
     }));
 
   const routeItems: CommunityPostItem[] =
-    routes.map((route) => ({
-      id: route.id,
-      itemType: "route",
-      category:
-        "route_suggestion",
-      title: route.title,
-      content: route.description,
-      authorNickname:
-        nicknameById.get(
-          route.author_id,
-        ) ?? "익명 시민",
-      createdAt: route.created_at,
-      viewCount: 0,
-      commentCount: 0,
-      voteCount: route.vote_count,
-      stopCount: route.stop_count,
-    }));
+    routes
+      .filter(
+        (
+          route,
+        ): route is RouteRow & {
+          post_id: string;
+        } =>
+          Boolean(route.post_id),
+      )
+      .map((route) => ({
+        id: route.post_id,
+        itemType: "route",
+        category: "route_suggestion",
+        title: route.title,
+        content: route.description,
+        authorNickname:
+          nicknameById.get(route.author_id) ??
+          "익명 시민",
+        createdAt: route.created_at,
+        viewCount: 0,
+        commentCount:
+          commentCountByPostId.get(
+            route.post_id,
+          ) ?? 0,
+        voteCount: route.vote_count,
+        stopCount: route.stop_count,
+      }));
 
   const items = [
     ...postItems,

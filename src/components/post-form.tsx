@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  type FormEvent,
   type ReactNode,
   useActionState,
   useEffect,
@@ -12,18 +11,20 @@ import {
 import {
   createPost,
   createRouteSuggestionPost,
-  deletePost,
   updatePost,
   updateRouteSuggestionPost,
   type PostActionState,
 } from "@/app/community/actions";
 import {
+  requiredRouteSuggestionStops,
+  RouteSuggestionFields,
+} from "@/components/route-suggestion-fields";
+import type { RouteStopOption } from "@/components/route-stop-types";
+import {
   Button,
   Card,
   SectionHeader,
 } from "@/components/ui";
-import type { RouteStopOption } from "@/components/route-stop-types";
-import { RouteSuggestionFields } from "@/components/route-suggestion-fields";
 
 export type PostEditData = {
   id: string;
@@ -37,6 +38,7 @@ export type PostEditData = {
 type PostFormProps = {
   initialPost?: PostEditData;
   stops?: RouteStopOption[];
+  onSuccess?: (message: string) => void;
 };
 
 const initialState: PostActionState = {
@@ -47,20 +49,25 @@ const initialState: PostActionState = {
 export function PostForm({
   initialPost,
   stops = [],
+  onSuccess,
 }: PostFormProps) {
-  const formRef =
-    useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const isEditMode =
-    Boolean(initialPost);
+  const isEditMode = Boolean(initialPost);
 
-  const [category, setCategory] =
-    useState(
-      initialPost?.category ?? "",
-    );
+  const [category, setCategory] = useState(
+    initialPost?.category ?? "",
+  );
+
+  const [selectedStopCount, setSelectedStopCount] = useState(
+    initialPost?.routeStops?.length ?? 0,
+  );
 
   const isRouteSuggestion =
     category === "route_suggestion";
+
+  const hasRequiredStops =
+    selectedStopCount === requiredRouteSuggestionStops;
 
   const action = isRouteSuggestion
     ? isEditMode
@@ -70,11 +77,10 @@ export function PostForm({
       ? updatePost
       : createPost;
 
-  const [state, formAction, isPending] =
-    useActionState(
-      action,
-      initialState,
-    );
+  const [state, formAction, isPending] = useActionState(
+    action,
+    initialState,
+  );
 
   useEffect(() => {
     if (
@@ -84,11 +90,11 @@ export function PostForm({
       return;
     }
 
-    const timeoutId =
-      window.setTimeout(() => {
-        formRef.current?.reset();
-        setCategory("");
-      }, 0);
+    const timeoutId = window.setTimeout(() => {
+      formRef.current?.reset();
+      setCategory("");
+      setSelectedStopCount(0);
+    }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -97,6 +103,48 @@ export function PostForm({
     state.status,
     isEditMode,
   ]);
+
+  useEffect(() => {
+    if (
+      state.status === "success" &&
+      isEditMode
+    ) {
+      onSuccess?.(state.message);
+    }
+  }, [
+    state.status,
+    state.message,
+    isEditMode,
+    onSuccess,
+  ]);
+
+  function handleCategoryChange(
+    nextCategory: string,
+  ) {
+    setCategory(nextCategory);
+
+    if (nextCategory !== "route_suggestion") {
+      setSelectedStopCount(0);
+      return;
+    }
+
+    setSelectedStopCount(
+      initialPost?.category === "route_suggestion"
+        ? initialPost.routeStops?.length ?? 0
+        : 0,
+    );
+  }
+
+  const submitDisabled =
+    isPending ||
+    (isRouteSuggestion && !hasRequiredStops);
+
+  const submitLabel = getSubmitLabel({
+    isPending,
+    isEditMode,
+    isRouteSuggestion,
+    hasRequiredStops,
+  });
 
   return (
     <Card>
@@ -108,8 +156,8 @@ export function PostForm({
         }
         description={
           isEditMode
-            ? "작성한 게시글 내용을 변경합니다."
-            : "교통 정보와 의견을 시민들과 공유해 보세요."
+            ? "작성한 게시글 내용을 확인한 후 수정해 주세요."
+            : "화성시 교통 정보와 의견을 시민들과 공유해 보세요."
         }
       />
 
@@ -132,7 +180,7 @@ export function PostForm({
             required
             value={category}
             onChange={(event) =>
-              setCategory(
+              handleCategoryChange(
                 event.target.value,
               )
             }
@@ -143,10 +191,6 @@ export function PostForm({
               disabled
             >
               분류 선택
-            </option>
-
-            <option value="route_request">
-              노선 요청
             </option>
 
             <option value="route_suggestion">
@@ -163,35 +207,46 @@ export function PostForm({
           </select>
         </Field>
 
-        <Field
-          label="버스 유형"
-          optional
-        >
-          <select
+        {/*
+          노선 제안 수정 시에는 버스 유형을 표시하지 않습니다.
+          서버 액션의 FormData 형식을 유지하기 위해 숨겨진 값만 전송합니다.
+        */}
+        {isRouteSuggestion && isEditMode ? (
+          <input
+            type="hidden"
             name="busType"
-            defaultValue={
-              initialPost?.busType ??
-              ""
-            }
-            className={inputClassName}
+            value=""
+          />
+        ) : (
+          <Field
+            label="버스 유형"
+            optional
           >
-            <option value="">
-              선택 안 함
-            </option>
+            <select
+              name="busType"
+              defaultValue={
+                initialPost?.busType ?? ""
+              }
+              className={inputClassName}
+            >
+              <option value="">
+                선택 안 함
+              </option>
 
-            <option value="city">
-              시내버스
-            </option>
+              <option value="city">
+                시내버스
+              </option>
 
-            <option value="village">
-              마을버스
-            </option>
+              <option value="village">
+                마을버스
+              </option>
 
-            <option value="other">
-              기타
-            </option>
-          </select>
-        </Field>
+              <option value="other">
+                기타
+              </option>
+            </select>
+          </Field>
+        )}
 
         <Field
           label={
@@ -205,13 +260,11 @@ export function PostForm({
             required
             minLength={2}
             maxLength={100}
-            defaultValue={
-              initialPost?.title
-            }
+            defaultValue={initialPost?.title}
             placeholder={
               isRouteSuggestion
                 ? "예: 병점역-동탄역 출근 급행"
-                : "게시글 제목"
+                : "게시글 제목을 입력해 주세요."
             }
             className={inputClassName}
           />
@@ -220,7 +273,7 @@ export function PostForm({
         <Field
           label={
             isRouteSuggestion
-              ? "제안 사유"
+              ? "제안 이유"
               : "내용"
           }
         >
@@ -230,9 +283,7 @@ export function PostForm({
             minLength={5}
             maxLength={5000}
             rows={7}
-            defaultValue={
-              initialPost?.content
-            }
+            defaultValue={initialPost?.content}
             placeholder={
               isRouteSuggestion
                 ? "필요한 시간대와 노선이 필요한 이유를 작성해 주세요."
@@ -246,7 +297,10 @@ export function PostForm({
           <RouteSuggestionFields
             stops={stops}
             initialStops={
-              initialPost?.routeStops
+              initialPost?.routeStops ?? []
+            }
+            onSelectedCountChange={
+              setSelectedStopCount
             }
           />
         )}
@@ -268,56 +322,48 @@ export function PostForm({
         <Button
           type="submit"
           fullWidth
-          disabled={isPending}
+          disabled={submitDisabled}
         >
-          {isPending
-            ? "저장 중..."
-            : isEditMode
-              ? "수정 내용 저장"
-              : "게시글 등록"}
+          {submitLabel}
         </Button>
       </form>
     </Card>
   );
 }
 
-export function DeletePostButton({
-  postId,
-}: {
-  postId: string;
-}) {
-  function confirmDelete(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    const confirmed = window.confirm(
-      "이 게시글을 삭제할까요? 작성된 댓글도 함께 삭제되며 복구할 수 없습니다.",
-    );
+type SubmitLabelOptions = {
+  isPending: boolean;
+  isEditMode: boolean;
+  isRouteSuggestion: boolean;
+  hasRequiredStops: boolean;
+};
 
-    if (!confirmed) {
-      event.preventDefault();
-    }
+function getSubmitLabel({
+  isPending,
+  isEditMode,
+  isRouteSuggestion,
+  hasRequiredStops,
+}: SubmitLabelOptions) {
+  if (isPending) {
+    return "저장 중...";
   }
 
-  return (
-    <form
-      action={deletePost}
-      onSubmit={confirmDelete}
-    >
-      <input
-        type="hidden"
-        name="postId"
-        value={postId}
-      />
+  if (
+    isRouteSuggestion &&
+    !hasRequiredStops
+  ) {
+    return `정류장 ${requiredRouteSuggestionStops}개를 선택해야 합니다`;
+  }
 
-      <Button
-        type="submit"
-        variant="danger"
-        fullWidth
-      >
-        게시글 삭제
-      </Button>
-    </form>
-  );
+  if (isEditMode) {
+    return "수정 내용 저장";
+  }
+
+  if (isRouteSuggestion) {
+    return "노선 제안 등록";
+  }
+
+  return "게시글 등록";
 }
 
 type FieldProps = {
