@@ -5,7 +5,6 @@ import {
   Badge,
   ButtonLink,
   Card,
-  EmptyState,
   SectionHeader,
 } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
@@ -13,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   ProfileSettingsForm,
 } from "@/components/profile-settings-form";
+import { PointHistory } from "@/components/point-history";
 
 export const metadata: Metadata = {
   title: "마이페이지",
@@ -39,17 +39,6 @@ type PointLedger = {
   amount: number;
   reason: string;
   created_at: string;
-};
-
-const pointReasonLabels: Record<
-  string,
-  string
-> = {
-  attendance: "출석 보상",
-  reward: "보상 지급",
-  reward_draw: "룰렛 참여",
-  admin_adjustment: "관리자 조정",
-  referral: "추천인 보상",
 };
 
 export default async function MyPage() {
@@ -398,78 +387,6 @@ function ActivitySummary({
   );
 }
 
-type PointHistoryProps = {
-  pointHistory: PointLedger[];
-  hasError: boolean;
-};
-
-function PointHistory({
-  pointHistory,
-  hasError,
-}: PointHistoryProps) {
-  return (
-    <Card>
-      <SectionHeader
-        title="포인트 내역"
-        description="최근 포인트 적립과 사용 기록"
-      />
-
-      {hasError ? (
-        <p className="mt-5 text-sm text-danger">
-          포인트 내역을 불러오지 못했습니다.
-        </p>
-      ) : pointHistory.length === 0 ? (
-        <div className="mt-5">
-          <EmptyState
-            title="포인트 내역이 없습니다"
-            description="출석 체크로 첫 포인트를 받아보세요."
-          />
-        </div>
-      ) : (
-        <ul className="mt-5 divide-y divide-line-light">
-          {pointHistory.map(
-            (history) => (
-              <li
-                key={history.id}
-                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-main">
-                    {pointReasonLabels[
-                      history.reason
-                    ] ??
-                      history.reason}
-                  </p>
-
-                  <p className="mt-1 text-xs text-muted">
-                    {formatDateTime(
-                      history.created_at,
-                    )}
-                  </p>
-                </div>
-
-                <strong
-                  className={
-                    history.amount > 0
-                      ? "text-success"
-                      : "text-danger"
-                  }
-                >
-                  {history.amount > 0
-                    ? "+"
-                    : ""}
-                  {history.amount.toLocaleString()}
-                  P
-                </strong>
-              </li>
-            ),
-          )}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
 function formatDateKey(
   date: Date,
 ) {
@@ -484,18 +401,6 @@ function formatDateKey(
   ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat(
-    "ko-KR",
-    {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  ).format(new Date(value));
 }
 
 function formatMemberDate(value: string) {
