@@ -7,8 +7,17 @@ import {
 } from "next/navigation";
 
 import {
+  AdminDrtReviewLoader,
+} from "@/components/admin-drt-review-loader";
+import {
   AdminIncidentAiPanel,
 } from "@/components/admin-incident-ai-panel";
+import {
+  AdminIncidentResolutionPanel,
+} from "@/components/admin-incident-resolution-panel";
+import {
+  AdminIncidentSourceReports,
+} from "@/components/admin-incident-source-reports";
 import {
   Badge,
   Card,
@@ -21,32 +30,28 @@ import {
   createClient,
 } from "@/lib/supabase/server";
 
-import {
-  AdminDrtReviewPanel,
-} from "@/components/admin-drt-review-panel";
-
-import {
-  AdminIncidentSourceReports,
-} from "@/components/admin-incident-source-reports";
-
-import {
-  AdminIncidentResolutionPanel,
-} from "@/components/admin-incident-resolution-panel";
-
 type IncidentPageProps = {
   params: Promise<{
     id: string;
   }>;
 };
 
+type IncidentStatus =
+  | "detected"
+  | "reviewing"
+  | "notified"
+  | "resolved";
+
+type ReportKind =
+  | "full_pass"
+  | "dispatch_delay"
+  | "transfer_failure";
+
 type Incident = {
   id: number;
   stop_id: number;
 
-  kind:
-    | "full_pass"
-    | "dispatch_delay"
-    | "transfer_failure";
+  kind: ReportKind;
 
   route_number:
     | string
@@ -60,10 +65,7 @@ type Incident = {
     | "high";
 
   status:
-    | "detected"
-    | "reviewing"
-    | "notified"
-    | "resolved";
+    IncidentStatus;
 
   ai_summary:
     | string
@@ -94,18 +96,22 @@ type Incident = {
   transit_stops:
     | {
         name: string;
+
         stop_number:
           | string
           | null;
+
         district_name:
           | string
           | null;
       }
     | {
         name: string;
+
         stop_number:
           | string
           | null;
+
         district_name:
           | string
           | null;
@@ -113,25 +119,36 @@ type Incident = {
     | null;
 };
 
-const reportLabels = {
+const reportLabels: Record<
+  ReportKind,
+  string
+> = {
   full_pass:
     "만차 통과",
+
   dispatch_delay:
     "배차 지연",
+
   transfer_failure:
     "환승 실패",
-} as const;
+};
 
-const statusLabels = {
+const statusLabels: Record<
+  IncidentStatus,
+  string
+> = {
   detected:
     "감지됨",
+
   reviewing:
     "검토 중",
+
   notified:
     "시민 안내",
+
   resolved:
     "해결 완료",
-} as const;
+};
 
 export async function generateMetadata({
   params,
@@ -199,7 +216,10 @@ export default async function AdminIncidentPage({
         )
       `,
     )
-    .eq("id", incidentId)
+    .eq(
+      "id",
+      incidentId,
+    )
     .single();
 
   if (
@@ -264,10 +284,11 @@ export default async function AdminIncidentPage({
             ? ` · ${incident.route_number}번`
             : ""}
 
-          {" · "}
+          {" · 신고 "}
 
-          신고{" "}
-          {incident.report_count}
+          {
+            incident.report_count
+          }
           건
         </p>
       </header>
@@ -354,7 +375,7 @@ export default async function AdminIncidentPage({
         }
       />
 
-      <AdminDrtReviewPanel
+      <AdminDrtReviewLoader
         incidentId={
           incident.id
         }
@@ -467,7 +488,9 @@ function SeverityBadge({
     | "medium"
     | "high";
 }) {
-  if (severity === "high") {
+  if (
+    severity === "high"
+  ) {
     return (
       <Badge variant="danger">
         긴급
@@ -496,10 +519,7 @@ function StatusBadge({
   status,
 }: {
   status:
-    | "detected"
-    | "reviewing"
-    | "notified"
-    | "resolved";
+    IncidentStatus;
 }) {
   if (
     status === "resolved"
@@ -541,6 +561,17 @@ function StatusBadge({
 function formatDateTime(
   value: string,
 ) {
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return "시간 정보 없음";
+  }
+
   return new Intl.DateTimeFormat(
     "ko-KR",
     {
@@ -550,7 +581,5 @@ function formatDateTime(
       hour: "2-digit",
       minute: "2-digit",
     },
-  ).format(
-    new Date(value),
-  );
+  ).format(date);
 }

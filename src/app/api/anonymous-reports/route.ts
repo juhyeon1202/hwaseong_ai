@@ -348,20 +348,69 @@ export async function POST(request: NextRequest) {
       });
 
     if (reportError) {
-      console.error("[Anonymous report error]", reportError);
+      console.error(
+        "[Anonymous report error]",
+        reportError,
+      );
 
       return NextResponse.json(
         {
-          message: reportError.message,
+          message:
+            reportError.message,
         },
-        { status: 500 },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    // 방금 저장된 신고를 기준으로 사건 자동 생성 또는 갱신
+    const {
+      data: incidentId,
+      error: incidentError,
+    } = await supabaseAdmin.rpc(
+      "upsert_incident_from_report",
+      {
+        p_report_id:
+          reportId,
+
+        p_threshold:
+          5,
+
+        p_window_minutes:
+          10,
+      },
+    );
+
+    if (incidentError) {
+      // 신고 저장은 성공했으므로 사용자 신고 자체를 실패 처리하지 않습니다.
+      console.error(
+        "[Automatic incident detection error]",
+        incidentError,
       );
     }
 
     return NextResponse.json({
       reportId,
-      stopId: stop.id,
-      reportedAt: new Date().toISOString(),
+      stopId:
+        stop.id,
+
+      incidentId:
+        incidentId ??
+        null,
+
+      incidentDetected:
+        Boolean(
+          incidentId,
+        ),
+
+      reportedAt:
+        new Date().toISOString(),
+
+      message:
+        incidentId
+          ? "신고가 접수되었으며 교통 사건이 감지되었습니다."
+          : "신고가 정상적으로 접수되었습니다.",
     });
   } catch (error) {
     console.error("[Anonymous report save error]", error);
