@@ -4,6 +4,11 @@ import {
   AuthForm,
   type AuthMode,
 } from "@/components/auth-form";
+
+import {
+  SignupForm,
+} from "@/components/signup-form";
+
 import { getCurrentUser } from "@/lib/auth";
 
 type AuthPageProps = {
@@ -52,8 +57,12 @@ export default async function AuthPage({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-var(--app-header-height))] items-center justify-center bg-[#f4f5f7] px-5 py-10">
-      <AuthForm mode={mode} />
+    <div className="flex min-h-[calc(100vh-var(--app-header-height))] items-start justify-center bg-[#f4f5f7] px-4 py-8 sm:px-6 sm:py-12">
+      {mode === "signup" ? (
+        <SignupForm />
+      ) : (
+        <AuthForm mode={mode} />
+      )}
     </div>
   );
 }
