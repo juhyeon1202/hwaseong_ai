@@ -2652,3 +2652,631 @@ group by
 grant select on public.post_report_summary
 to authenticated;
 
+-- =========================================================
+-- 29. 게시판 "노선제안" 글의 정류장 선택(핀+순서)
+-- 기존 route_requests(희망 노선, 투표 기능 포함)와는 별개 기능이며,
+-- posts.category = 'route_suggestion' 게시글에만 연결됩니다.
+-- =========================================================
+
+create table public.post_route_stops (
+  post_id uuid not null
+    references public.posts(id) on delete cascade,
+
+  stop_id bigint not null
+    references public.transit_stops(id) on delete restrict,
+
+  stop_order smallint not null
+    check (stop_order > 0),
+
+  primary key (post_id, stop_order),
+  unique (post_id, stop_id)
+);
+
+create index post_route_stops_post_idx
+on public.post_route_stops (post_id, stop_order);
+
+alter table public.post_route_stops enable row level security;
+
+create policy "post_route_stops_public_read"
+on public.post_route_stops
+for select
+to anon, authenticated
+using (true);
+
+create policy "post_route_stops_author_manage"
+on public.post_route_stops
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.posts p
+    where p.id = post_id
+      and (
+        p.author_id = auth.uid()
+        or public.is_admin()
+      )
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.posts p
+    where p.id = post_id
+      and (
+        p.author_id = auth.uid()
+        or public.is_admin()
+      )
+  )
+);
+
+-- 노선제안 게시글과 정류장 선택을 한 번에 생성
+create or replace function public.create_route_suggestion_post(
+  p_title text,
+  p_content text,
+  p_bus_type text,
+  p_stop_ids bigint[]
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_post_id uuid;
+  v_stop_id bigint;
+  v_order integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  if char_length(trim(p_title)) < 2
+     or char_length(trim(p_title)) > 100 then
+    raise exception '노선 이름은 2자 이상 100자 이하로 입력해 주세요.';
+  end if;
+
+  if char_length(trim(p_content)) < 5
+     or char_length(trim(p_content)) > 5000 then
+    raise exception '제안 사유는 5자 이상 5000자 이하로 입력해 주세요.';
+  end if;
+
+  if coalesce(array_length(p_stop_ids, 1), 0) < 5 then
+    raise exception '정류장을 최소 5개 선택해 주세요.';
+  end if;
+
+  if (
+    select count(distinct value)
+    from unnest(p_stop_ids) as value
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '같은 정류장을 중복해서 선택할 수 없습니다.';
+  end if;
+
+  if (
+    select count(*)
+    from public.transit_stops
+    where id = any(p_stop_ids)
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '존재하지 않는 정류장이 포함되어 있습니다.';
+  end if;
+
+  insert into public.posts (
+    author_id,
+    category,
+    bus_type,
+    title,
+    content
+  )
+  values (
+    auth.uid(),
+    'route_suggestion',
+    nullif(trim(p_bus_type), ''),
+    trim(p_title),
+    trim(p_content)
+  )
+  returning id into v_post_id;
+
+  foreach v_stop_id in array p_stop_ids loop
+    v_order := v_order + 1;
+
+    insert into public.post_route_stops (
+      post_id,
+      stop_id,
+      stop_order
+    )
+    values (
+      v_post_id,
+      v_stop_id,
+      v_order
+    );
+  end loop;
+
+  return v_post_id;
+end;
+$$;
+
+grant execute on function public.create_route_suggestion_post(
+  text,
+  text,
+  text,
+  bigint[]
+) to authenticated;
+
+-- 노선제안 게시글 내용과 정류장 선택을 함께 수정
+create or replace function public.update_route_suggestion_post(
+  p_post_id uuid,
+  p_title text,
+  p_content text,
+  p_bus_type text,
+  p_stop_ids bigint[]
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_author_id uuid;
+  v_category public.post_category;
+  v_stop_id bigint;
+  v_order integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  select author_id, category
+  into v_author_id, v_category
+  from public.posts
+  where id = p_post_id;
+
+  if v_author_id is null then
+    raise exception '존재하지 않는 게시글입니다.';
+  end if;
+
+  if v_category <> 'route_suggestion' then
+    raise exception '노선제안 게시글이 아닙니다.';
+  end if;
+
+  if v_author_id <> auth.uid()
+     and not public.is_admin() then
+    raise exception '수정 권한이 없습니다.';
+  end if;
+
+  if char_length(trim(p_title)) < 2
+     or char_length(trim(p_title)) > 100 then
+    raise exception '노선 이름은 2자 이상 100자 이하로 입력해 주세요.';
+  end if;
+
+  if char_length(trim(p_content)) < 5
+     or char_length(trim(p_content)) > 5000 then
+    raise exception '제안 사유는 5자 이상 5000자 이하로 입력해 주세요.';
+  end if;
+
+  if coalesce(array_length(p_stop_ids, 1), 0) < 5 then
+    raise exception '정류장을 최소 5개 선택해 주세요.';
+  end if;
+
+  if (
+    select count(distinct value)
+    from unnest(p_stop_ids) as value
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '같은 정류장을 중복해서 선택할 수 없습니다.';
+  end if;
+
+  if (
+    select count(*)
+    from public.transit_stops
+    where id = any(p_stop_ids)
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '존재하지 않는 정류장이 포함되어 있습니다.';
+  end if;
+
+  update public.posts
+  set
+    bus_type = nullif(trim(p_bus_type), ''),
+    title = trim(p_title),
+    content = trim(p_content)
+  where id = p_post_id;
+
+  delete from public.post_route_stops
+  where post_id = p_post_id;
+
+  foreach v_stop_id in array p_stop_ids loop
+    v_order := v_order + 1;
+
+    insert into public.post_route_stops (
+      post_id,
+      stop_id,
+      stop_order
+    )
+    values (
+      p_post_id,
+      v_stop_id,
+      v_order
+    );
+  end loop;
+end;
+$$;
+
+grant execute on function public.update_route_suggestion_post(
+  uuid,
+  text,
+  text,
+  text,
+  bigint[]
+) to authenticated;
+
+-- =========================================================
+-- 30. 게시판 "노선제안"과 "희망 노선" 데이터/투표 통일
+-- posts(category='route_suggestion')를 게시글(제목/본문/댓글/신고)
+-- 원본으로 두고, route_requests를 post_id로 1:1 연결해 정류장·투표·
+-- 검토 상태(draft/open/reviewing/adopted/rejected/closed)를 그대로
+-- 재사용합니다. 새 post_route_stops 테이블은 이 구조로 대체되어
+-- 제거하고, route_requests/route_request_stops/route_request_votes는
+-- 기존 그대로 유지합니다(투표·상태 관리 로직 재사용).
+-- =========================================================
+
+-- route_requests를 posts와 1:1로 연결
+alter table public.route_requests
+add column post_id uuid
+  unique
+  references public.posts(id)
+  on delete cascade;
+
+-- 기존에 게시판에서 이미 작성된 "노선제안" 글의 정류장 데이터를
+-- 잃지 않도록, post_route_stops에 남아있는 데이터를
+-- route_requests + route_request_stops로 옮겨둡니다.
+do $$
+declare
+  r record;
+  v_route_request_id uuid;
+begin
+  for r in
+    select
+      p.id as post_id,
+      p.author_id,
+      p.title,
+      p.content
+    from public.posts p
+    where p.category = 'route_suggestion'
+      and not exists (
+        select 1
+        from public.route_requests rr
+        where rr.post_id = p.id
+      )
+  loop
+    insert into public.route_requests (
+      author_id,
+      title,
+      description,
+      status,
+      post_id
+    )
+    values (
+      r.author_id,
+      r.title,
+      r.content,
+      'open',
+      r.post_id
+    )
+    returning id into v_route_request_id;
+
+    insert into public.route_request_stops (
+      route_request_id,
+      stop_id,
+      stop_order
+    )
+    select
+      v_route_request_id,
+      prs.stop_id,
+      prs.stop_order
+    from public.post_route_stops prs
+    where prs.post_id = r.post_id
+    order by prs.stop_order;
+  end loop;
+end;
+$$;
+
+-- 더 이상 쓰지 않는 게시판 전용 정류장 테이블 제거
+-- (route_request_stops로 대체됩니다. 위 마이그레이션으로
+-- 기존 데이터는 이미 옮겨졌습니다)
+drop policy if exists
+  "post_route_stops_public_read"
+on public.post_route_stops;
+
+drop policy if exists
+  "post_route_stops_author_manage"
+on public.post_route_stops;
+
+drop table if exists
+  public.post_route_stops;
+
+-- 게시판 창구 외에는 희망 노선을 만들 수 없도록
+-- 예전 단독 생성/수정 RPC를 제거합니다.
+drop function if exists
+  public.create_route_request(
+    text,
+    text,
+    bigint[]
+  );
+
+drop function if exists
+  public.update_route_request(
+    uuid,
+    text,
+    text,
+    bigint[]
+  );
+
+-- 게시판 "노선제안" 글 작성 시 posts + route_requests + 정류장을
+-- 한 번에 생성(투표 대상으로 바로 노출되도록 status를 'open'으로 시작)
+create or replace function public.create_route_suggestion_post(
+  p_title text,
+  p_content text,
+  p_bus_type text,
+  p_stop_ids bigint[]
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_post_id uuid;
+  v_route_request_id uuid;
+  v_stop_id bigint;
+  v_order integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  if char_length(trim(p_title)) < 2
+     or char_length(trim(p_title)) > 100 then
+    raise exception '노선 이름은 2자 이상 100자 이하로 입력해 주세요.';
+  end if;
+
+  if char_length(trim(p_content)) < 5
+     or char_length(trim(p_content)) > 5000 then
+    raise exception '제안 사유는 5자 이상 5000자 이하로 입력해 주세요.';
+  end if;
+
+  if coalesce(array_length(p_stop_ids, 1), 0) < 5 then
+    raise exception '정류장을 최소 5개 선택해 주세요.';
+  end if;
+
+  if (
+    select count(distinct value)
+    from unnest(p_stop_ids) as value
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '같은 정류장을 중복해서 선택할 수 없습니다.';
+  end if;
+
+  if (
+    select count(*)
+    from public.transit_stops
+    where id = any(p_stop_ids)
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '존재하지 않는 정류장이 포함되어 있습니다.';
+  end if;
+
+  insert into public.posts (
+    author_id,
+    category,
+    bus_type,
+    title,
+    content
+  )
+  values (
+    auth.uid(),
+    'route_suggestion',
+    nullif(trim(p_bus_type), ''),
+    trim(p_title),
+    trim(p_content)
+  )
+  returning id into v_post_id;
+
+  insert into public.route_requests (
+    author_id,
+    title,
+    description,
+    status,
+    post_id
+  )
+  values (
+    auth.uid(),
+    trim(p_title),
+    trim(p_content),
+    'open',
+    v_post_id
+  )
+  returning id into v_route_request_id;
+
+  foreach v_stop_id in array p_stop_ids loop
+    v_order := v_order + 1;
+
+    insert into public.route_request_stops (
+      route_request_id,
+      stop_id,
+      stop_order
+    )
+    values (
+      v_route_request_id,
+      v_stop_id,
+      v_order
+    );
+  end loop;
+
+  return v_post_id;
+end;
+$$;
+
+grant execute on function public.create_route_suggestion_post(
+  text,
+  text,
+  text,
+  bigint[]
+) to authenticated;
+
+-- 게시판 "노선제안" 글 수정 시 posts + 연결된 route_requests +
+-- 정류장을 함께 갱신
+create or replace function public.update_route_suggestion_post(
+  p_post_id uuid,
+  p_title text,
+  p_content text,
+  p_bus_type text,
+  p_stop_ids bigint[]
+)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_author_id uuid;
+  v_category public.post_category;
+  v_route_request_id uuid;
+  v_stop_id bigint;
+  v_order integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요합니다.';
+  end if;
+
+  select author_id, category
+  into v_author_id, v_category
+  from public.posts
+  where id = p_post_id;
+
+  if v_author_id is null then
+    raise exception '존재하지 않는 게시글입니다.';
+  end if;
+
+  if v_category <> 'route_suggestion' then
+    raise exception '노선제안 게시글이 아닙니다.';
+  end if;
+
+  if v_author_id <> auth.uid()
+     and not public.is_admin() then
+    raise exception '수정 권한이 없습니다.';
+  end if;
+
+  select id
+  into v_route_request_id
+  from public.route_requests
+  where post_id = p_post_id;
+
+  if v_route_request_id is null then
+    raise exception '연결된 희망 노선 정보를 찾을 수 없습니다.';
+  end if;
+
+  if char_length(trim(p_title)) < 2
+     or char_length(trim(p_title)) > 100 then
+    raise exception '노선 이름은 2자 이상 100자 이하로 입력해 주세요.';
+  end if;
+
+  if char_length(trim(p_content)) < 5
+     or char_length(trim(p_content)) > 5000 then
+    raise exception '제안 사유는 5자 이상 5000자 이하로 입력해 주세요.';
+  end if;
+
+  if coalesce(array_length(p_stop_ids, 1), 0) < 5 then
+    raise exception '정류장을 최소 5개 선택해 주세요.';
+  end if;
+
+  if (
+    select count(distinct value)
+    from unnest(p_stop_ids) as value
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '같은 정류장을 중복해서 선택할 수 없습니다.';
+  end if;
+
+  if (
+    select count(*)
+    from public.transit_stops
+    where id = any(p_stop_ids)
+  ) <> array_length(p_stop_ids, 1) then
+    raise exception '존재하지 않는 정류장이 포함되어 있습니다.';
+  end if;
+
+  update public.posts
+  set
+    bus_type = nullif(trim(p_bus_type), ''),
+    title = trim(p_title),
+    content = trim(p_content)
+  where id = p_post_id;
+
+  update public.route_requests
+  set
+    title = trim(p_title),
+    description = trim(p_content)
+  where id = v_route_request_id;
+
+  delete from public.route_request_stops
+  where route_request_id = v_route_request_id;
+
+  foreach v_stop_id in array p_stop_ids loop
+    v_order := v_order + 1;
+
+    insert into public.route_request_stops (
+      route_request_id,
+      stop_id,
+      stop_order
+    )
+    values (
+      v_route_request_id,
+      v_stop_id,
+      v_order
+    );
+  end loop;
+end;
+$$;
+
+grant execute on function public.update_route_suggestion_post(
+  uuid,
+  text,
+  text,
+  text,
+  bigint[]
+) to authenticated;
+
+-- 희망 노선 요약 뷰에 연결된 게시글 id 추가
+-- (게시판 게시글 ↔ 희망 노선 상세를 서로 오갈 수 있도록)
+create or replace view public.route_request_summary
+with (security_invoker = true)
+as
+select
+  r.id,
+  r.author_id,
+  r.title,
+  r.description,
+  r.status,
+  r.ai_suggestion,
+  r.created_at,
+  count(distinct v.user_id)::integer as vote_count,
+  count(distinct s.stop_id)::integer as stop_count,
+  r.post_id
+from public.route_requests r
+left join public.route_request_votes v
+  on v.route_request_id = r.id
+left join public.route_request_stops s
+  on s.route_request_id = r.id
+group by r.id;
+
+grant select on public.route_request_summary
+to anon, authenticated;
+
+
+
+-- route_requests에 RLS는 켜져 있었지만 INSERT 정책이 원래
+-- 하나도 없어서, RPC 안에서 로그인 사용자가 직접 넣는
+-- insert가 전부 막혀 있었습니다(기존 "희망 노선 만들기" 기능도
+-- 마찬가지). 게시판 "노선제안" 작성이 동작하려면 필요합니다.
+create policy "route_requests_author_insert"
+on public.route_requests
+for insert
+to authenticated
+with check (
+  author_id = auth.uid()
+);

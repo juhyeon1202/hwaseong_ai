@@ -6,12 +6,15 @@ import {
   useActionState,
   useEffect,
   useRef,
+  useState,
 } from "react";
 
 import {
   createPost,
+  createRouteSuggestionPost,
   deletePost,
   updatePost,
+  updateRouteSuggestionPost,
   type PostActionState,
 } from "@/app/community/actions";
 import {
@@ -19,6 +22,8 @@ import {
   Card,
   SectionHeader,
 } from "@/components/ui";
+import type { RouteStopOption } from "@/components/route-stop-types";
+import { RouteSuggestionFields } from "@/components/route-suggestion-fields";
 
 export type PostEditData = {
   id: string;
@@ -26,10 +31,12 @@ export type PostEditData = {
   busType: string;
   title: string;
   content: string;
+  routeStops?: RouteStopOption[];
 };
 
 type PostFormProps = {
   initialPost?: PostEditData;
+  stops?: RouteStopOption[];
 };
 
 const initialState: PostActionState = {
@@ -39,6 +46,7 @@ const initialState: PostActionState = {
 
 export function PostForm({
   initialPost,
+  stops = [],
 }: PostFormProps) {
   const formRef =
     useRef<HTMLFormElement>(null);
@@ -46,9 +54,21 @@ export function PostForm({
   const isEditMode =
     Boolean(initialPost);
 
-  const action = isEditMode
-    ? updatePost
-    : createPost;
+  const [category, setCategory] =
+    useState(
+      initialPost?.category ?? "",
+    );
+
+  const isRouteSuggestion =
+    category === "route_suggestion";
+
+  const action = isRouteSuggestion
+    ? isEditMode
+      ? updateRouteSuggestionPost
+      : createRouteSuggestionPost
+    : isEditMode
+      ? updatePost
+      : createPost;
 
   const [state, formAction, isPending] =
     useActionState(
@@ -58,11 +78,21 @@ export function PostForm({
 
   useEffect(() => {
     if (
-      state.status === "success" &&
-      !isEditMode
+      state.status !== "success" ||
+      isEditMode
     ) {
-      formRef.current?.reset();
+      return;
     }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        formRef.current?.reset();
+        setCategory("");
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [
     state.status,
     isEditMode,
@@ -100,9 +130,11 @@ export function PostForm({
           <select
             name="category"
             required
-            defaultValue={
-              initialPost?.category ??
-              ""
+            value={category}
+            onChange={(event) =>
+              setCategory(
+                event.target.value,
+              )
             }
             className={inputClassName}
           >
@@ -161,7 +193,13 @@ export function PostForm({
           </select>
         </Field>
 
-        <Field label="제목">
+        <Field
+          label={
+            isRouteSuggestion
+              ? "노선 이름"
+              : "제목"
+          }
+        >
           <input
             name="title"
             required
@@ -170,12 +208,22 @@ export function PostForm({
             defaultValue={
               initialPost?.title
             }
-            placeholder="게시글 제목"
+            placeholder={
+              isRouteSuggestion
+                ? "예: 병점역-동탄역 출근 급행"
+                : "게시글 제목"
+            }
             className={inputClassName}
           />
         </Field>
 
-        <Field label="내용">
+        <Field
+          label={
+            isRouteSuggestion
+              ? "제안 사유"
+              : "내용"
+          }
+        >
           <textarea
             name="content"
             required
@@ -185,10 +233,23 @@ export function PostForm({
             defaultValue={
               initialPost?.content
             }
-            placeholder="교통 정보나 의견을 자세히 작성해 주세요."
+            placeholder={
+              isRouteSuggestion
+                ? "필요한 시간대와 노선이 필요한 이유를 작성해 주세요."
+                : "교통 정보나 의견을 자세히 작성해 주세요."
+            }
             className={`${inputClassName} resize-none py-3`}
           />
         </Field>
+
+        {isRouteSuggestion && (
+          <RouteSuggestionFields
+            stops={stops}
+            initialStops={
+              initialPost?.routeStops
+            }
+          />
+        )}
 
         {state.message && (
           <p

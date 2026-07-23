@@ -23,12 +23,22 @@ export type CommentActionState =
 export type ReportActionState =
   PostActionState;
 
+export type RouteSuggestionActionState =
+  PostActionState;
+
+/*
+ * route_suggestion은 정류장 선택(post_route_stops)이 반드시 필요해
+ * createPost/updatePost가 아니라 전용 액션(create/updateRouteSuggestionPost)
+ * 으로만 만들 수 있도록 일반 글쓰기 카테고리 목록에서 제외합니다.
+ */
 const validCategories = [
   "route_request",
-  "route_suggestion",
   "information",
   "question",
 ];
+
+// route_requests(희망 노선)와 동일하게 최소 5개, 상한 없음
+const minRouteSuggestionStops = 5;
 
 const validBusTypes = [
   "city",
@@ -179,6 +189,12 @@ export async function deletePost(
   }
 
   revalidatePath("/community");
+  // route_suggestion 게시글이면 연결된 route_requests가
+  // on delete cascade로 함께 삭제되므로 같이 재검증합니다.
+  revalidatePath("/route-requests");
+  revalidatePath(
+    "/admin/route-requests",
+  );
   redirect("/community");
 }
 
@@ -419,6 +435,208 @@ export async function setPostVisibility(
     `/community/${postId}`,
   );
   revalidatePath("/community");
+}
+
+export async function createRouteSuggestionPost(
+  _previousState: RouteSuggestionActionState,
+  formData: FormData,
+): Promise<RouteSuggestionActionState> {
+  await requireUser();
+
+  const parsed =
+    parseRouteSuggestionForm(
+      formData,
+    );
+
+  if (!parsed.success) {
+    return parsed.state;
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc(
+    "create_route_suggestion_post",
+    {
+      p_title: parsed.title,
+      p_content: parsed.content,
+      p_bus_type:
+        parsed.busType || null,
+      p_stop_ids: parsed.stopIds,
+    },
+  );
+
+  if (error) {
+    return errorState(
+      error.message ||
+        "노선제안을 등록하지 못했습니다.",
+    );
+  }
+
+  revalidatePath("/community");
+  revalidatePath("/route-requests");
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  return successState(
+    "노선제안이 등록되었습니다.",
+  );
+}
+
+export async function updateRouteSuggestionPost(
+  _previousState: RouteSuggestionActionState,
+  formData: FormData,
+): Promise<RouteSuggestionActionState> {
+  await requireUser();
+
+  const postId =
+    formData.get("postId")?.toString();
+
+  if (!postId) {
+    return errorState(
+      "수정할 게시글 정보가 없습니다.",
+    );
+  }
+
+  const parsed =
+    parseRouteSuggestionForm(
+      formData,
+    );
+
+  if (!parsed.success) {
+    return parsed.state;
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc(
+    "update_route_suggestion_post",
+    {
+      p_post_id: postId,
+      p_title: parsed.title,
+      p_content: parsed.content,
+      p_bus_type:
+        parsed.busType || null,
+      p_stop_ids: parsed.stopIds,
+    },
+  );
+
+  if (error) {
+    return errorState(
+      error.message ||
+        "노선제안을 수정하지 못했습니다.",
+    );
+  }
+
+  revalidatePath("/community");
+  revalidatePath(
+    `/community/${postId}`,
+  );
+  revalidatePath("/route-requests");
+  revalidatePath(
+    "/admin/route-requests",
+  );
+
+  return successState(
+    "노선제안이 수정되었습니다.",
+  );
+}
+
+function parseRouteSuggestionForm(
+  formData: FormData,
+):
+  | {
+      success: true;
+      title: string;
+      content: string;
+      busType: string;
+      stopIds: number[];
+    }
+  | {
+      success: false;
+      state: RouteSuggestionActionState;
+    } {
+  const title =
+    formData
+      .get("title")
+      ?.toString()
+      .trim() ?? "";
+
+  const content =
+    formData
+      .get("content")
+      ?.toString()
+      .trim() ?? "";
+
+  const busType =
+    formData
+      .get("busType")
+      ?.toString() ?? "";
+
+  const stopIds = formData
+    .getAll("stopIds")
+    .map((value) =>
+      Number(value.toString()),
+    )
+    .filter((value) =>
+      Number.isInteger(value),
+    );
+
+  if (
+    title.length < 2 ||
+    title.length > 100
+  ) {
+    return {
+      success: false,
+      state: errorState(
+        "노선 이름은 2자 이상 100자 이하로 입력해 주세요.",
+      ),
+    };
+  }
+
+  if (
+    content.length < 5 ||
+    content.length > 5000
+  ) {
+    return {
+      success: false,
+      state: errorState(
+        "제안 사유는 5자 이상 5000자 이하로 입력해 주세요.",
+      ),
+    };
+  }
+
+  if (
+    busType &&
+    !validBusTypes.includes(busType)
+  ) {
+    return {
+      success: false,
+      state: errorState(
+        "올바른 버스 유형을 선택해 주세요.",
+      ),
+    };
+  }
+
+  if (
+    stopIds.length <
+    minRouteSuggestionStops
+  ) {
+    return {
+      success: false,
+      state: errorState(
+        `정류장을 최소 ${minRouteSuggestionStops}개 선택해 주세요.`,
+      ),
+    };
+  }
+
+  return {
+    success: true,
+    title,
+    content,
+    busType,
+    stopIds,
+  };
 }
 
 function parsePostForm(

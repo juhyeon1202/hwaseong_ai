@@ -6,12 +6,7 @@ import {
   toggleRouteVote,
   updateRouteRequestStatus,
 } from "@/app/route-requests/actions";
-import {
-  DeleteRouteRequestButton,
-  RouteRequestForm,
-  type RouteRequestEditData,
-  type RouteStopOption,
-} from "@/components/route-request-form";
+import type { RouteStopOption } from "@/components/route-stop-types";
 import {
   Badge,
   Button,
@@ -42,6 +37,7 @@ type RouteRequest = {
   title: string;
   description: string;
   status: RouteRequestStatus;
+  post_id: string | null;
   created_at: string;
   updated_at: string;
   route_request_stops:
@@ -111,6 +107,7 @@ export default async function RouteRequestPage({
         title,
         description,
         status,
+        post_id,
         created_at,
         updated_at,
         route_request_stops (
@@ -140,7 +137,6 @@ export default async function RouteRequestPage({
   const [
     voteCountResult,
     userVoteResult,
-    allStopsResult,
   ] = await Promise.all([
     supabase
       .from("route_request_votes")
@@ -168,24 +164,6 @@ export default async function RouteRequestPage({
           data: null,
           error: null,
         }),
-
-    user?.id === route.author_id
-      ? supabase
-          .from("transit_stops")
-          .select(
-            `
-              id,
-              name,
-              stop_number,
-              district_name
-            `,
-          )
-          .order("name")
-          .limit(500)
-      : Promise.resolve({
-          data: [],
-          error: null,
-        }),
   ]);
 
   const voteCount =
@@ -195,32 +173,9 @@ export default async function RouteRequestPage({
     userVoteResult.data,
   );
 
-  const canEdit =
-    user?.id === route.author_id &&
-    (
-      route.status === "draft" ||
-      route.status === "open"
-    );
-
-  const allStops: RouteStopOption[] =
-    (allStopsResult.data ?? []).map(
-      (stop) => ({
-        id: Number(stop.id),
-        name: stop.name,
-        stopNumber:
-          stop.stop_number,
-        districtName:
-          stop.district_name,
-      }),
-    );
-
-  const editData: RouteRequestEditData = {
-    id: route.id,
-    title: route.title,
-    description:
-      route.description,
-    stops: selectedStops,
-  };
+  const canManage =
+    user?.id === route.author_id ||
+    user?.role === "admin";
 
   return (
       <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -384,35 +339,24 @@ export default async function RouteRequestPage({
           </Card>
         )}
 
-        {canEdit && (
-          <details>
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-brand-text">
-              작성한 희망 노선 수정
-            </summary>
-
-            <div className="mt-4 space-y-4">
-              <RouteRequestForm
-                stops={allStops}
-                initialRequest={editData}
+        {canManage &&
+          route.post_id && (
+            <Card>
+              <SectionHeader
+                title="노선 제안 수정·삭제"
+                description="이 희망 노선의 원문 게시글에서 내용 수정, 정류장 변경, 삭제를 할 수 있습니다."
               />
 
-              <Card>
-                <SectionHeader
-                  title="희망 노선 삭제"
-                  description="삭제한 제안과 투표는 복구할 수 없습니다."
-                />
-
-                <div className="mt-5">
-                  <DeleteRouteRequestButton
-                    routeRequestId={
-                      route.id
-                    }
-                  />
-                </div>
-              </Card>
-            </div>
-          </details>
-        )}
+              <ButtonLink
+                href={`/community/${route.post_id}`}
+                variant="secondary"
+                fullWidth
+                className="mt-5"
+              >
+                게시글에서 관리하기 →
+              </ButtonLink>
+            </Card>
+          )}
       </div>
   );
 }
