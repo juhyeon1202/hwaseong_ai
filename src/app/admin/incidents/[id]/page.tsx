@@ -25,6 +25,14 @@ import {
   AdminDrtReviewPanel,
 } from "@/components/admin-drt-review-panel";
 
+import {
+  AdminIncidentSourceReports,
+} from "@/components/admin-incident-source-reports";
+
+import {
+  AdminIncidentResolutionPanel,
+} from "@/components/admin-incident-resolution-panel";
+
 type IncidentPageProps = {
   params: Promise<{
     id: string;
@@ -301,6 +309,24 @@ export default async function AdminIncidentPage({
         />
       </section>
 
+      <AdminIncidentSourceReports
+        stopId={
+          incident.stop_id
+        }
+        kind={
+          incident.kind
+        }
+        routeNumber={
+          incident.route_number
+        }
+        windowStartedAt={
+          incident.window_started_at
+        }
+        windowEndedAt={
+          incident.window_ended_at
+        }
+      />
+
       <AdminIncidentAiPanel
         incidentId={
           incident.id
@@ -331,6 +357,18 @@ export default async function AdminIncidentPage({
       <AdminDrtReviewPanel
         incidentId={
           incident.id
+        }
+      />
+
+      <AdminIncidentResolutionPanel
+        incidentId={
+          incident.id
+        }
+        status={
+          incident.status
+        }
+        evidence={
+          incident.evidence
         }
       />
 
