@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
 import {
   Badge,
   Card,
   EmptyState,
   SectionHeader,
 } from "@/components/ui";
-import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -96,7 +94,6 @@ const reportLabels = {
 } as const;
 
 export default async function IncidentsPage() {
-  const user = await getCurrentUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -135,7 +132,6 @@ export default async function IncidentsPage() {
     (data ?? []) as CitizenAlert[];
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <header>
           <Badge variant="danger">
@@ -195,7 +191,6 @@ export default async function IncidentsPage() {
           발송하지 않습니다.
         </p>
       </div>
-    </AppShell>
   );
 }
 

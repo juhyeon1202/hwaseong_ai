@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import { PolicyPage } from "@/components/policy-page";
-import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침",
@@ -77,16 +75,12 @@ const privacySections = [
 ];
 
 export default async function PrivacyPage() {
-  const user = await getCurrentUser();
-
   return (
-    <AppShell user={user}>
       <PolicyPage
         title="개인정보처리방침"
         description="화성 교통일지는 사용자의 개인정보와 위치정보를 안전하게 처리하기 위해 다음과 같은 원칙을 따릅니다."
         updatedAt="2026년 7월 23일"
         sections={privacySections}
       />
-    </AppShell>
   );
 }

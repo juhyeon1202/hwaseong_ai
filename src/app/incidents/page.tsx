@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
 import {
   Badge,
   Card,
   EmptyState,
   SectionHeader,
 } from "@/components/ui";
-import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -62,7 +60,6 @@ const reportLabels: Record<
 };
 
 export default async function IncidentsPage() {
-  const user = await getCurrentUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -97,7 +94,6 @@ export default async function IncidentsPage() {
     (data as Incident[] | null) ?? [];
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <SectionHeader
           title="실시간 교통 알림"
@@ -127,7 +123,6 @@ export default async function IncidentsPage() {
           </ul>
         )}
       </div>
-    </AppShell>
   );
 }
 

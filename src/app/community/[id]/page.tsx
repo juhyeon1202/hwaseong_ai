@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
 import {
   CommentForm,
   DeleteCommentButton,
@@ -188,7 +187,6 @@ export default async function CommunityPostPage({
   };
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <article>
           <Link
@@ -331,7 +329,6 @@ export default async function CommunityPostPage({
           </details>
         )}
       </div>
-    </AppShell>
   );
 }
 

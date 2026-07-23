@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import {
   DeleteFavoriteButton,
   FavoriteForm,
@@ -121,7 +120,6 @@ export default async function FavoritesPage() {
     );
 
   return (
-    <AppShell user={user}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
         <section className="space-y-4">
           <SectionHeader
@@ -198,6 +196,5 @@ export default async function FavoritesPage() {
           />
         </aside>
       </div>
-    </AppShell>
   );
 }

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import { PolicyPage } from "@/components/policy-page";
-import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "이용약관",
@@ -82,16 +80,12 @@ const termsSections = [
 ];
 
 export default async function TermsPage() {
-  const user = await getCurrentUser();
-
   return (
-    <AppShell user={user}>
       <PolicyPage
         title="이용약관"
         description="화성 교통일지 서비스를 안전하고 공정하게 이용하기 위한 기본 규칙입니다."
         updatedAt="2026년 7월 23일"
         sections={termsSections}
       />
-    </AppShell>
   );
 }

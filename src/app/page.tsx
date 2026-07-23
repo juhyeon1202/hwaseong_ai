@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
 import {
   KakaoMap,
   type MapMarkerData,
@@ -103,7 +102,6 @@ export default async function HomePage() {
     createMapMarkers(ranking);
 
   return (
-    <AppShell user={user}>
       <div className="space-y-6">
         <HeroSection />
 
@@ -139,7 +137,6 @@ export default async function HomePage() {
           </aside>
         </div>
       </div>
-    </AppShell>
   );
 }
 

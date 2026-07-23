@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import { ReportPanel } from "@/components/report-panel";
-import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "정류장 원터치 신고",
@@ -11,10 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ReportPage() {
-  const user = await getCurrentUser();
-
   return (
-    <AppShell user={user}>
       <div className="space-y-6">
         <header>
           <div className="flex flex-wrap items-center gap-2">
@@ -43,6 +38,5 @@ export default async function ReportPage() {
 
         <ReportPanel />
       </div>
-    </AppShell>
   );
 }
