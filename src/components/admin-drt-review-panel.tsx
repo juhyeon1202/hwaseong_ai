@@ -19,7 +19,7 @@ type ActionStatus =
   | "completed"
   | "failed";
 
-type DrtAction = {
+export type DrtActionData = {
   id: number;
   status: ActionStatus;
   title: string;
@@ -52,23 +52,30 @@ type DrtResponse = {
   success: boolean;
   created?: boolean;
   message?: string;
-  action?: DrtAction;
+  action?: DrtActionData;
   result?: DrtRuleResult;
 };
 
 export function AdminDrtReviewPanel({
   incidentId,
+  initialAction = null,
 }: {
   incidentId: number;
+  initialAction?:
+    | DrtActionData
+    | null;
 }) {
   const [action, setAction] =
-    useState<DrtAction | null>(
-      null,
+    useState<DrtActionData | null>(
+      initialAction,
     );
 
   const [ruleResult, setRuleResult] =
     useState<DrtRuleResult | null>(
-      null,
+      readStoredRuleResult(
+        initialAction?.payload ??
+          null,
+      ),
     );
 
   const [isGenerating, setIsGenerating] =
@@ -480,4 +487,125 @@ function ActionStatusBadge({
       검토 대기
     </Badge>
   );
+}
+
+function readStoredRuleResult(
+  payload:
+    | Record<string, unknown>
+    | null,
+): DrtRuleResult | null {
+  if (
+    !payload ||
+    typeof payload !==
+      "object"
+  ) {
+    return null;
+  }
+
+  const value =
+    payload.ruleResult;
+
+  if (
+    !value ||
+    typeof value !==
+      "object" ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+
+  const record =
+    value as Record<
+      string,
+      unknown
+    >;
+
+  const evidenceValue =
+    record.evidence;
+
+  if (
+    !evidenceValue ||
+    typeof evidenceValue !==
+      "object" ||
+    Array.isArray(
+      evidenceValue,
+    )
+  ) {
+    return null;
+  }
+
+  const evidence =
+    evidenceValue as Record<
+      string,
+      unknown
+    >;
+
+  const level =
+    record.level;
+
+  if (
+    level !== "none" &&
+    level !== "review" &&
+    level !== "priority"
+  ) {
+    return null;
+  }
+
+  return {
+    eligible:
+      record.eligible ===
+      true,
+
+    score:
+      typeof record.score ===
+      "number"
+        ? record.score
+        : 0,
+
+    level,
+
+    title:
+      typeof record.title ===
+      "string"
+        ? record.title
+        : "똑버스 검토",
+
+    reason:
+      typeof record.reason ===
+      "string"
+        ? record.reason
+        : "검토 사유 정보가 없습니다.",
+
+    evidence: {
+      radiusKm:
+        typeof evidence.radiusKm ===
+        "number"
+          ? evidence.radiusKm
+          : 2.5,
+
+      timeWindowMinutes:
+        typeof evidence.timeWindowMinutes ===
+        "number"
+          ? evidence.timeWindowMinutes
+          : 30,
+
+      incidentCount:
+        typeof evidence.incidentCount ===
+        "number"
+          ? evidence.incidentCount
+          : 0,
+
+      totalReportCount:
+        typeof evidence.totalReportCount ===
+        "number"
+          ? evidence.totalReportCount
+          : 0,
+
+      maximumSeverity:
+        typeof evidence.maximumSeverity ===
+        "string"
+          ? evidence.maximumSeverity
+          : "low",
+    },
+  };
 }
