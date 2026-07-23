@@ -6,6 +6,9 @@ import {
   useState,
 } from "react";
 
+import { createRegionThermometerElement } from "@/components/region-thermometer";
+import type { RegionParticipation } from "@/lib/regions";
+
 export type MapMarkerData = {
   id: string | number;
   latitude: number;
@@ -19,6 +22,7 @@ type KakaoMapProps = {
     longitude: number;
   };
   markers?: MapMarkerData[];
+  regionOverlays?: RegionParticipation[];
   level?: number;
   height?: number | string;
   className?: string;
@@ -30,6 +34,8 @@ type KakaoMapProps = {
 type KakaoLatLng = object;
 type KakaoMapInstance = object;
 type KakaoMarkerInstance = object;
+type KakaoCustomOverlayInstance =
+  object;
 
 type KakaoMapsApi = {
   load: (
@@ -54,6 +60,15 @@ type KakaoMapsApi = {
     position: KakaoLatLng;
     title?: string;
   }) => KakaoMarkerInstance;
+
+  CustomOverlay: new (options: {
+    map: KakaoMapInstance;
+    position: KakaoLatLng;
+    content: HTMLElement;
+    xAnchor?: number;
+    yAnchor?: number;
+    zIndex?: number;
+  }) => KakaoCustomOverlayInstance;
 
   event: {
     addListener: (
@@ -230,6 +245,7 @@ function loadKakaoMapSdk() {
 export function KakaoMap({
   center,
   markers = [],
+  regionOverlays = [],
   level = 8,
   height = 380,
   className = "",
@@ -326,6 +342,36 @@ export function KakaoMap({
           },
         );
 
+        regionOverlays.forEach(
+          (region) => {
+            if (
+              !Number.isFinite(
+                region.latitude,
+              ) ||
+              !Number.isFinite(
+                region.longitude,
+              )
+            ) {
+              return;
+            }
+
+            new maps.CustomOverlay({
+              map,
+              position:
+                new maps.LatLng(
+                  region.latitude,
+                  region.longitude,
+                ),
+              content:
+                createRegionThermometerElement(
+                  region,
+                ),
+              yAnchor: 1,
+              zIndex: 5,
+            });
+          },
+        );
+
         if (active) {
           setIsLoading(false);
         }
@@ -358,6 +404,7 @@ export function KakaoMap({
     center.longitude,
     level,
     markers,
+    regionOverlays,
     onMarkerClick,
   ]);
 
