@@ -207,7 +207,7 @@ function ParticipationMap({
           height={420}
         />
 
-        <div className="pointer-events-none absolute left-3 top-3 rounded-control bg-[#191f28]/85 px-4 py-3 text-white shadow-card backdrop-blur sm:left-4 sm:top-4">
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-control bg-[#191f28]/85 px-4 py-3 text-white shadow-card backdrop-blur sm:left-4 sm:top-4">
           <p className="text-xs text-white/70">
             최근 7일 시민 참여
           </p>
@@ -219,7 +219,7 @@ function ParticipationMap({
           </p>
         </div>
 
-        <div className="absolute inset-x-3 bottom-3 rounded-card border border-white/50 bg-surface/95 p-4 shadow-floating backdrop-blur sm:inset-x-auto sm:bottom-4 sm:left-4 sm:w-[360px]">
+        <div className="absolute inset-x-3 bottom-3 z-10 rounded-card border border-white/50 bg-surface/95 p-4 shadow-floating backdrop-blur sm:inset-x-auto sm:bottom-4 sm:left-4 sm:w-[360px]">
           <div className="flex items-center gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-danger-soft text-lg font-bold text-danger">
               !
