@@ -66,7 +66,7 @@ export function AdminNav() {
     usePathname();
 
   return (
-    <aside className="border-b border-line bg-surface lg:min-h-[calc(100vh-5rem)] lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
+    <aside className="h-fit self-start overflow-hidden rounded-control border border-line bg-surface shadow-card lg:sticky lg:top-24 lg:w-64 lg:shrink-0">
       <div className="hidden border-b border-line px-5 py-6 lg:block">
         <span className="text-xs font-bold text-brand-text">
           ADMIN
@@ -166,7 +166,7 @@ export function AdminNav() {
         )}
       </nav>
 
-      <div className="mx-4 mt-auto hidden rounded-card border border-brand-line bg-brand-softer p-4 lg:block">
+      <div className="mx-4 mt-auto mb-4 hidden rounded-card border border-brand-line bg-brand-softer p-4 lg:block">
         <p className="text-xs font-bold text-brand-text">
           AI 관리자 지원
         </p>

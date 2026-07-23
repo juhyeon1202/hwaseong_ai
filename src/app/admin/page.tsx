@@ -24,6 +24,10 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
+import {
+  AdminDrtQueue,
+} from "@/components/admin-drt-queue";
+
 export const metadata: Metadata = {
   title: "관리자 대시보드",
 };
@@ -332,6 +336,8 @@ export default async function AdminPage() {
       </section>
 
       <AdminAiBriefing />
+
+      <AdminDrtQueue />
 
       <AdminWorkQueue />
 
