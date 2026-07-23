@@ -22,6 +22,10 @@ import {
   SectionHeader,
 } from "@/components/ui";
 
+import {
+  RouteStopMap,
+} from "@/components/route-stop-map";
+
 export type RouteStopOption = {
   id: number;
   name: string;
@@ -115,13 +119,22 @@ export function RouteRequestForm({
 
   useEffect(() => {
     if (
-      state.status === "success" &&
-      !isEditMode
+      state.status !== "success" ||
+      isEditMode
     ) {
-      formRef.current?.reset();
-      setSelectedStops([]);
-      setSearch("");
+      return;
     }
+
+    const timeoutId =
+      window.setTimeout(() => {
+        formRef.current?.reset();
+        setSelectedStops([]);
+        setSearch("");
+      }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [
     state.status,
     isEditMode,
@@ -380,6 +393,15 @@ export function RouteRequestForm({
                 개 더 선택해 주세요.
               </p>
             )}
+          {selectedStops.length > 0 && (
+            <div className="mt-4">
+              <RouteStopMap
+                stopIds={selectedStops.map(
+                  (stop) => stop.id,
+                )}
+              />
+            </div>
+          )}
         </div>
 
         {state.message && (

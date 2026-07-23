@@ -240,6 +240,8 @@ export async function createInquiry(
   }
 
   revalidatePath("/inquiries");
+  revalidatePath("/admin");
+  revalidatePath("/admin/inquiries");
 
   return successState(
     "1:1 문의가 등록되었습니다.",
@@ -312,8 +314,10 @@ export async function respondToInquiry(
       "문의 답변을 저장하지 못했습니다.",
     );
   }
-
+  
   revalidatePath("/inquiries");
+  revalidatePath("/admin");
+  revalidatePath("/admin/inquiries");
 }
 
 function successState(
