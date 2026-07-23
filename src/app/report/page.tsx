@@ -15,30 +15,28 @@ export default async function ReportPage() {
 
   return (
     <AppShell user={user}>
-      <div className="space-y-6">
-        <header>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-pill bg-danger-soft px-3 py-1.5 text-xs font-semibold text-danger">
-              원터치 신고
-            </span>
+      <div className="mx-auto w-full max-w-5xl">
+        <header className="mb-5 flex items-center justify-between gap-4 border-b border-line-light pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-main sm:text-2xl">
+                정류장 원터치 신고
+              </h1>
 
-            <span className="rounded-pill bg-info-soft px-3 py-1.5 text-xs font-semibold text-info">
-              위치정보 미저장
-            </span>
+              <span className="inline-flex min-h-7 items-center rounded-control border border-line bg-white px-2.5 text-xs font-semibold text-secondary">
+                익명
+              </span>
+            </div>
+
+            <p className="mt-2 text-sm leading-6 text-muted">
+              정류장을 선택하고 불편 유형을
+              눌러 바로 접수해 주세요.
+            </p>
           </div>
 
-          <h1 className="mt-4 text-2xl font-bold text-main sm:text-3xl">
-            정류장 불편을
-            <br className="sm:hidden" /> 바로
-            알려주세요
-          </h1>
-
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-secondary">
-            정류장을 검색하거나 지도에서
-            선택한 후 만차 통과, 배차 지연,
-            환승 실패를 한 번에 신고할 수
-            있습니다.
-          </p>
+          <span className="hidden rounded-control bg-info-soft px-3 py-2 text-xs font-semibold text-info sm:inline-flex">
+            GPS 위치 미저장
+          </span>
         </header>
 
         <ReportPanel />
