@@ -24,6 +24,7 @@ const pointReasonLabels: Record<
   reward_draw: "룰렛 참여",
   admin_adjustment: "관리자 조정",
   referral: "추천인 보상",
+  referral_signup: "추천인 코드 등록 보상",
 };
 
 type PointHistoryProps = {

@@ -3351,3 +3351,173 @@ values
   null,
   true
 );
+
+-- =========================================================
+-- 32. 추천인(친구 초대) 코드 시스템
+-- profiles.referral_code / referred_by 컬럼은 이미 있었지만
+-- (1) 코드 형식이 숫자+영어대문자 8자리가 아니었고(UUID 기반),
+-- (2) 회원가입 시 추천인 코드를 실제로 조회해 반영하는 로직이
+--     없었습니다(가입 트리거가 이 필드를 아예 읽지 않았음).
+-- =========================================================
+
+-- 숫자(0-9)+영어 대문자(A-Z) 8자리 코드를 만들고, 이미 존재하면
+-- 재생성합니다.
+create or replace function public.generate_referral_code()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_chars text := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  v_char_count integer := length(v_chars);
+  v_code text;
+  v_attempts integer := 0;
+begin
+  loop
+    v_code := '';
+
+    for i in 1..8 loop
+      v_code := v_code || substr(
+        v_chars,
+        floor(random() * v_char_count)::integer + 1,
+        1
+      );
+    end loop;
+
+    exit when not exists (
+      select 1
+      from public.profiles
+      where referral_code = v_code
+    );
+
+    v_attempts := v_attempts + 1;
+
+    if v_attempts > 30 then
+      raise exception '추천인 코드 생성에 실패했습니다. 다시 시도해 주세요.';
+    end if;
+  end loop;
+
+  return v_code;
+end;
+$$;
+
+-- 새로 가입하는 회원부터는 숫자+대문자 8자리 형식으로 발급합니다.
+-- 기존에 이미 발급된(UUID 기반) 코드는 그대로 유지됩니다.
+alter table public.profiles
+alter column referral_code
+set default public.generate_referral_code();
+
+-- 회원가입 폼에서, 아직 로그인하지 않은 상태로도 추천인 코드가
+-- 실제로 존재하는지 미리 확인할 수 있어야 하므로 anon에도 실행
+-- 권한을 주는 별도 함수입니다(다른 프로필 정보는 노출하지 않음).
+create or replace function public.referral_code_exists(
+  p_code text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where referral_code = upper(trim(p_code))
+  );
+$$;
+
+grant execute on function public.referral_code_exists(text)
+to anon, authenticated;
+
+-- 회원가입 완료 시 추천인 코드를 처리하도록 프로필 생성 트리거를
+-- 교체합니다. 코드가 실제로 존재하면 referred_by를 채우고,
+-- 가입자·추천인 양쪽에 300P씩 지급합니다. 포인트 지급은
+-- point_ledger에 insert하는 것으로 끝나고, 실제 잔액 반영은
+-- 기존 point_ledger_apply 트리거가 그대로 처리합니다.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_referral_code text;
+  v_referrer_id uuid;
+begin
+  v_referral_code := upper(trim(
+    coalesce(
+      new.raw_user_meta_data ->> 'referral_code',
+      ''
+    )
+  ));
+
+  if v_referral_code <> '' then
+    select id
+    into v_referrer_id
+    from public.profiles
+    where referral_code = v_referral_code
+      and id <> new.id
+    limit 1;
+  end if;
+
+  insert into public.profiles (
+    id,
+    nickname,
+    birth_date,
+    gender,
+    home_district,
+    preferred_language,
+    referred_by
+  )
+  values (
+    new.id,
+    coalesce(
+      nullif(new.raw_user_meta_data ->> 'nickname', ''),
+      '화성시민-' || substr(new.id::text, 1, 6)
+    ),
+    case
+      when nullif(new.raw_user_meta_data ->> 'birth_date', '') is not null
+      then (new.raw_user_meta_data ->> 'birth_date')::date
+      else null
+    end,
+    nullif(new.raw_user_meta_data ->> 'gender', ''),
+    nullif(new.raw_user_meta_data ->> 'home_district', ''),
+    coalesce(
+      nullif(new.raw_user_meta_data ->> 'preferred_language', ''),
+      'ko'
+    ),
+    v_referrer_id
+  );
+
+  if v_referrer_id is not null then
+    insert into public.point_ledger (
+      user_id,
+      amount,
+      reason,
+      reference_key
+    )
+    values (
+      new.id,
+      300,
+      'referral_signup',
+      new.id::text
+    );
+
+    insert into public.point_ledger (
+      user_id,
+      amount,
+      reason,
+      reference_key
+    )
+    values (
+      v_referrer_id,
+      300,
+      'referral',
+      new.id::text
+    );
+  end if;
+
+  return new;
+end;
+$$;
