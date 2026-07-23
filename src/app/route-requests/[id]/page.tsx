@@ -6,7 +6,6 @@ import {
   toggleRouteVote,
   updateRouteRequestStatus,
 } from "@/app/route-requests/actions";
-import { AppShell } from "@/components/app-shell";
 import {
   DeleteRouteRequestButton,
   RouteRequestForm,
@@ -224,7 +223,6 @@ export default async function RouteRequestPage({
   };
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <header>
           <Link
@@ -416,7 +414,6 @@ export default async function RouteRequestPage({
           </details>
         )}
       </div>
-    </AppShell>
   );
 }
 

@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import {
   toggleRouteVote,
 } from "@/app/route-requests/actions";
-import { AppShell } from "@/components/app-shell";
 import {
   RouteRequestForm,
   type RouteStopOption,
@@ -139,7 +138,6 @@ export default async function RouteRequestsPage() {
   }
 
   return (
-    <AppShell user={user}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <section className="space-y-4">
           <SectionHeader
@@ -203,7 +201,6 @@ export default async function RouteRequestsPage() {
           )}
         </aside>
       </div>
-    </AppShell>
   );
 }
 

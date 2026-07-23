@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import {
   respondToInquiry,
 } from "@/app/(protected)/account-actions";
-import { AppShell } from "@/components/app-shell";
 import {
   InquiryForm,
 } from "@/components/account-tools";
@@ -78,7 +77,6 @@ export default async function InquiriesPage() {
     (data as Inquiry[] | null) ?? [];
 
   return (
-    <AppShell user={user}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
         <section className="space-y-4">
           <SectionHeader
@@ -127,7 +125,6 @@ export default async function InquiriesPage() {
           <InquiryForm />
         </aside>
       </div>
-    </AppShell>
   );
 }
 

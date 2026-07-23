@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-page px-4 py-12">
+    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
       <section className="w-full max-w-md rounded-card border border-line bg-surface p-6 text-center shadow-card sm:p-8">
         <p className="text-sm font-bold text-info">
           404
@@ -24,6 +24,6 @@ export default function NotFound() {
           홈으로 돌아가기
         </Link>
       </section>
-    </main>
+    </div>
   );
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import {
   RewardRoulette,
   type RewardOption,
@@ -131,7 +130,6 @@ export default async function RewardsPage() {
       | null) ?? [];
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <header>
           <Badge variant="warning">
@@ -166,7 +164,6 @@ export default async function RewardsPage() {
           </aside>
         </div>
       </div>
-    </AppShell>
   );
 }
 

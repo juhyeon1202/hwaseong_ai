@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
-
 import {
   DeleteJournalButton,
   JournalForm,
@@ -127,7 +125,6 @@ export default async function JournalPage({
     createInitialValues(params);
 
   return (
-    <AppShell user={user}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)]">
         <section className="space-y-4">
           <SectionHeader
@@ -169,7 +166,6 @@ export default async function JournalPage({
           />
         </section>
       </div>
-    </AppShell>
   );
 }
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
 import {
   ButtonLink,
   Card,
@@ -40,7 +39,6 @@ export default async function RankingPage() {
     ) ?? null;
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-4xl space-y-6">
         <header>
           <p className="text-sm font-semibold text-brand-text">
@@ -153,7 +151,6 @@ export default async function RankingPage() {
           </Link>
         </section>
       </div>
-    </AppShell>
   );
 }
 
