@@ -3,6 +3,7 @@
 import {
   FormEvent,
   useActionState,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -18,6 +19,7 @@ import {
   Card,
   EmptyState,
 } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
 
 type Place = {
   id: string;
@@ -56,6 +58,43 @@ type RouteResponse = {
   landingUrl: string | null;
   routes: TransitRoute[];
   message?: string;
+};
+
+type FavoritePayload =
+  | {
+      type: "place";
+      kakaoPlaceId: string;
+      placeName: string;
+      address: string;
+      latitude: number;
+      longitude: number;
+    }
+  | {
+      type: "route";
+      startPlace: Place;
+      endPlace: Place;
+      route: TransitRoute;
+    };
+
+type FavoriteRow = {
+  id: string;
+  favorite_type: "place" | "route";
+  label: string;
+  place_payload: FavoritePayload | null;
+};
+
+type FavoritePlace = {
+  id: string;
+  label: string;
+  place: Place;
+};
+
+type FavoriteRoute = {
+  id: string;
+  label: string;
+  startPlace: Place;
+  endPlace: Place;
+  route: TransitRoute;
 };
 
 type SegmentReview = {
@@ -130,6 +169,11 @@ const reasons = [
 export function JournalRouteForm({
   initialCategory = "commute",
 }: JournalRouteFormProps) {
+  const supabase = useMemo(
+    () => createClient(),
+    [],
+  );
+
   const [category, setCategory] =
     useState(initialCategory);
 
@@ -159,11 +203,120 @@ export function JournalRouteForm({
   const [searchError, setSearchError] =
     useState("");
 
+  const [favoritePlaces, setFavoritePlaces] =
+    useState<FavoritePlace[]>([]);
+
+  const [favoriteRoutes, setFavoriteRoutes] =
+    useState<FavoriteRoute[]>([]);
+
+  const [isLoadingFavorites, setIsLoadingFavorites] =
+    useState(true);
+
+  const [favoriteError, setFavoriteError] =
+    useState("");
+
   const [state, formAction, isPending] =
     useActionState(
       createJournal,
       initialState,
     );
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadFavorites() {
+      setIsLoadingFavorites(true);
+      setFavoriteError("");
+
+      const { data: userResult } =
+        await supabase.auth.getUser();
+
+      if (!userResult.user) {
+        if (isActive) {
+          setFavoriteError(
+            "즐겨찾기를 사용하려면 로그인이 필요합니다.",
+          );
+          setIsLoadingFavorites(false);
+        }
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("favorites")
+        .select(
+          "id, favorite_type, label, place_payload",
+        )
+        .eq("user_id", userResult.user.id)
+        .in("favorite_type", ["place", "route"])
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (!isActive) return;
+
+      if (error) {
+        setFavoriteError(
+          "즐겨찾기를 불러오지 못했습니다.",
+        );
+        setIsLoadingFavorites(false);
+        return;
+      }
+
+      const rows = (data ?? []) as FavoriteRow[];
+
+      setFavoritePlaces(
+        rows.flatMap((row) => {
+          const payload = row.place_payload;
+
+          if (payload?.type !== "place") {
+            return [];
+          }
+
+          return [
+            {
+              id: row.id,
+              label: row.label,
+              place: {
+                id: payload.kakaoPlaceId,
+                name: payload.placeName,
+                address: payload.address,
+                latitude: payload.latitude,
+                longitude: payload.longitude,
+              },
+            },
+          ];
+        }),
+      );
+
+      setFavoriteRoutes(
+        rows.flatMap((row) => {
+          const payload = row.place_payload;
+
+          if (payload?.type !== "route") {
+            return [];
+          }
+
+          return [
+            {
+              id: row.id,
+              label: row.label,
+              startPlace: payload.startPlace,
+              endPlace: payload.endPlace,
+              route: payload.route,
+            },
+          ];
+        }),
+      );
+
+      setIsLoadingFavorites(false);
+    }
+
+    void loadFavorites();
+
+    return () => {
+      isActive = false;
+    };
+  }, [supabase]);
 
   const sortedRoutes = useMemo(() => {
     const indexedRoutes = routes.map(
@@ -297,6 +450,40 @@ export function JournalRouteForm({
     setStartPlace(endPlace);
     setEndPlace(startPlace);
     resetRoutes();
+  }
+
+  function selectFavoritePlace(
+    favoriteId: string,
+    target: "start" | "end",
+  ) {
+    const favorite = favoritePlaces.find(
+      (item) => item.id === favoriteId,
+    );
+
+    if (!favorite) return;
+
+    if (target === "start") {
+      changeStartPlace(favorite.place);
+    } else {
+      changeEndPlace(favorite.place);
+    }
+  }
+
+  function selectFavoriteRoute(
+    favoriteId: string,
+  ) {
+    const favorite = favoriteRoutes.find(
+      (item) => item.id === favoriteId,
+    );
+
+    if (!favorite) return;
+
+    setStartPlace(favorite.startPlace);
+    setEndPlace(favorite.endPlace);
+    setRoutes([favorite.route]);
+    setRouteSort("recommended");
+    setSearchError("");
+    selectRoute(favorite.route);
   }
 
   async function findRoutes() {
@@ -559,10 +746,127 @@ export function JournalRouteForm({
           </div>
         </fieldset>
 
-        <section className="mt-8 flex flex-1 flex-col justify-center">
+        <section className="mt-8 flex flex-1 flex-col justify-start">
           <h2 className="text-base font-bold text-main">
             출발지와 도착지
           </h2>
+
+          <div className="mt-4 space-y-3 rounded-control border border-info/20 bg-info-soft p-4">
+            <div>
+              <p className="text-sm font-bold text-main">
+                즐겨찾기에서 불러오기
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted">
+                저장한 장소를 출발지·도착지로 지정하거나 저장한 노선을 한 번에 불러올 수 있습니다.
+              </p>
+            </div>
+
+            {isLoadingFavorites ? (
+              <p className="text-xs text-muted">
+                즐겨찾기를 불러오는 중입니다.
+              </p>
+            ) : favoriteError ? (
+              <p className="text-xs text-danger">
+                {favoriteError}
+              </p>
+            ) : (
+              <>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-secondary">
+                    즐겨찾기 노선
+                  </span>
+                  <select
+                    value=""
+                    onChange={(event) =>
+                      selectFavoriteRoute(
+                        event.target.value,
+                      )
+                    }
+                    disabled={favoriteRoutes.length === 0}
+                    className="min-h-11 w-full rounded-control border border-line bg-white px-3 text-sm text-main outline-none focus:border-info disabled:text-muted"
+                  >
+                    <option value="">
+                      {favoriteRoutes.length === 0
+                        ? "저장한 노선이 없습니다"
+                        : "저장한 노선 선택"}
+                    </option>
+                    {favoriteRoutes.map((favorite) => (
+                      <option
+                        key={favorite.id}
+                        value={favorite.id}
+                      >
+                        {favorite.label} · {favorite.startPlace.name} → {favorite.endPlace.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid gap-3">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold text-secondary">
+                      즐겨찾기 출발지
+                    </span>
+                    <select
+                      value=""
+                      onChange={(event) =>
+                        selectFavoritePlace(
+                          event.target.value,
+                          "start",
+                        )
+                      }
+                      disabled={favoritePlaces.length === 0}
+                      className="min-h-11 w-full rounded-control border border-line bg-white px-3 text-sm text-main outline-none focus:border-info disabled:text-muted"
+                    >
+                      <option value="">
+                        {favoritePlaces.length === 0
+                          ? "저장한 장소 없음"
+                          : "출발지 선택"}
+                      </option>
+                      {favoritePlaces.map((favorite) => (
+                        <option
+                          key={favorite.id}
+                          value={favorite.id}
+                        >
+                          {favorite.label} · {favorite.place.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold text-secondary">
+                      즐겨찾기 도착지
+                    </span>
+                    <select
+                      value=""
+                      onChange={(event) =>
+                        selectFavoritePlace(
+                          event.target.value,
+                          "end",
+                        )
+                      }
+                      disabled={favoritePlaces.length === 0}
+                      className="min-h-11 w-full rounded-control border border-line bg-white px-3 text-sm text-main outline-none focus:border-info disabled:text-muted"
+                    >
+                      <option value="">
+                        {favoritePlaces.length === 0
+                          ? "저장한 장소 없음"
+                          : "도착지 선택"}
+                      </option>
+                      {favoritePlaces.map((favorite) => (
+                        <option
+                          key={favorite.id}
+                          value={favorite.id}
+                        >
+                          {favorite.label} · {favorite.place.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="mt-4 space-y-4">
             <PlaceSearch
@@ -714,7 +1018,7 @@ export function JournalRouteForm({
             </RouteFilterButton>
           </div>
 
-          <div className="-mr-3 max-h-[340px] overflow-y-auto pr-3 scrollbar-thin">
+          <div className="-mr-3 max-h-[510px] overflow-y-auto overscroll-contain pr-3 scrollbar-thin">
             <div className="space-y-4">
               {sortedRoutes.map((route) => (
                 <RouteChoiceCard
@@ -806,7 +1110,7 @@ export function JournalRouteForm({
                 </p>
               </header>
 
-              <ol className="mt-5 space-y-4">
+              <ol className="-mr-3 mt-5 max-h-[820px] space-y-4 overflow-y-auto overscroll-contain pr-3 scrollbar-thin">
                 {reviewableSteps.map(
                   (step, index) => (
                     <SegmentReviewCard
