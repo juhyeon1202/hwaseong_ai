@@ -21,6 +21,10 @@ import {
   createClient,
 } from "@/lib/supabase/server";
 
+import {
+  AdminDrtReviewPanel,
+} from "@/components/admin-drt-review-panel";
+
 type IncidentPageProps = {
   params: Promise<{
     id: string;
@@ -321,6 +325,12 @@ export default async function AdminIncidentPage({
         }
         evidence={
           incident.evidence
+        }
+      />
+
+      <AdminDrtReviewPanel
+        incidentId={
+          incident.id
         }
       />
 
