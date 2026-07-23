@@ -436,27 +436,81 @@ export function JournalRouteForm({
   return (
     <div
       className={[
-        "grid items-start gap-6",
+        "grid gap-6 lg:items-stretch",
         "lg:grid-cols-[380px_minmax(0,1fr)]",
       ].join(" ")}
     >
-      <Card className="lg:row-span-[20]">
-        <header className="border-b border-line-light pb-4">
-          <p className="text-xs font-semibold text-brand">
-            오늘의 이동
+      <Card
+        className={[
+          "flex flex-col",
+          "lg:row-span-2",
+          "lg:mt-[150px]",
+          "lg:h-[calc(100%-150px)]",
+        ].join(" ")}
+      >
+        <header className="border-b border-line-light pb-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-brand">
+                오늘의 일지
+              </p>
+
+              <h1 className="mt-1 text-xl font-bold text-main">
+                교통일지 기록
+              </h1>
+            </div>
+
+            <span className="rounded-pill bg-brand-softer px-3 py-1.5 text-xs font-semibold text-brand">
+              자동 기록
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm leading-6 text-muted">
+            경로를 찾고 실제 이용한 경로의 각 구간을 평가해 주세요.
+            오늘의 이동 경험이 더 나은 화성시 교통을 만드는 데이터가 됩니다.
           </p>
 
-          <h1 className="mt-1 text-xl font-bold text-main">
-            교통일지 기록
-          </h1>
+          <div className="mt-5 rounded-card bg-surface-muted p-4">
+            <p className="text-xs font-semibold text-secondary">
+              교통일지 작성 순서
+            </p>
 
-          <p className="mt-2 text-sm leading-6 text-muted">
-            경로를 찾고 실제 이용한 경로의
-            각 구간을 평가해 주세요.
-          </p>
+            <ol className="mt-3 grid grid-cols-3 gap-2">
+              <li className="rounded-control bg-white px-2 py-3 text-center">
+                <span className="block text-[11px] font-bold text-brand">
+                  01
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-main">
+                  이동 유형
+                </span>
+              </li>
+
+              <li className="rounded-control bg-white px-2 py-3 text-center">
+                <span className="block text-[11px] font-bold text-info">
+                  02
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-main">
+                  경로 선택
+                </span>
+              </li>
+
+              <li className="rounded-control bg-white px-2 py-3 text-center">
+                <span className="block text-[11px] font-bold text-success">
+                  03
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-main">
+                  구간 평가
+                </span>
+              </li>
+            </ol>
+
+            <p className="mt-3 text-center text-[11px] leading-5 text-muted">
+              날짜와 작성 시간은 저장할 때 자동으로 기록됩니다.
+            </p>
+          </div>
         </header>
 
-        <fieldset className="mt-5">
+        <fieldset className="mt-6">
           <legend className="text-base font-bold text-main">
             어떤 이동인가요?
           </legend>
@@ -505,7 +559,7 @@ export function JournalRouteForm({
           </div>
         </fieldset>
 
-        <section className="mt-6">
+        <section className="mt-8 flex flex-1 flex-col justify-center">
           <h2 className="text-base font-bold text-main">
             출발지와 도착지
           </h2>
@@ -660,32 +714,18 @@ export function JournalRouteForm({
             </RouteFilterButton>
           </div>
 
-          <div
-            className={[
-              "max-h-[340px] space-y-4",
-              "overflow-y-auto pr-2",
-              "scrollbar-thin",
-            ].join(" ")}
-          >
-            {sortedRoutes.map(
-              (route) => (
+          <div className="-mr-3 max-h-[340px] overflow-y-auto pr-3 scrollbar-thin">
+            <div className="space-y-4">
+              {sortedRoutes.map((route) => (
                 <RouteChoiceCard
                   key={route.id}
                   route={route}
-                  recommended={
-                    routes[0]?.id ===
-                    route.id
-                  }
-                  selected={
-                    selectedRouteId ===
-                    route.id
-                  }
-                  onSelect={() =>
-                    selectRoute(route)
-                  }
+                  recommended={routes[0]?.id === route.id}
+                  selected={selectedRouteId === route.id}
+                  onSelect={() => selectRoute(route)}
                 />
-              ),
-            )}
+              ))}
+            </div>
           </div>
         </section>
       )}

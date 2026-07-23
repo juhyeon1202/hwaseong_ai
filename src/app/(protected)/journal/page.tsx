@@ -1,21 +1,13 @@
-import type { Metadata } from "next";
+import type {
+  Metadata,
+} from "next";
 
 import {
-  DeleteJournalButton,
-  JournalForm,
-  type JournalFormData,
-  type JournalInitialValues,
-} from "@/components/journal-form";
-
+  JournalRouteForm,
+} from "@/components/journal-route-form";
 import {
-  Badge,
-  Card,
-  EmptyState,
-  SectionHeader,
-} from "@/components/ui";
-
-import { requireUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+  requireUser,
+} from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "교통일지 작성",
@@ -24,6 +16,11 @@ export const metadata: Metadata = {
 };
 
 export default async function JournalPage() {
-  const user = await requireUser();
+  await requireUser();
 
+  return (
+    <div className="mx-auto w-full max-w-6xl">
+      <JournalRouteForm />
+    </div>
+  );
 }
