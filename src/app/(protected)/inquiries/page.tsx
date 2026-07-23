@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 
 import {
-  respondToInquiry,
-} from "@/app/(protected)/account-actions";
-import {
-  InquiryForm,
-} from "@/components/account-tools";
+  InquiryDeleteButton,
+  InquiryEditModal,
+} from "@/components/inquiry-edit-modal";
+
+import { InquiryForm } from "@/components/account-tools";
 import {
   Badge,
-  Button,
   Card,
   EmptyState,
   SectionHeader,
@@ -36,17 +35,58 @@ type Inquiry = {
   created_at: string;
 };
 
-const statusLabels = {
+type InquiriesPageProps = {
+  searchParams: Promise<{
+    mode?: string | string[];
+  }>;
+};
+
+const statusLabels: Record<InquiryStatus, string> = {
   waiting: "답변 대기",
   in_progress: "확인 중",
   completed: "답변 완료",
-} as const;
+};
 
-export default async function InquiriesPage() {
+export default async function InquiriesPage({
+  searchParams,
+}: InquiriesPageProps) {
   const user = await requireUser();
+  const params = await searchParams;
+
+  const mode = Array.isArray(params.mode)
+    ? params.mode[0]
+    : params.mode;
+
+  if (mode === "write") {
+    return (
+      <div className="mx-auto w-full max-w-2xl">
+        <header className="mb-6">
+          <p className="text-sm font-semibold text-brand-text">
+            고객 지원
+          </p>
+
+          <h1 className="mt-2 text-2xl font-bold text-main sm:text-3xl">
+            1:1 문의 작성
+          </h1>
+
+          <p className="mt-2 text-sm leading-6 text-secondary">
+            서비스 이용 중 궁금한 점이나 불편한 내용을 남겨 주세요.
+            등록한 문의와 답변은 마이페이지에서 확인할 수 있습니다.
+          </p>
+        </header>
+
+        <InquiryForm />
+
+        <p className="mt-4 text-center text-xs leading-5 text-muted">
+          문의 내용은 작성자 본인과 관리자만 확인할 수 있습니다.
+        </p>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
 
-  let query = supabase
+  const { data, error } = await supabase
     .from("inquiries")
     .select(
       `
@@ -60,93 +100,60 @@ export default async function InquiriesPage() {
         created_at
       `,
     )
+    .eq("user_id", user.id)
     .order("created_at", {
       ascending: false,
     });
 
-  if (user.role !== "admin") {
-    query = query.eq(
-      "user_id",
-      user.id,
-    );
-  }
-
-  const { data, error } = await query;
-
-  const inquiries =
-    (data as Inquiry[] | null) ?? [];
+  const inquiries = (data as Inquiry[] | null) ?? [];
 
   return (
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
-        <section className="space-y-4">
-          <SectionHeader
-            title={
-              user.role === "admin"
-                ? "전체 1:1 문의"
-                : "나의 1:1 문의"
-            }
-            description={
-              user.role === "admin"
-                ? "시민 문의를 확인하고 답변합니다."
-                : "등록한 문의와 답변을 확인하세요."
-            }
-          />
+    <div className="mx-auto w-full max-w-4xl space-y-6">
+      <SectionHeader
+        title="나의 1:1 문의"
+        description="내가 등록한 문의와 관리자 답변을 확인하세요."
+      />
 
-          {error ? (
-            <Card>
-              <p className="text-sm text-danger">
-                문의를 불러오지 못했습니다.
-              </p>
-            </Card>
-          ) : inquiries.length === 0 ? (
-            <EmptyState
-              title="등록된 문의가 없습니다"
-              description="서비스 이용 중 궁금한 점을 남겨 주세요."
+      {error ? (
+        <Card>
+          <p role="alert" className="text-sm text-danger">
+            문의 내역을 불러오지 못했습니다.
+          </p>
+        </Card>
+      ) : inquiries.length === 0 ? (
+        <EmptyState
+          title="등록한 문의가 없습니다"
+          description="프로필 메뉴의 1:1 문의에서 새로운 문의를 등록할 수 있습니다."
+        />
+      ) : (
+        <ul className="space-y-4">
+          {inquiries.map((inquiry) => (
+            <InquiryItem
+              key={inquiry.id}
+              inquiry={inquiry}
             />
-          ) : (
-            <ul className="space-y-3">
-              {inquiries.map(
-                (inquiry) => (
-                  <InquiryItem
-                    key={inquiry.id}
-                    inquiry={inquiry}
-                    isAdmin={
-                      user.role ===
-                      "admin"
-                    }
-                  />
-                ),
-              )}
-            </ul>
-          )}
-        </section>
-
-        <aside>
-          <InquiryForm />
-        </aside>
-      </div>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
 function InquiryItem({
   inquiry,
-  isAdmin,
 }: {
   inquiry: Inquiry;
-  isAdmin: boolean;
 }) {
+  const canEdit = inquiry.status === "waiting";
+
   return (
     <li>
       <Card>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge
-            status={inquiry.status}
-          />
+          <StatusBadge status={inquiry.status} />
 
           <span className="ml-auto text-xs text-muted">
-            {formatDateTime(
-              inquiry.created_at,
-            )}
+            {formatDateTime(inquiry.created_at)}
           </span>
         </div>
 
@@ -158,7 +165,7 @@ function InquiryItem({
           {inquiry.content}
         </p>
 
-        {inquiry.admin_response && (
+        {inquiry.admin_response ? (
           <div className="mt-5 rounded-control bg-brand-softer p-4">
             <p className="text-xs font-semibold text-brand-text">
               관리자 답변
@@ -167,60 +174,45 @@ function InquiryItem({
             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-main">
               {inquiry.admin_response}
             </p>
+
+            {inquiry.responded_at && (
+              <p className="mt-3 text-xs text-muted">
+                답변일 {formatDateTime(inquiry.responded_at)}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-control bg-surface-muted p-4">
+            <p className="text-sm text-secondary">
+              관리자가 문의 내용을 확인하고 있습니다.
+            </p>
           </div>
         )}
 
-        {isAdmin && (
-          <form
-            action={respondToInquiry}
-            className="mt-5 space-y-3 border-t border-line-light pt-5"
-          >
-            <input
-              type="hidden"
-              name="inquiryId"
-              value={inquiry.id}
+        <div className="mt-5 border-t border-line pt-4">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canEdit && (
+              <InquiryEditModal
+                inquiry={{
+                  id: inquiry.id,
+                  title: inquiry.title,
+                  content: inquiry.content,
+                }}
+              />
+            )}
+
+            <InquiryDeleteButton
+              inquiryId={inquiry.id}
+              inquiryTitle={inquiry.title}
             />
+          </div>
 
-            <select
-              name="status"
-              defaultValue={
-                inquiry.status
-              }
-              className="min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-main outline-none focus:border-brand"
-            >
-              <option value="waiting">
-                답변 대기
-              </option>
-
-              <option value="in_progress">
-                확인 중
-              </option>
-
-              <option value="completed">
-                답변 완료
-              </option>
-            </select>
-
-            <textarea
-              name="response"
-              rows={4}
-              maxLength={3000}
-              defaultValue={
-                inquiry.admin_response ??
-                ""
-              }
-              placeholder="관리자 답변"
-              className="w-full resize-none rounded-control border border-line bg-surface px-3 py-3 text-sm text-main outline-none focus:border-brand"
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-            >
-              답변 저장
-            </Button>
-          </form>
-        )}
+          {!canEdit && (
+            <p className="mt-3 text-right text-xs text-muted">
+              관리자가 확인을 시작한 문의는 수정할 수 없습니다.
+            </p>
+          )}
+        </div>
       </Card>
     </li>
   );
@@ -255,14 +247,11 @@ function StatusBadge({
 }
 
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat(
-    "ko-KR",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  ).format(new Date(value));
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }

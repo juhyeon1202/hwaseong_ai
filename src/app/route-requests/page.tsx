@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import {
   toggleRouteVote,
@@ -205,7 +204,11 @@ function RouteRequestItem({
 
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
           <ButtonLink
-            href={`/route-requests/${route.id}`}
+            href={
+              route.post_id
+                ? `/community/${route.post_id}`
+                : "/community"
+            }
             variant="secondary"
             fullWidth
           >
@@ -252,14 +255,6 @@ function RouteRequestItem({
           )}
         </div>
 
-        {route.post_id && (
-          <Link
-            href={`/community/${route.post_id}`}
-            className="mt-3 inline-flex min-h-9 items-center text-xs font-semibold text-secondary"
-          >
-            게시글 원문·댓글 보기 →
-          </Link>
-        )}
       </Card>
     </li>
   );

@@ -13,6 +13,12 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 
+export type RouteVoteActionState = {
+  status: "success" | "error";
+  message: string;
+  voted?: boolean;
+};
+
 export async function deleteRouteRequest(
   formData: FormData,
 ) {
@@ -143,6 +149,88 @@ export async function toggleRouteVote(
   revalidatePath("/admin");
 
   revalidatePath("/community");
+}
+
+export async function toggleRouteVoteWithResult(
+  formData: FormData,
+): Promise<RouteVoteActionState> {
+  const user = await requireUser();
+
+  const routeRequestId =
+    formData
+      .get("routeRequestId")
+      ?.toString();
+
+  if (!routeRequestId) {
+    return {
+      status: "error",
+      message:
+        "투표할 노선 정보가 없습니다.",
+    };
+  }
+
+  const supabase =
+    await createClient();
+
+  const { data: existingVote } =
+    await supabase
+      .from("route_request_votes")
+      .select("route_request_id")
+      .eq(
+        "route_request_id",
+        routeRequestId,
+      )
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+  if (existingVote) {
+    const { error } = await supabase
+      .from("route_request_votes")
+      .delete()
+      .eq(
+        "route_request_id",
+        routeRequestId,
+      )
+      .eq("user_id", user.id);
+
+    if (error) {
+      return {
+        status: "error",
+        message:
+          "투표를 취소하지 못했습니다.",
+      };
+    }
+
+    return {
+      status: "success",
+      message:
+        "투표가 취소되었습니다.",
+      voted: false,
+    };
+  }
+
+  const { error } = await supabase
+    .from("route_request_votes")
+    .insert({
+      route_request_id:
+        routeRequestId,
+      user_id: user.id,
+    });
+
+  if (error) {
+    return {
+      status: "error",
+      message:
+        "투표를 처리하지 못했습니다.",
+    };
+  }
+
+  return {
+    status: "success",
+    message:
+      "이 노선에 투표했습니다.",
+    voted: true,
+  };
 }
 
 export async function updateRouteRequestStatus(

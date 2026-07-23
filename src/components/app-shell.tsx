@@ -230,7 +230,7 @@ function HeaderAccount({
           />
 
           <AccountLink
-            href="/inquiries"
+            href="/inquiries?mode=write"
             label="1:1 문의"
           />
 
