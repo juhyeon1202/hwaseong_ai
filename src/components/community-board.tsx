@@ -12,12 +12,10 @@ import {
 
 import {
   createPost,
+  createRouteSuggestionPost,
   type PostActionState,
+  type RouteSuggestionActionState,
 } from "@/app/community/actions";
-import {
-  createRouteRequest,
-  type RouteRequestActionState,
-} from "@/app/route-requests/actions";
 import {
   RouteStopMap,
 } from "@/components/route-stop-map";
@@ -759,7 +757,7 @@ type RouteProposalComposerProps = {
   onSuccess: () => void;
 };
 
-const initialRouteState: RouteRequestActionState =
+const initialRouteState: RouteSuggestionActionState =
   {
     status: "idle",
     message: "",
@@ -774,7 +772,7 @@ function RouteProposalComposer({
     formAction,
     isPending,
   ] = useActionState(
-    createRouteRequest,
+    createRouteSuggestionPost,
     initialRouteState,
   );
 
@@ -923,6 +921,12 @@ function RouteProposalComposer({
       action={formAction}
       className="space-y-5"
     >
+      <input
+        type="hidden"
+        name="busType"
+        value=""
+      />
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
         <div className="space-y-5">
           <Field label="노선 제목">
@@ -938,10 +942,10 @@ function RouteProposalComposer({
 
           <Field label="제안 내용">
             <textarea
-              name="description"
+              name="content"
               required
               minLength={5}
-              maxLength={3000}
+              maxLength={5000}
               rows={5}
               placeholder="필요한 시간대와 노선이 필요한 이유를 작성해 주세요."
               className={`${inputClassName} resize-none py-4`}
@@ -1080,6 +1084,7 @@ function RouteProposalComposer({
                 stopIds={selectedStops.map(
                   (stop) => stop.id,
                 )}
+                showPolyline
               />
             </div>
           )}
