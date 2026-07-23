@@ -364,7 +364,7 @@ export function KakaoMap({
   return (
     <div
       className={[
-        "relative overflow-hidden bg-info-soft",
+        "relative z-0 overflow-hidden bg-info-soft",
         className,
       ].join(" ")}
       style={{ height }}
