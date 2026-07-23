@@ -352,7 +352,7 @@ function ActivitySummary({
 }: ActivitySummaryProps) {
   const activities = [
     {
-      href: "/journal",
+      href: "/mypage/journals",
       label: "교통일지",
       count: journalCount,
     },
