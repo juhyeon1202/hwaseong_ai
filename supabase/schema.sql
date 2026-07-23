@@ -3280,3 +3280,74 @@ to authenticated
 with check (
   author_id = auth.uid()
 );
+
+-- =========================================================
+-- 31. 룰렛 보상 구성 재배정 (100P/200P/300P/사탕쿠폰/커피쿠폰)
+-- 기존 행은 reward_draws가 참조할 수 있어 삭제 대신 비활성화하고,
+-- 화면에 표시할 새 5종 보상을 추가합니다.
+-- =========================================================
+
+update public.reward_catalog
+set is_active = false
+where name in (
+  '50 포인트',
+  '100 포인트',
+  '300 포인트',
+  '커피 쿠폰'
+);
+
+insert into public.reward_catalog (
+  name,
+  description,
+  reward_type,
+  reward_value,
+  probability,
+  stock,
+  is_active
+)
+values
+(
+  '100P',
+  '룰렛 포인트 보상',
+  'points',
+  100,
+  0.35,
+  null,
+  true
+),
+(
+  '200P',
+  '룰렛 포인트 보상',
+  'points',
+  200,
+  0.30,
+  null,
+  true
+),
+(
+  '300P',
+  '룰렛 특별 포인트 보상',
+  'points',
+  300,
+  0.20,
+  null,
+  true
+),
+(
+  '사탕쿠폰',
+  '프로토타입 데모용 예시 경품입니다.',
+  'coupon',
+  1,
+  0.10,
+  null,
+  true
+),
+(
+  '커피쿠폰',
+  '프로토타입 데모용 예시 경품입니다.',
+  'coupon',
+  1,
+  0.05,
+  null,
+  true
+);
