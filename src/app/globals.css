@@ -15,6 +15,7 @@
   /* 선 */
   --app-border: #e5e8eb;
   --app-border-light: #eef0f2;
+  --app-border-strong: #cbd1d9;
 
   /* 브랜드 */
   --app-brand: #ec7211;
@@ -67,6 +68,7 @@
 
   --color-line: var(--app-border);
   --color-line-light: var(--app-border-light);
+  --color-line-strong: var(--app-border-strong);
 
   --color-brand: var(--app-brand);
   --color-brand-hover: var(--app-brand-hover);
@@ -147,4 +149,20 @@ a {
 ::selection {
   background: var(--app-brand-soft);
   color: var(--app-brand-text);
+}
+
+@keyframes reward-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-reward-pop {
+  animation: reward-pop 0.2s ease-out;
 }
