@@ -1,19 +1,23 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
+  type FormEvent,
+  type ReactNode,
   useEffect,
   useState,
-  type FormEvent,
 } from "react";
+import {
+  useRouter,
+} from "next/navigation";
 
 import {
   HWASEONG_DISTRICTS,
   isHwaseongDistrict,
 } from "@/lib/hwaseong-districts";
-
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClient,
+} from "@/lib/supabase/client";
+import { Button } from "./ui";
 
 type Gender =
   | "male"
@@ -57,72 +61,103 @@ const nicknameNouns = [
 export function SignupForm() {
   const router = useRouter();
 
-  const [nickname, setNickname] =
-    useState("화성시민");
+  const [
+    nickname,
+    setNickname,
+  ] = useState("");
 
-  const [name, setName] =
-    useState("");
+  const [
+    name,
+    setName,
+  ] = useState("");
 
-  const [username, setUsername] =
-    useState("");
+  const [
+    username,
+    setUsername,
+  ] = useState("");
 
-  const [phone, setPhone] =
-    useState("");
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
-  const [otp, setOtp] =
-    useState("");
+  const [
+    otp,
+    setOtp,
+  ] = useState("");
 
-  const [password, setPassword] =
-    useState("");
+  const [
+    password,
+    setPassword,
+  ] = useState("");
 
   const [
     passwordConfirm,
     setPasswordConfirm,
   ] = useState("");
 
-  const [birthDate, setBirthDate] =
-    useState("");
+  const [
+    birthDate,
+    setBirthDate,
+  ] = useState("");
 
-  const [gender, setGender] =
-    useState<Gender>("male");
+  const [
+    gender,
+    setGender,
+  ] = useState<Gender>("male");
 
   const [
     homeDistrict,
     setHomeDistrict,
   ] = useState("");
 
-  const [language, setLanguage] =
-    useState<Language>("ko");
+  const [
+    language,
+    setLanguage,
+  ] = useState<Language>("ko");
 
   const [
     referralCode,
     setReferralCode,
   ] = useState("");
 
-  const [isOtpSent, setIsOtpSent] =
-    useState(false);
-
   const [
-    isPhoneVerified,
-    setIsPhoneVerified,
+    isOtpSent,
+    setIsOtpSent,
   ] = useState(false);
 
-  const [isSendingOtp, setIsSendingOtp] =
-    useState(false);
+  const [
+    isEmailVerified,
+    setIsEmailVerified,
+  ] = useState(false);
+
+  const [
+    isSendingOtp,
+    setIsSendingOtp,
+  ] = useState(false);
 
   const [
     isVerifyingOtp,
     setIsVerifyingOtp,
   ] = useState(false);
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
-  const [isError, setIsError] =
-    useState(false);
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
-  const normalizedPhone =
-    normalizeKoreanPhone(phone);
+  const [
+    isError,
+    setIsError,
+  ] = useState(false);
+
+  const normalizedEmail =
+    email.trim().toLowerCase();
 
   useEffect(() => {
     setNickname(
@@ -144,21 +179,44 @@ export function SignupForm() {
     setNickname(nextNickname);
   }
 
-  function showError(value: string) {
+  function showError(
+    value: string,
+  ) {
     setIsError(true);
     setMessage(value);
   }
 
-  function showSuccess(value: string) {
+  function showSuccess(
+    value: string,
+  ) {
     setIsError(false);
     setMessage(value);
   }
 
+  function validateEmail() {
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        normalizedEmail,
+      )
+    ) {
+      showError(
+        "올바른 이메일 주소를 입력해 주세요.",
+      );
+
+      return false;
+    }
+
+    return true;
+  }
+
   function validateProfile() {
-    if (nickname.length < 2) {
+    if (
+      nickname.trim().length < 2
+    ) {
       showError(
         "닉네임을 생성해 주세요.",
       );
+
       return false;
     }
 
@@ -166,6 +224,7 @@ export function SignupForm() {
       showError(
         "이름을 입력해 주세요.",
       );
+
       return false;
     }
 
@@ -177,13 +236,11 @@ export function SignupForm() {
       showError(
         "아이디는 영문, 숫자, 밑줄을 사용해 4~20자로 입력해 주세요.",
       );
+
       return false;
     }
 
-    if (!normalizedPhone) {
-      showError(
-        "올바른 휴대전화 번호를 입력해 주세요.",
-      );
+    if (!validateEmail()) {
       return false;
     }
 
@@ -191,13 +248,18 @@ export function SignupForm() {
       showError(
         "비밀번호는 8자 이상 입력해 주세요.",
       );
+
       return false;
     }
 
-    if (password !== passwordConfirm) {
+    if (
+      password !==
+      passwordConfirm
+    ) {
       showError(
         "비밀번호가 서로 일치하지 않습니다.",
       );
+
       return false;
     }
 
@@ -205,15 +267,19 @@ export function SignupForm() {
       showError(
         "생년월일을 입력해 주세요.",
       );
+
       return false;
     }
 
     if (
-      !isHwaseongDistrict(homeDistrict)
+      !isHwaseongDistrict(
+        homeDistrict,
+      )
     ) {
       showError(
         "거주지역을 선택해 주세요.",
       );
+
       return false;
     }
 
@@ -230,22 +296,42 @@ export function SignupForm() {
     setIsSendingOtp(true);
 
     try {
-      const supabase = createClient();
+      const supabase =
+        createClient();
+
+      if (isOtpSent) {
+        const { error } =
+          await supabase.auth.resend({
+            type: "signup",
+            email: normalizedEmail,
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        showSuccess(
+          "인증번호를 다시 전송했습니다.",
+        );
+
+        return;
+      }
 
       const { data, error } =
         await supabase.auth.signUp({
-          phone: normalizedPhone,
+          email: normalizedEmail,
           password,
           options: {
             data: {
-              nickname,
+              nickname:
+                nickname.trim(),
               name: name.trim(),
               username:
                 username
                   .trim()
                   .toLowerCase(),
-              phone:
-                normalizedPhone,
+              email:
+                normalizedEmail,
               birth_date:
                 birthDate,
               gender,
@@ -268,18 +354,19 @@ export function SignupForm() {
 
       if (data.session) {
         setIsOtpSent(true);
-        setIsPhoneVerified(true);
+        setIsEmailVerified(true);
 
         showSuccess(
-          "전화번호 인증이 완료되었습니다.",
+          "이메일 인증이 완료되었습니다.",
         );
+
         return;
       }
 
       setIsOtpSent(true);
 
       showSuccess(
-        "인증번호를 전송했습니다. 문자로 받은 번호를 입력해 주세요.",
+        "이메일로 6자리 인증번호를 전송했습니다.",
       );
     } catch (error) {
       showError(
@@ -297,40 +384,39 @@ export function SignupForm() {
   async function verifyOtp() {
     setMessage("");
 
-    if (!normalizedPhone) {
-      showError(
-        "휴대전화 번호를 확인해 주세요.",
-      );
+    if (!validateEmail()) {
       return;
     }
 
     if (!/^\d{6}$/.test(otp)) {
       showError(
-        "문자로 받은 6자리 인증번호를 입력해 주세요.",
+        "이메일로 받은 6자리 인증번호를 입력해 주세요.",
       );
+
       return;
     }
 
     setIsVerifyingOtp(true);
 
     try {
-      const supabase = createClient();
+      const supabase =
+        createClient();
 
       const { error } =
         await supabase.auth.verifyOtp({
-          phone: normalizedPhone,
+          email: normalizedEmail,
           token: otp,
-          type: "sms",
+          type: "signup",
         });
 
       if (error) {
         throw error;
       }
 
-      setIsPhoneVerified(true);
+      setIsEmailVerified(true);
 
       showSuccess(
-        "휴대전화 인증이 완료되었습니다.",
+        "이메일 인증이 완료되었습니다.",
       );
     } catch (error) {
       showError(
@@ -345,24 +431,32 @@ export function SignupForm() {
     }
   }
 
-  function completeSignup(
+  async function completeSignup(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+    setMessage("");
 
     if (!validateProfile()) {
       return;
     }
 
-    if (!isPhoneVerified) {
+    if (!isEmailVerified) {
       showError(
-        "휴대전화 인증을 완료해 주세요.",
+        "이메일 인증을 완료해 주세요.",
       );
+
       return;
     }
 
-    router.replace("/");
-    router.refresh();
+    setIsSubmitting(true);
+
+    try {
+      router.replace("/");
+      router.refresh();
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -391,15 +485,7 @@ export function SignupForm() {
           className="rounded-card border border-brand-line bg-brand-softer p-4"
         >
           <div className="flex items-center gap-4">
-            <span
-              className={[
-                "flex size-16 shrink-0",
-                "items-center justify-center",
-                "rounded-full bg-[#ffe4ca]",
-                "text-sm font-extrabold",
-                "text-brand-text",
-              ].join(" ")}
-            >
+            <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#ffe4ca] text-sm font-extrabold text-brand-text">
               {getNicknameAvatar(
                 nickname,
               )}
@@ -420,15 +506,7 @@ export function SignupForm() {
               onClick={
                 regenerateNickname
               }
-              className={[
-                "min-h-11 shrink-0",
-                "rounded-control border",
-                "border-line bg-white",
-                "px-4 text-sm font-bold",
-                "text-secondary",
-                "hover:border-brand",
-                "hover:text-brand",
-              ].join(" ")}
+              className="min-h-11 shrink-0 rounded-control border border-line bg-white px-4 text-sm font-bold text-secondary hover:border-brand hover:text-brand"
             >
               다시 생성
             </button>
@@ -439,7 +517,9 @@ export function SignupForm() {
           <input
             value={name}
             onChange={(event) =>
-              setName(event.target.value)
+              setName(
+                event.target.value,
+              )
             }
             required
             maxLength={50}
@@ -457,41 +537,40 @@ export function SignupForm() {
             value={username}
             onChange={(event) =>
               setUsername(
-                event.target.value.replace(
-                  /[^a-zA-Z0-9_]/g,
-                  "",
-                ),
+                event.target.value,
               )
             }
             required
             minLength={4}
             maxLength={20}
             autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoComplete="username"
             placeholder="아이디"
             className={inputClassName}
           />
         </SignupField>
 
-        <SignupField label="전화번호">
+        <SignupField label="이메일">
           <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
             <input
-              type="tel"
-              value={phone}
+              type="email"
+              value={email}
               onChange={(event) => {
-                setPhone(
-                  formatPhoneInput(
-                    event.target.value,
-                  ),
+                setEmail(
+                  event.target.value,
                 );
 
                 setIsOtpSent(false);
-                setIsPhoneVerified(false);
+                setIsEmailVerified(
+                  false,
+                );
                 setOtp("");
               }}
               required
-              autoComplete="tel"
-              placeholder="010-0000-0000"
+              autoComplete="email"
+              placeholder="example@email.com"
               className={inputClassName}
             />
 
@@ -499,23 +578,14 @@ export function SignupForm() {
               type="button"
               disabled={
                 isSendingOtp ||
-                isPhoneVerified
+                isEmailVerified
               }
               onClick={() =>
                 void sendOtp()
               }
-              className={[
-                "min-h-14 rounded-control",
-                "border border-line bg-white",
-                "text-sm font-bold",
-                "text-secondary",
-                "hover:border-info",
-                "hover:text-info",
-                "disabled:cursor-not-allowed",
-                "disabled:opacity-50",
-              ].join(" ")}
+              className="min-h-14 rounded-control border border-line bg-white text-sm font-bold text-secondary hover:border-info hover:text-info disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPhoneVerified
+              {isEmailVerified
                 ? "인증 완료"
                 : isSendingOtp
                   ? "전송 중"
@@ -527,8 +597,8 @@ export function SignupForm() {
         </SignupField>
 
         {isOtpSent &&
-          !isPhoneVerified && (
-            <SignupField label="OTP 인증번호">
+          !isEmailVerified && (
+            <SignupField label="이메일 인증번호">
               <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
                 <input
                   inputMode="numeric"
@@ -536,7 +606,10 @@ export function SignupForm() {
                   onChange={(event) =>
                     setOtp(
                       event.target.value
-                        .replace(/\D/g, "")
+                        .replace(
+                          /\D/g,
+                          "",
+                        )
                         .slice(0, 6),
                     )
                   }
@@ -544,7 +617,9 @@ export function SignupForm() {
                   maxLength={6}
                   autoComplete="one-time-code"
                   placeholder="6자리 인증번호"
-                  className={inputClassName}
+                  className={
+                    inputClassName
+                  }
                 />
 
                 <button
@@ -577,7 +652,7 @@ export function SignupForm() {
             required
             minLength={8}
             autoComplete="new-password"
-            placeholder="비밀번호"
+            placeholder="8자 이상 비밀번호"
             className={inputClassName}
           />
         </SignupField>
@@ -615,102 +690,103 @@ export function SignupForm() {
             />
           </SignupField>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-muted">
-              성별
-            </legend>
-
-            <div
-              className={[
-                "grid grid-cols-2 gap-2",
-                "[&>label]:block",
-                "[&>label]:w-full",
-                "[&>label>span]:min-h-14",
-                "[&>label>span]:w-full",
-              ].join(" ")}
-            >
+          <SignupField label="성별">
+            <div className="grid min-h-14 grid-cols-2 gap-2">
               <ChoiceButton
-                name="gender"
-                value="male"
-                label="남"
-                checked={
+                selected={
                   gender === "male"
                 }
-                onChange={() =>
+                onClick={() =>
                   setGender("male")
                 }
-              />
+              >
+                남
+              </ChoiceButton>
 
               <ChoiceButton
-                name="gender"
-                value="female"
-                label="여"
-                checked={
+                selected={
                   gender === "female"
                 }
-                onChange={() =>
+                onClick={() =>
                   setGender("female")
                 }
-              />
+              >
+                여
+              </ChoiceButton>
             </div>
-          </fieldset>
+          </SignupField>
         </div>
 
         <p className="-mt-2 text-xs leading-5 text-muted">
-          생년월일과 성별은 통계용이며 다른
-          사용자에게 공개되지 않습니다.
+          생년월일과 성별은 통계용이며
+          다른 사용자에게 공개되지
+          않습니다.
         </p>
 
-        <SignupField label="거주지역">
-          <div className="flex flex-wrap items-start gap-2">
-            <div className="flex min-h-12 w-[90px] items-center rounded-control border border-line bg-surface-muted px-3 text-sm font-semibold text-secondary">
-              화성시
-            </div>
+        <SignupField label="거주 지역">
+          <select
+            value={homeDistrict}
+            onChange={(event) =>
+              setHomeDistrict(
+                event.target.value,
+              )
+            }
+            required
+            className={inputClassName}
+          >
+            <option value="">
+              읍·면·동 선택
+            </option>
 
-            <DistrictDropdown
-              value={homeDistrict}
-              onChange={
-                setHomeDistrict
-              }
-            />
-          </div>
+            {HWASEONG_DISTRICTS.map(
+              (district) => (
+                <option
+                  key={district}
+                  value={district}
+                >
+                  {district}
+                </option>
+              ),
+            )}
+          </select>
         </SignupField>
 
-        <fieldset className="flex flex-wrap items-center gap-3">
-          <legend className="mr-3 text-sm font-medium text-muted">
-            사용 언어
-          </legend>
+        <SignupField label="사용 언어">
+          <div className="grid grid-cols-3 gap-2">
+            <ChoiceButton
+              selected={
+                language === "ko"
+              }
+              onClick={() =>
+                setLanguage("ko")
+              }
+            >
+              한국어
+            </ChoiceButton>
 
-          <ChoiceButton
-            name="language"
-            value="ko"
-            label="한국어"
-            checked={language === "ko"}
-            onChange={() =>
-              setLanguage("ko")
-            }
-          />
+            <ChoiceButton
+              selected={
+                language === "en"
+              }
+              onClick={() =>
+                setLanguage("en")
+              }
+            >
+              EN
+            </ChoiceButton>
 
-          <ChoiceButton
-            name="language"
-            value="en"
-            label="EN"
-            checked={language === "en"}
-            onChange={() =>
-              setLanguage("en")
-            }
-          />
-
-          <ChoiceButton
-            name="language"
-            value="zh"
-            label="中"
-            checked={language === "zh"}
-            onChange={() =>
-              setLanguage("zh")
-            }
-          />
-        </fieldset>
+            <ChoiceButton
+              selected={
+                language === "zh"
+              }
+              onClick={() =>
+                setLanguage("zh")
+              }
+            >
+              中
+            </ChoiceButton>
+          </div>
+        </SignupField>
 
         <SignupField
           label="추천인 코드"
@@ -726,10 +802,10 @@ export function SignupForm() {
                   .replace(
                     /[^A-Z0-9-]/g,
                     "",
-                  )
-                  .slice(0, 20),
+                  ),
               )
             }
+            maxLength={20}
             placeholder="예: HWS-2K9F"
             className={inputClassName}
           />
@@ -737,14 +813,9 @@ export function SignupForm() {
 
         {message && (
           <p
-            role={
-              isError
-                ? "alert"
-                : "status"
-            }
+            role="status"
             className={[
-              "rounded-control px-4 py-3",
-              "text-sm leading-6",
+              "rounded-control p-3 text-sm leading-6",
               isError
                 ? "bg-danger-soft text-danger"
                 : "bg-success-soft text-success",
@@ -754,168 +825,46 @@ export function SignupForm() {
           </p>
         )}
 
-        <button
+        <Button
           type="submit"
-          disabled={!isPhoneVerified}
-          className={[
-            "flex min-h-14 w-full",
-            "items-center justify-center",
-            "rounded-control bg-brand",
-            "px-5 text-base font-bold",
-            "text-white",
-            "hover:bg-brand-hover",
-            "disabled:cursor-not-allowed",
-            "disabled:opacity-50",
-          ].join(" ")}
+          fullWidth
+          disabled={
+            isSubmitting ||
+            !isEmailVerified
+          }
         >
-          가입 완료
-        </button>
-
-        <p className="text-center text-sm text-muted">
-          이미 회원이신가요?{" "}
-          <Link
-            href="/auth?mode=login"
-            className="font-semibold text-brand-text"
-          >
-            로그인
-          </Link>
-        </p>
+          {isSubmitting
+            ? "가입 처리 중..."
+            : isEmailVerified
+              ? "가입 완료"
+              : "이메일 인증 필요"}
+        </Button>
       </form>
     </section>
   );
 }
 
-function DistrictDropdown({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [isOpen, setIsOpen] =
-    useState(false);
-
-  return (
-    <div className="relative z-30 w-[180px]">
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() =>
-          setIsOpen((current) => !current)
-        }
-        className={[
-          "flex min-h-12 w-full items-center",
-          "justify-between gap-2",
-          "rounded-control border border-line",
-          "bg-white px-3 text-left",
-          "text-sm outline-none",
-          isOpen
-            ? "border-brand ring-2 ring-brand-soft"
-            : "",
-        ].join(" ")}
-      >
-        <span
-          className={
-            value
-              ? "truncate text-main"
-              : "truncate text-muted"
-          }
-        >
-          {value || "읍·면·동 선택"}
-        </span>
-
-        <svg
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-          className={[
-            "size-4 shrink-0 text-muted",
-            "transition-transform",
-            isOpen
-              ? "rotate-180"
-              : "",
-          ].join(" ")}
-        >
-          <path
-            d="m5 7.5 5 5 5-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div
-          role="listbox"
-          className={[
-            "absolute left-0 top-[calc(100%+6px)]",
-            "z-50 w-full",
-            "max-h-56 overflow-y-auto",
-            "rounded-control border border-line",
-            "bg-white p-1 shadow-floating",
-          ].join(" ")}
-        >
-          {HWASEONG_DISTRICTS.map(
-            (district) => (
-              <button
-                key={district}
-                type="button"
-                role="option"
-                aria-selected={
-                  value === district
-                }
-                onClick={() => {
-                  onChange(district);
-                  setIsOpen(false);
-                }}
-                className={[
-                  "flex min-h-10 w-full",
-                  "items-center rounded-lg",
-                  "px-3 text-left text-sm",
-                  value === district
-                    ? "bg-brand-soft font-semibold text-brand-text"
-                    : "text-secondary hover:bg-surface-muted",
-                ].join(" ")}
-              >
-                {district}
-              </button>
-            ),
-          )}
-        </div>
-      )}
-
-      <input
-        type="hidden"
-        name="homeDistrict"
-        value={value}
-        required
-      />
-    </div>
-  );
-}
+type SignupFieldProps = {
+  label: string;
+  description?: string;
+  optional?: boolean;
+  children: ReactNode;
+};
 
 function SignupField({
   label,
-  optional = false,
   description,
+  optional = false,
   children,
-}: {
-  label: string;
-  optional?: boolean;
-  description?: string;
-  children: React.ReactNode;
-}) {
+}: SignupFieldProps) {
   return (
     <label className="block">
-      <span className="mb-2 flex items-center gap-2 text-sm font-medium text-muted">
+      <span className="mb-2 flex items-center gap-2 text-sm font-bold text-main">
         {label}
 
         {optional && (
-          <span className="text-xs">
-            (선택)
+          <span className="text-xs font-normal text-muted">
+            선택
           </span>
         )}
       </span>
@@ -923,7 +872,7 @@ function SignupField({
       {children}
 
       {description && (
-        <span className="mt-1.5 block text-xs leading-5 text-muted">
+        <span className="mt-2 block text-xs leading-5 text-muted">
           {description}
         </span>
       )}
@@ -931,45 +880,31 @@ function SignupField({
   );
 }
 
-function ChoiceButton({
-  name,
-  value,
-  label,
-  checked,
-  onChange,
-}: {
-  name: string;
-  value: string;
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="cursor-pointer">
-      <input
-        type="radio"
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={onChange}
-        className="peer sr-only"
-      />
+type ChoiceButtonProps = {
+  selected: boolean;
+  onClick: () => void;
+  children: ReactNode;
+};
 
-      <span
-        className={[
-          "inline-flex min-h-12 items-center",
-          "justify-center rounded-control",
-          "border border-line bg-white",
-          "px-4 text-sm font-semibold",
-          "text-secondary",
-          "peer-checked:border-[#191f28]",
-          "peer-checked:bg-[#191f28]",
-          "peer-checked:text-white",
-        ].join(" ")}
-      >
-        {label}
-      </span>
-    </label>
+function ChoiceButton({
+  selected,
+  onClick,
+  children,
+}: ChoiceButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={[
+        "flex min-h-14 items-center justify-center rounded-control border px-3 text-sm font-bold transition",
+        selected
+          ? "border-main bg-main text-white"
+          : "border-line bg-white text-secondary hover:border-main",
+      ].join(" ")}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -1013,41 +948,6 @@ function getNicknameAvatar(
   return noun.slice(-2);
 }
 
-function formatPhoneInput(
-  value: string,
-) {
-  const digits = value
-    .replace(/\D/g, "")
-    .slice(0, 11);
-
-  if (digits.length <= 3) {
-    return digits;
-  }
-
-  if (digits.length <= 7) {
-    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  }
-
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
-
-function normalizeKoreanPhone(
-  value: string,
-) {
-  const digits =
-    value.replace(/\D/g, "");
-
-  if (
-    !/^01[016789]\d{7,8}$/.test(
-      digits,
-    )
-  ) {
-    return "";
-  }
-
-  return `+82${digits.slice(1)}`;
-}
-
 function getToday() {
   return new Date()
     .toISOString()
@@ -1062,15 +962,7 @@ function getSignupErrorMessage(
       "User already registered",
     )
   ) {
-    return "이미 가입된 전화번호입니다.";
-  }
-
-  if (
-    message.includes(
-      "Phone provider is not enabled",
-    )
-  ) {
-    return "Supabase에서 전화번호 인증 기능이 활성화되지 않았습니다.";
+    return "이미 가입된 이메일입니다.";
   }
 
   if (
@@ -1086,6 +978,17 @@ function getSignupErrorMessage(
     )
   ) {
     return "인증번호가 만료되었습니다. 인증번호를 다시 받아 주세요.";
+  }
+
+  if (
+    message.includes(
+      "Invalid OTP",
+    ) ||
+    message.includes(
+      "Token has expired or is invalid",
+    )
+  ) {
+    return "인증번호가 올바르지 않거나 만료되었습니다.";
   }
 
   return message;
