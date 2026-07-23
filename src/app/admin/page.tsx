@@ -9,6 +9,10 @@ import {
 } from "@/components/admin-work-queue";
 
 import {
+  AdminAiBriefing,
+} from "@/components/admin-ai-briefing";
+
+import {
   Badge,
   Button,
   Card,
@@ -326,6 +330,8 @@ export default async function AdminPage() {
           variant="warning"
         />
       </section>
+
+      <AdminAiBriefing />
 
       <AdminWorkQueue />
 
