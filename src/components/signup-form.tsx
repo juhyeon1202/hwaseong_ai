@@ -122,6 +122,16 @@ export function SignupForm() {
   ] = useState("");
 
   const [
+    referralCodeStatus,
+    setReferralCodeStatus,
+  ] = useState<
+    | "idle"
+    | "checking"
+    | "valid"
+    | "invalid"
+  >("idle");
+
+  const [
     isOtpSent,
     setIsOtpSent,
   ] = useState(false);
@@ -284,6 +294,35 @@ export function SignupForm() {
     }
 
     return true;
+  }
+
+  async function checkReferralCode() {
+    const code = referralCode
+      .trim()
+      .toUpperCase();
+
+    if (!code) {
+      setReferralCodeStatus("idle");
+      return;
+    }
+
+    setReferralCodeStatus(
+      "checking",
+    );
+
+    const supabase = createClient();
+
+    const { data, error } =
+      await supabase.rpc(
+        "referral_code_exists",
+        { p_code: code },
+      );
+
+    setReferralCodeStatus(
+      !error && data
+        ? "valid"
+        : "invalid",
+    );
   }
 
   async function sendOtp() {
@@ -795,20 +834,50 @@ export function SignupForm() {
         >
           <input
             value={referralCode}
-            onChange={(event) =>
+            onChange={(event) => {
               setReferralCode(
                 event.target.value
                   .toUpperCase()
                   .replace(
-                    /[^A-Z0-9-]/g,
+                    /[^A-Z0-9]/g,
                     "",
                   ),
-              )
+              );
+
+              setReferralCodeStatus(
+                "idle",
+              );
+            }}
+            onBlur={
+              checkReferralCode
             }
-            maxLength={20}
-            placeholder="예: HWS-2K9F"
+            maxLength={8}
+            placeholder="예: 4F7B92XQ"
             className={inputClassName}
           />
+
+          {referralCodeStatus ===
+            "checking" && (
+            <p className="mt-2 text-xs text-muted">
+              코드 확인 중...
+            </p>
+          )}
+
+          {referralCodeStatus ===
+            "valid" && (
+            <p className="mt-2 text-xs text-success">
+              유효한 추천인 코드입니다.
+            </p>
+          )}
+
+          {referralCodeStatus ===
+            "invalid" && (
+            <p className="mt-2 text-xs text-danger">
+              유효하지 않은 추천인
+              코드입니다. 코드 없이도
+              가입을 진행할 수 있습니다.
+            </p>
+          )}
         </SignupField>
 
         {message && (

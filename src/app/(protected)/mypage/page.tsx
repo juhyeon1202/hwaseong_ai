@@ -13,6 +13,7 @@ import {
   ProfileSettingsForm,
 } from "@/components/profile-settings-form";
 import { PointHistory } from "@/components/point-history";
+import { ReferralCodeCard } from "@/components/referral-code-card";
 
 export const metadata: Metadata = {
   title: "마이페이지",
@@ -31,6 +32,7 @@ type Profile = {
   home_district:
     | string
     | null;
+  referral_code: string;
   created_at: string;
 };
 
@@ -63,6 +65,7 @@ export default async function MyPage() {
           attendance_streak,
           last_attendance_date,
           home_district,
+          referral_code,
           created_at
         `,
       )
@@ -224,6 +227,12 @@ export default async function MyPage() {
           <aside className="space-y-6">
             <PointCard
               points={profile.points}
+            />
+
+            <ReferralCodeCard
+              referralCode={
+                profile.referral_code
+              }
             />
 
             <PointHistory
