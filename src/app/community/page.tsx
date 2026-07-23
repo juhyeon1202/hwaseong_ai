@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PostForm } from "@/components/post-form";
+import type { RouteStopOption } from "@/components/route-stop-types";
 import {
   Badge,
   ButtonLink,
@@ -132,11 +133,45 @@ export default async function CommunityPage({
     );
   }
 
-  const { data, error } =
-    await postQuery;
+  const [
+    postResult,
+    stopResult,
+  ] = await Promise.all([
+    postQuery,
+    user
+      ? supabase
+          .from("transit_stops")
+          .select(
+            `
+              id,
+              name,
+              stop_number,
+              district_name
+            `,
+          )
+          .order("name")
+          .limit(500)
+      : Promise.resolve({
+          data: [],
+          error: null,
+        }),
+  ]);
+
+  const { data, error } = postResult;
 
   const posts =
     (data as Post[] | null) ?? [];
+
+  const stops: RouteStopOption[] = (
+    stopResult.data ?? []
+  ).map((stop) => ({
+    id: Number(stop.id),
+    name: stop.name,
+    stopNumber:
+      stop.stop_number ?? null,
+    districtName:
+      stop.district_name ?? null,
+  }));
 
   return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
@@ -178,7 +213,9 @@ export default async function CommunityPage({
 
         <aside>
           {user ? (
-            <PostForm />
+            <PostForm
+              stops={stops}
+            />
           ) : (
             <LoginRequiredCard />
           )}

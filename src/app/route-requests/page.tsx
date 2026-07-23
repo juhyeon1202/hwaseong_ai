@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import {
   toggleRouteVote,
 } from "@/app/route-requests/actions";
-import {
-  RouteRequestForm,
-  type RouteStopOption,
-} from "@/components/route-request-form";
 import {
   Badge,
   Button,
@@ -38,6 +35,7 @@ type RouteRequestSummary = {
   status: RouteRequestStatus;
   vote_count: number;
   stop_count: number;
+  post_id: string | null;
   created_at: string;
 };
 
@@ -57,63 +55,34 @@ export default async function RouteRequestsPage() {
   const user = await getCurrentUser();
   const supabase = await createClient();
 
-  const [
-    routeResult,
-    stopResult,
-  ] = await Promise.all([
-    supabase
-      .from("route_request_summary")
-      .select(
-        `
-          id,
-          author_id,
-          title,
-          description,
-          status,
-          vote_count,
-          stop_count,
-          created_at
-        `,
-      )
-      .neq("status", "draft")
-      .order("vote_count", {
-        ascending: false,
-      })
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(30),
-
-    supabase
-      .from("transit_stops")
-      .select(
-        `
-          id,
-          name,
-          stop_number,
-          district_name
-        `,
-      )
-      .order("name")
-      .limit(500),
-  ]);
+  const routeResult = await supabase
+    .from("route_request_summary")
+    .select(
+      `
+        id,
+        author_id,
+        title,
+        description,
+        status,
+        vote_count,
+        stop_count,
+        post_id,
+        created_at
+      `,
+    )
+    .neq("status", "draft")
+    .order("vote_count", {
+      ascending: false,
+    })
+    .order("created_at", {
+      ascending: false,
+    })
+    .limit(30);
 
   const routes =
     (routeResult.data as
       | RouteRequestSummary[]
       | null) ?? [];
-
-  const stops: RouteStopOption[] =
-    (stopResult.data ?? []).map(
-      (stop) => ({
-        id: Number(stop.id),
-        name: stop.name,
-        stopNumber:
-          stop.stop_number,
-        districtName:
-          stop.district_name,
-      }),
-    );
 
   let votedRouteIds =
     new Set<string>();
@@ -176,29 +145,11 @@ export default async function RouteRequestsPage() {
         </section>
 
         <aside>
-          {user ? (
-            stopResult.error ? (
-              <Card>
-                <p className="text-sm text-danger">
-                  정류장 목록을 불러오지
-                  못했습니다.
-                </p>
-              </Card>
-            ) : stops.length === 0 ? (
-              <Card>
-                <p className="text-sm text-muted">
-                  등록된 정류장이 없어 희망
-                  노선을 작성할 수 없습니다.
-                </p>
-              </Card>
-            ) : (
-              <RouteRequestForm
-                stops={stops}
-              />
-            )
-          ) : (
-            <LoginRequiredCard />
-          )}
+          <HowToProposeCard
+            userLoggedIn={Boolean(
+              user,
+            )}
+          />
         </aside>
       </div>
   );
@@ -300,32 +251,55 @@ function RouteRequestItem({
             </div>
           )}
         </div>
+
+        {route.post_id && (
+          <Link
+            href={`/community/${route.post_id}`}
+            className="mt-3 inline-flex min-h-9 items-center text-xs font-semibold text-secondary"
+          >
+            게시글 원문·댓글 보기 →
+          </Link>
+        )}
       </Card>
     </li>
   );
 }
 
-function LoginRequiredCard() {
+function HowToProposeCard({
+  userLoggedIn,
+}: {
+  userLoggedIn: boolean;
+}) {
   return (
     <Card>
-      <Badge>로그인 필요</Badge>
+      <Badge>노선 제안 방법</Badge>
 
       <h2 className="mt-4 text-lg font-bold text-main">
-        필요한 노선을 제안해 보세요
+        희망 노선은 게시판에서 제안해 주세요
       </h2>
 
       <p className="mt-2 text-sm leading-6 text-muted">
-        로그인하면 희망 노선을 등록하고 다른
-        시민의 제안에 투표할 수 있습니다.
+        게시판에서 &ldquo;노선 제안&rdquo;
+        분류로 글을 작성하면 정류장 지도를
+        선택할 수
+        있고, 등록한 노선이 자동으로 이
+        목록에도 나타나 투표를 받습니다.
       </p>
 
       <ButtonLink
-        href="/auth?mode=login"
+        href="/community?category=route_suggestion"
         fullWidth
         className="mt-5"
       >
-        로그인
+        게시판에서 노선 제안하기
       </ButtonLink>
+
+      {!userLoggedIn && (
+        <p className="mt-3 text-center text-xs text-muted">
+          제안하려면 먼저 로그인해야
+          합니다.
+        </p>
+      )}
     </Card>
   );
 }

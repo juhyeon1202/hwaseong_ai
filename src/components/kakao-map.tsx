@@ -23,6 +23,10 @@ type KakaoMapProps = {
   };
   markers?: MapMarkerData[];
   regionOverlays?: RegionParticipation[];
+  polylinePath?: {
+    latitude: number;
+    longitude: number;
+  }[];
   level?: number;
   height?: number | string;
   className?: string;
@@ -36,6 +40,7 @@ type KakaoMapInstance = object;
 type KakaoMarkerInstance = object;
 type KakaoCustomOverlayInstance =
   object;
+type KakaoPolylineInstance = object;
 
 type KakaoMapsApi = {
   load: (
@@ -69,6 +74,15 @@ type KakaoMapsApi = {
     yAnchor?: number;
     zIndex?: number;
   }) => KakaoCustomOverlayInstance;
+
+  Polyline: new (options: {
+    map: KakaoMapInstance;
+    path: KakaoLatLng[];
+    strokeWeight?: number;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeStyle?: string;
+  }) => KakaoPolylineInstance;
 
   event: {
     addListener: (
@@ -246,6 +260,7 @@ export function KakaoMap({
   center,
   markers = [],
   regionOverlays = [],
+  polylinePath = [],
   level = 8,
   height = 380,
   className = "",
@@ -372,6 +387,36 @@ export function KakaoMap({
           },
         );
 
+        const polylinePoints =
+          polylinePath.filter(
+            (point) =>
+              Number.isFinite(
+                point.latitude,
+              ) &&
+              Number.isFinite(
+                point.longitude,
+              ),
+          );
+
+        if (
+          polylinePoints.length >= 2
+        ) {
+          new maps.Polyline({
+            map,
+            path: polylinePoints.map(
+              (point) =>
+                new maps.LatLng(
+                  point.latitude,
+                  point.longitude,
+                ),
+            ),
+            strokeWeight: 4,
+            strokeColor: "#ec7211",
+            strokeOpacity: 0.8,
+            strokeStyle: "solid",
+          });
+        }
+
         if (active) {
           setIsLoading(false);
         }
@@ -405,6 +450,7 @@ export function KakaoMap({
     level,
     markers,
     regionOverlays,
+    polylinePath,
     onMarkerClick,
   ]);
 

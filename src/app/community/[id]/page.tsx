@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { toggleRouteVote } from "@/app/route-requests/actions";
 import {
   CommentForm,
   DeleteCommentButton,
@@ -12,8 +13,11 @@ import {
   type PostEditData,
 } from "@/components/post-form";
 import { ReportPostButton } from "@/components/report-post-button";
+import type { RouteStopOption } from "@/components/route-stop-types";
+import { RouteStopMap } from "@/components/route-stop-map";
 import {
   Badge,
+  Button,
   ButtonLink,
   Card,
   SectionHeader,
@@ -178,6 +182,164 @@ export default async function CommunityPostPage({
     user?.id === post.author_id ||
     user?.role === "admin";
 
+  const isRouteSuggestion =
+    post.category ===
+    "route_suggestion";
+
+  let routeStops: RouteStopOption[] =
+    [];
+
+  let routeRequestId: string | null =
+    null;
+
+  let voteCount = 0;
+  let voted = false;
+
+  if (isRouteSuggestion) {
+    const { data: routeRequestRow } =
+      await supabase
+        .from("route_requests")
+        .select(
+          `
+            id,
+            route_request_stops (
+              stop_order,
+              transit_stops (
+                id,
+                name,
+                stop_number,
+                district_name
+              )
+            )
+          `,
+        )
+        .eq("post_id", post.id)
+        .maybeSingle();
+
+    if (routeRequestRow) {
+      routeRequestId =
+        routeRequestRow.id;
+
+      routeStops = (
+        routeRequestRow.route_request_stops ??
+        []
+      )
+        .slice()
+        .sort(
+          (a, b) =>
+            a.stop_order -
+            b.stop_order,
+        )
+        .map((row) => {
+          const stop = Array.isArray(
+            row.transit_stops,
+          )
+            ? row.transit_stops[0]
+            : row.transit_stops;
+
+          if (!stop) {
+            return null;
+          }
+
+          return {
+            id: Number(stop.id),
+            name: stop.name,
+            stopNumber:
+              stop.stop_number ??
+              null,
+            districtName:
+              stop.district_name ??
+              null,
+          };
+        })
+        .filter(
+          (
+            stop,
+          ): stop is RouteStopOption =>
+            Boolean(stop),
+        );
+
+      const [
+        voteCountResult,
+        userVoteResult,
+      ] = await Promise.all([
+        supabase
+          .from(
+            "route_request_votes",
+          )
+          .select("*", {
+            count: "exact",
+            head: true,
+          })
+          .eq(
+            "route_request_id",
+            routeRequestId,
+          ),
+
+        user
+          ? supabase
+              .from(
+                "route_request_votes",
+              )
+              .select(
+                "route_request_id",
+              )
+              .eq(
+                "route_request_id",
+                routeRequestId,
+              )
+              .eq(
+                "user_id",
+                user.id,
+              )
+              .maybeSingle()
+          : Promise.resolve({
+              data: null,
+            }),
+      ]);
+
+      voteCount =
+        voteCountResult.count ?? 0;
+
+      voted = Boolean(
+        userVoteResult.data,
+      );
+    }
+  }
+
+  let editableStops: RouteStopOption[] =
+    [];
+
+  if (
+    canManagePost &&
+    isRouteSuggestion
+  ) {
+    const { data: stopOptionRows } =
+      await supabase
+        .from("transit_stops")
+        .select(
+          `
+            id,
+            name,
+            stop_number,
+            district_name
+          `,
+        )
+        .order("name")
+        .limit(500);
+
+    editableStops = (
+      stopOptionRows ?? []
+    ).map((stop) => ({
+      id: Number(stop.id),
+      name: stop.name,
+      stopNumber:
+        stop.stop_number ?? null,
+      districtName:
+        stop.district_name ?? null,
+    }));
+  }
+
   const canReport =
     Boolean(user) &&
     user?.id !== post.author_id;
@@ -205,6 +367,7 @@ export default async function CommunityPostPage({
       post.bus_type ?? "",
     title: post.title,
     content: post.content,
+    routeStops,
   };
 
   return (
@@ -272,8 +435,72 @@ export default async function CommunityPostPage({
                 {post.content}
               </p>
             </div>
+
+            {isRouteSuggestion &&
+              routeStops.length >
+                0 && (
+                <div className="mt-6 border-t border-line-light pt-6">
+                  <RouteStopMap
+                    stopIds={routeStops.map(
+                      (stop) =>
+                        stop.id,
+                    )}
+                    showPolyline
+                  />
+                </div>
+              )}
           </Card>
         </article>
+
+        {isRouteSuggestion &&
+          routeRequestId && (
+            <Card>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-muted">
+                    시민 투표
+                  </p>
+
+                  <p className="mt-1 text-2xl font-bold text-brand-text">
+                    {voteCount}표
+                  </p>
+                </div>
+
+                {user ? (
+                  <form
+                    action={
+                      toggleRouteVote
+                    }
+                  >
+                    <input
+                      type="hidden"
+                      name="routeRequestId"
+                      value={
+                        routeRequestId
+                      }
+                    />
+
+                    <Button
+                      type="submit"
+                      variant={
+                        voted
+                          ? "secondary"
+                          : "primary"
+                      }
+                    >
+                      {voted
+                        ? "투표 취소"
+                        : "이 노선에 투표"}
+                    </Button>
+                  </form>
+                ) : (
+                  <ButtonLink href="/auth?mode=login">
+                    로그인하고 투표
+                  </ButtonLink>
+                )}
+              </div>
+            </Card>
+          )}
 
         <Card>
           <SectionHeader
@@ -343,6 +570,9 @@ export default async function CommunityPostPage({
             <div className="mt-4 space-y-4">
               <PostForm
                 initialPost={editData}
+                stops={
+                  editableStops
+                }
               />
 
               <Card>

@@ -19,12 +19,14 @@ import { createClient } from "@/lib/supabase/client";
 
 type RouteStopMapProps = {
   stopIds: number[];
+  showPolyline?: boolean;
 };
 
 type StopLocationRow = {
   id: number;
   name: string;
-  location: unknown;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type StopLocation = {
@@ -34,6 +36,11 @@ type StopLocation = {
   longitude: number;
 };
 
+type SelectedStopInfo = {
+  order: number;
+  name: string;
+};
+
 const HWASEONG_CENTER = {
   latitude: 37.1995,
   longitude: 126.8312,
@@ -41,6 +48,7 @@ const HWASEONG_CENTER = {
 
 export function RouteStopMap({
   stopIds,
+  showPolyline = false,
 }: RouteStopMapProps) {
   const supabase = useMemo(
     () => createClient(),
@@ -60,6 +68,14 @@ export function RouteStopMap({
   const [error, setError] =
     useState("");
 
+  const [
+    selectedStop,
+    setSelectedStop,
+  ] =
+    useState<SelectedStopInfo | null>(
+      null,
+    );
+
   const stopIdKey =
     stopIds.join(",");
 
@@ -75,15 +91,17 @@ export function RouteStopMap({
 
       setIsLoading(true);
       setError("");
+      setSelectedStop(null);
 
       const { data, error } =
         await supabase
-          .from("transit_stops")
+          .from("transit_stop_map")
           .select(
             `
               id,
               name,
-              location
+              latitude,
+              longitude
             `,
           )
           .in("id", stopIds);
@@ -110,12 +128,14 @@ export function RouteStopMap({
         new Map<number, StopLocation>();
 
       rows.forEach((row) => {
-        const coordinate =
-          parseLocation(
-            row.location,
-          );
-
-        if (!coordinate) {
+        if (
+          !Number.isFinite(
+            row.latitude,
+          ) ||
+          !Number.isFinite(
+            row.longitude,
+          )
+        ) {
           return;
         }
 
@@ -125,9 +145,9 @@ export function RouteStopMap({
             id: Number(row.id),
             name: row.name,
             latitude:
-              coordinate.latitude,
+              row.latitude as number,
             longitude:
-              coordinate.longitude,
+              row.longitude as number,
           },
         );
       });
@@ -185,6 +205,26 @@ export function RouteStopMap({
         ),
       [stopLocations],
     );
+
+  function handleMarkerClick(
+    marker: MapMarkerData,
+  ) {
+    const index =
+      stopLocations.findIndex(
+        (stop) =>
+          stop.id === marker.id,
+      );
+
+    if (index === -1) {
+      return;
+    }
+
+    setSelectedStop({
+      order: index + 1,
+      name: stopLocations[index]
+        .name,
+    });
+  }
 
   const center = useMemo(() => {
     if (
@@ -276,6 +316,14 @@ export function RouteStopMap({
           <KakaoMap
             center={center}
             markers={markers}
+            polylinePath={
+              showPolyline
+                ? stopLocations
+                : undefined
+            }
+            onMarkerClick={
+              handleMarkerClick
+            }
             level={
               stopLocations.length <= 2
                 ? 5
@@ -283,6 +331,18 @@ export function RouteStopMap({
             }
             height={320}
           />
+
+          {selectedStop && (
+            <div className="flex items-center gap-3 border-t border-line-light bg-brand-softer px-4 py-3">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-pill bg-brand text-xs font-bold text-on-brand">
+                {selectedStop.order}
+              </span>
+
+              <p className="text-sm font-semibold text-brand-text">
+                {selectedStop.name}
+              </p>
+            </div>
+          )}
 
           <ol className="grid gap-2 border-t border-line-light p-4 sm:grid-cols-2">
             {stopLocations.map(
@@ -308,103 +368,3 @@ export function RouteStopMap({
   );
 }
 
-function parseLocation(
-  location: unknown,
-): {
-  latitude: number;
-  longitude: number;
-} | null {
-  if (
-    typeof location === "object" &&
-    location !== null
-  ) {
-    if (
-      "coordinates" in location &&
-      Array.isArray(
-        location.coordinates,
-      )
-    ) {
-      return parseCoordinates(
-        location.coordinates,
-      );
-    }
-  }
-
-  if (typeof location !== "string") {
-    return null;
-  }
-
-  const trimmed =
-    location.trim();
-
-  if (trimmed.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(
-        trimmed,
-      ) as {
-        coordinates?: unknown;
-      };
-
-      if (
-        Array.isArray(
-          parsed.coordinates,
-        )
-      ) {
-        return parseCoordinates(
-          parsed.coordinates,
-        );
-      }
-    } catch {
-      return null;
-    }
-  }
-
-  const pointMatch =
-    trimmed.match(
-      /POINT\s*\(\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*\)/i,
-    );
-
-  if (!pointMatch) {
-    return null;
-  }
-
-  const longitude =
-    Number(pointMatch[1]);
-
-  const latitude =
-    Number(pointMatch[2]);
-
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude)
-  ) {
-    return null;
-  }
-
-  return {
-    latitude,
-    longitude,
-  };
-}
-
-function parseCoordinates(
-  coordinates: unknown[],
-) {
-  const longitude =
-    Number(coordinates[0]);
-
-  const latitude =
-    Number(coordinates[1]);
-
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude)
-  ) {
-    return null;
-  }
-
-  return {
-    latitude,
-    longitude,
-  };
-}
