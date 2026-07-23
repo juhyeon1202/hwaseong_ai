@@ -55,6 +55,15 @@ type CommunityBoardProps = {
   loggedIn: boolean;
 };
 
+const categoryLabels: Record<
+  CommunityCategory,
+  string
+> = {
+  route_suggestion: "노선 제안",
+  information: "교통 정보",
+  question: "질문",
+};
+
 const categoryOptions: {
   value: "" | CommunityCategory;
   label: string;
@@ -77,20 +86,10 @@ const categoryOptions: {
   },
 ];
 
-const categoryLabels: Record<
-  CommunityCategory,
-  string
-> = {
-  route_suggestion: "노선 제안",
-  information: "교통 정보",
-  question: "질문",
-};
-
 const ITEMS_PER_PAGE = 4;
 
 export function CommunityBoard({
   items,
-  stops,
   loggedIn,
 }: CommunityBoardProps) {
   const [
@@ -110,17 +109,20 @@ export function CommunityBoard({
     setCurrentPage,
   ] = useState(1);
 
-  const filteredItems = useMemo(() => {
-    if (!selectedFilter) {
-      return items;
-    }
-
-    return items.filter(
-      (item) =>
-        item.category ===
-        selectedFilter,
-    );
-  }, [items, selectedFilter]);
+  const filteredItems = useMemo(
+    () =>
+      selectedFilter
+        ? items.filter(
+            (item) =>
+              item.category ===
+              selectedFilter,
+          )
+        : items,
+    [
+      items,
+      selectedFilter,
+    ],
+  );
 
   const totalPages = Math.max(
     1,
@@ -131,14 +133,13 @@ export function CommunityBoard({
   );
 
   const visibleItems = useMemo(() => {
-    const startIndex =
+    const start =
       (currentPage - 1) *
       ITEMS_PER_PAGE;
 
     return filteredItems.slice(
-      startIndex,
-      startIndex +
-        ITEMS_PER_PAGE,
+      start,
+      start + ITEMS_PER_PAGE,
     );
   }, [
     currentPage,
@@ -149,61 +150,41 @@ export function CommunityBoard({
     setCurrentPage(1);
   }, [selectedFilter]);
 
-  useEffect(() => {
-    if (
-      currentPage > totalPages
-    ) {
-      setCurrentPage(totalPages);
-    }
-  }, [
-    currentPage,
-    totalPages,
-  ]);
-
   function openWriteModal() {
     if (!loggedIn) {
       window.location.href =
         "/auth?mode=login";
+
       return;
     }
 
     setWriteModalOpen(true);
   }
 
-  function changePage(
-    nextPage: number,
-  ) {
-    if (
-      nextPage < 1 ||
-      nextPage > totalPages
-    ) {
-      return;
-    }
-
-    setCurrentPage(nextPage);
-  }
-
   return (
     <>
-      <section className="mx-auto w-full max-w-6xl px-1 py-5 md:px-3 md:py-8">
+      <section className="mx-auto w-full max-w-6xl py-5 md:py-8">
         <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-[30px] font-bold tracking-[-0.04em] text-main md:text-[34px]">
+            <h1 className="text-3xl font-bold tracking-[-0.04em] text-main">
               시민 게시판
             </h1>
 
-            <p className="mt-2 text-sm leading-6 text-muted md:text-base">
+            <p className="mt-2 text-sm text-muted md:text-base">
               화성시 교통 정보와 의견을
-              함께 나눠요.
+              시민들과 함께 나눠요.
             </p>
           </div>
 
           <button
             type="button"
             onClick={openWriteModal}
-            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 self-start rounded-[10px] bg-[#d87525] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#c96b1e] active:scale-[0.98]"
+            className="inline-flex min-h-12 items-center justify-center gap-2 self-start rounded-[10px] bg-[#d87525] px-5 text-sm font-bold text-white transition hover:bg-[#c7651d]"
           >
-            <WriteIcon />
+            <span aria-hidden="true">
+              ✎
+            </span>
+
             글 작성하기
           </button>
         </header>
@@ -233,8 +214,8 @@ export function CommunityBoard({
                   className={[
                     "min-h-12 shrink-0 rounded-[10px] border px-5 text-sm font-bold transition",
                     selected
-                      ? "border-[#5470e8] bg-[#5470e8] text-white shadow-sm"
-                      : "border-[#d9dde5] bg-white text-[#596273] hover:border-[#5470e8] hover:text-[#5470e8]",
+                      ? "border-[#5470e8] bg-[#5470e8] text-white"
+                      : "border-line bg-white text-secondary hover:border-[#5470e8]",
                   ].join(" ")}
                 >
                   {category.label}
@@ -244,12 +225,10 @@ export function CommunityBoard({
           )}
         </nav>
 
-        {filteredItems.length ===
-        0 ? (
-          <div className="mt-6 rounded-[14px] border border-dashed border-[#d9dde5] bg-white px-5 py-20 text-center">
+        {visibleItems.length === 0 ? (
+          <div className="mt-6 rounded-[14px] border border-dashed border-line bg-white px-5 py-20 text-center">
             <p className="font-bold text-main">
-              등록된 게시글이
-              없습니다.
+              등록된 게시글이 없습니다.
             </p>
 
             <p className="mt-2 text-sm text-muted">
@@ -258,83 +237,83 @@ export function CommunityBoard({
             </p>
           </div>
         ) : (
-          <>
-            <ol className="mt-6 space-y-4">
-              {visibleItems.map(
-                (item) => (
-                  <CommunityPostCard
-                    key={`${item.itemType}-${item.id}`}
-                    item={item}
-                  />
-                ),
-              )}
-            </ol>
-
-            {totalPages > 1 && (
-              <nav
-                aria-label="게시글 페이지"
-                className="mt-9 flex items-center justify-center gap-2"
-              >
-                <PaginationButton
-                  label="이전 페이지"
-                  disabled={
-                    currentPage === 1
-                  }
-                  onClick={() =>
-                    changePage(
-                      currentPage - 1,
-                    )
-                  }
-                >
-                  ‹
-                </PaginationButton>
-
-                {Array.from(
-                  {
-                    length:
-                      totalPages,
-                  },
-                  (_, index) =>
-                    index + 1,
-                ).map((page) => (
-                  <PaginationButton
-                    key={page}
-                    label={`${page}페이지`}
-                    selected={
-                      currentPage ===
-                      page
-                    }
-                    onClick={() =>
-                      changePage(page)
-                    }
-                  >
-                    {page}
-                  </PaginationButton>
-                ))}
-
-                <PaginationButton
-                  label="다음 페이지"
-                  disabled={
-                    currentPage ===
-                    totalPages
-                  }
-                  onClick={() =>
-                    changePage(
-                      currentPage + 1,
-                    )
-                  }
-                >
-                  ›
-                </PaginationButton>
-              </nav>
+          <ol className="mt-6 space-y-4">
+            {visibleItems.map(
+              (item) => (
+                <PostCard
+                  key={`${item.itemType}-${item.id}`}
+                  item={item}
+                />
+              ),
             )}
-          </>
+          </ol>
+        )}
+
+        {totalPages > 1 && (
+          <nav
+            aria-label="게시글 페이지"
+            className="mt-9 flex justify-center gap-2"
+          >
+            <PageButton
+              disabled={
+                currentPage === 1
+              }
+              onClick={() =>
+                setCurrentPage(
+                  (page) =>
+                    Math.max(
+                      1,
+                      page - 1,
+                    ),
+                )
+              }
+            >
+              ‹
+            </PageButton>
+
+            {Array.from(
+              {
+                length: totalPages,
+              },
+              (_, index) =>
+                index + 1,
+            ).map((page) => (
+              <PageButton
+                key={page}
+                selected={
+                  currentPage === page
+                }
+                onClick={() =>
+                  setCurrentPage(page)
+                }
+              >
+                {page}
+              </PageButton>
+            ))}
+
+            <PageButton
+              disabled={
+                currentPage ===
+                totalPages
+              }
+              onClick={() =>
+                setCurrentPage(
+                  (page) =>
+                    Math.min(
+                      totalPages,
+                      page + 1,
+                    ),
+                )
+              }
+            >
+              ›
+            </PageButton>
+          </nav>
         )}
       </section>
 
       {writeModalOpen && (
-        <CommunityWriteModal
-          stops={stops}
+        <WriteModal
           onClose={() =>
             setWriteModalOpen(false)
           }
@@ -344,7 +323,7 @@ export function CommunityBoard({
   );
 }
 
-function CommunityPostCard({
+function PostCard({
   item,
 }: {
   item: CommunityPostItem;
@@ -354,71 +333,64 @@ function CommunityPostCard({
       ? `/route-requests/${item.id}`
       : `/community/${item.id}`;
 
-  const primaryCount =
-    item.itemType === "route"
-      ? item.voteCount
-      : item.viewCount;
-
-  const secondaryCount =
-    item.itemType === "route"
-      ? item.stopCount
-      : item.commentCount;
-
   return (
     <li>
       <Link
         href={href}
-        className="block rounded-[14px] border border-[#dfe2e8] bg-white px-5 py-6 shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-[#c8cede] hover:shadow-[0_8px_22px_rgba(15,23,42,0.08)] active:scale-[0.995] md:px-7"
+        className="block rounded-[14px] border border-line bg-white px-5 py-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#cbd3f6] md:px-7"
       >
         <CategoryBadge
           category={item.category}
         />
 
-        <h2 className="mt-4 line-clamp-1 text-[18px] font-bold tracking-[-0.02em] text-main md:text-[20px]">
+        <h2 className="mt-4 line-clamp-1 text-lg font-bold text-main md:text-xl">
           {item.title}
         </h2>
 
-        <div className="mt-4 flex flex-wrap items-center gap-y-3">
-          <div className="flex min-w-0 items-center gap-2 text-xs text-muted md:text-sm">
-            <span className="max-w-32 truncate font-medium">
-              {item.authorNickname}
-            </span>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted">
+          <span>
+            {item.authorNickname}
+          </span>
 
-            <span
-              aria-hidden="true"
-              className="text-[#c4c8d0]"
-            >
-              ·
-            </span>
+          <span>·</span>
 
-            <time>
-              {formatDate(
-                item.createdAt,
-              )}
-            </time>
-          </div>
+          <time>
+            {formatDate(
+              item.createdAt,
+            )}
+          </time>
 
-          <div className="ml-auto flex items-center gap-6 text-sm text-[#6f7786]">
-            <span className="inline-flex items-center gap-2">
-              <ViewIcon />
+          <div className="ml-auto flex gap-5">
+            {item.itemType ===
+            "route" ? (
+              <>
+                <span>
+                  투표{" "}
+                  {item.voteCount.toLocaleString(
+                    "ko-KR",
+                  )}
+                </span>
 
-              {primaryCount.toLocaleString(
-                "ko-KR",
-              )}
-            </span>
+                <span>
+                  정류장{" "}
+                  {item.stopCount}
+                </span>
+              </>
+            ) : (
+              <>
+                <span>
+                  조회{" "}
+                  {item.viewCount.toLocaleString(
+                    "ko-KR",
+                  )}
+                </span>
 
-            <span className="inline-flex items-center gap-2">
-              {item.itemType ===
-              "route" ? (
-                <StopIcon />
-              ) : (
-                <CommentIcon />
-              )}
-
-              {secondaryCount.toLocaleString(
-                "ko-KR",
-              )}
-            </span>
+                <span>
+                  댓글{" "}
+                  {item.commentCount}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </Link>
@@ -431,7 +403,7 @@ function CategoryBadge({
 }: {
   category: CommunityCategory;
 }) {
-  const className =
+  const color =
     category ===
     "route_suggestion"
       ? "bg-[#fff1e5] text-[#d66d1d]"
@@ -442,63 +414,20 @@ function CategoryBadge({
 
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${className}`}
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${color}`}
     >
       {categoryLabels[category]}
     </span>
   );
 }
 
-type PaginationButtonProps = {
-  label: string;
-  selected?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-};
-
-function PaginationButton({
-  label,
-  selected = false,
-  disabled = false,
-  onClick,
-  children,
-}: PaginationButtonProps) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-current={
-        selected
-          ? "page"
-          : undefined
-      }
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        "flex size-10 items-center justify-center rounded-[8px] border text-sm font-bold transition",
-        selected
-          ? "border-[#5470e8] bg-[#5470e8] text-white shadow-sm"
-          : "border-[#d9dde5] bg-white text-[#596273] hover:border-[#5470e8] hover:text-[#5470e8]",
-        disabled
-          ? "cursor-not-allowed opacity-35"
-          : "",
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
-}
-
-type CommunityWriteModalProps = {
-  stops: CommunityStopOption[];
+type WriteModalProps = {
   onClose: () => void;
 };
 
-function CommunityWriteModal({
-  stops,
+function WriteModal({
   onClose,
-}: CommunityWriteModalProps) {
+}: WriteModalProps) {
   const [
     category,
     setCategory,
@@ -508,13 +437,13 @@ function CommunityWriteModal({
     );
 
   useEffect(() => {
-    const previousOverflow =
+    const previous =
       document.body.style.overflow;
 
     document.body.style.overflow =
       "hidden";
 
-    function handleKeyDown(
+    function closeWithEscape(
       event: KeyboardEvent,
     ) {
       if (event.key === "Escape") {
@@ -524,16 +453,16 @@ function CommunityWriteModal({
 
     window.addEventListener(
       "keydown",
-      handleKeyDown,
+      closeWithEscape,
     );
 
     return () => {
       document.body.style.overflow =
-        previousOverflow;
+        previous;
 
       window.removeEventListener(
         "keydown",
-        handleKeyDown,
+        closeWithEscape,
       );
     };
   }, [onClose]);
@@ -542,8 +471,8 @@ function CommunityWriteModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="community-write-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111827]/55 p-4 backdrop-blur-[2px]"
+      aria-labelledby="write-modal-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111827]/55 p-4"
       onMouseDown={(event) => {
         if (
           event.target ===
@@ -562,9 +491,9 @@ function CommunityWriteModal({
             : "max-w-xl",
         ].join(" ")}
       >
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line-light bg-white px-5 py-4 md:px-7">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line-light bg-white px-6 py-4">
           <h2
-            id="community-write-title"
+            id="write-modal-title"
             className="text-xl font-bold text-main"
           >
             게시글 작성
@@ -588,44 +517,37 @@ function CommunityWriteModal({
                 "information",
                 "question",
               ] as CommunityCategory[]
-            ).map((value) => {
-              const selected =
-                category === value;
-
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() =>
-                    setCategory(value)
-                  }
-                  className={[
-                    "min-h-11 rounded-control border px-2 text-sm font-bold transition",
-                    selected
-                      ? "border-[#5470e8] bg-[#5470e8] text-white"
-                      : "border-line bg-white text-secondary hover:border-[#5470e8]",
-                  ].join(" ")}
-                >
-                  {
-                    categoryLabels[
-                      value
-                    ]
-                  }
-                </button>
-              );
-            })}
+            ).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() =>
+                  setCategory(value)
+                }
+                className={[
+                  "min-h-11 rounded-control border px-2 text-sm font-bold transition",
+                  category === value
+                    ? "border-[#5470e8] bg-[#5470e8] text-white"
+                    : "border-line bg-white text-secondary hover:border-[#5470e8]",
+                ].join(" ")}
+              >
+                {
+                  categoryLabels[
+                    value
+                  ]
+                }
+              </button>
+            ))}
           </div>
 
           <div className="mt-6">
             {category ===
             "route_suggestion" ? (
-              <RouteProposalComposer
-                key="route_suggestion"
-                stops={stops}
+              <RouteProposalForm
                 onSuccess={onClose}
               />
             ) : (
-              <GeneralPostComposer
+              <GeneralPostForm
                 key={category}
                 category={category}
                 onSuccess={onClose}
@@ -638,23 +560,21 @@ function CommunityWriteModal({
   );
 }
 
-type GeneralPostComposerProps = {
-  category:
-    | "information"
-    | "question";
-  onSuccess: () => void;
-};
-
 const initialPostState: PostActionState =
   {
     status: "idle",
     message: "",
   };
 
-function GeneralPostComposer({
+function GeneralPostForm({
   category,
   onSuccess,
-}: GeneralPostComposerProps) {
+}: {
+  category:
+    | "information"
+    | "question";
+  onSuccess: () => void;
+}) {
   const [
     state,
     formAction,
@@ -671,16 +591,14 @@ function GeneralPostComposer({
       return;
     }
 
-    const timeoutId =
+    const timer =
       window.setTimeout(
         onSuccess,
-        650,
+        600,
       );
 
     return () =>
-      window.clearTimeout(
-        timeoutId,
-      );
+      window.clearTimeout(timer);
   }, [
     state.status,
     onSuccess,
@@ -711,7 +629,7 @@ function GeneralPostComposer({
           maxLength={100}
           placeholder={
             category === "question"
-              ? "궁금한 교통 정보를 질문해 주세요."
+              ? "궁금한 내용을 제목으로 입력해 주세요."
               : "공유할 교통 정보의 제목을 입력해 주세요."
           }
           className={inputClassName}
@@ -727,16 +645,15 @@ function GeneralPostComposer({
           rows={8}
           placeholder={
             category === "question"
-              ? "질문 내용을 자세히 작성해 주세요."
-              : "교통 정보나 의견을 자세히 작성해 주세요."
+              ? "교통 이용과 관련해 궁금한 내용을 자세히 작성해 주세요."
+              : "시민들과 공유할 교통 정보를 자세히 작성해 주세요."
           }
           className={`${inputClassName} resize-none py-4`}
         />
       </Field>
 
       <ActionMessage
-        status={state.status}
-        message={state.message}
+        state={state}
       />
 
       <Button
@@ -752,9 +669,9 @@ function GeneralPostComposer({
   );
 }
 
-type RouteProposalComposerProps = {
-  stops: CommunityStopOption[];
-  onSuccess: () => void;
+type StopSearchResponse = {
+  stops?: CommunityStopOption[];
+  message?: string;
 };
 
 const initialRouteState: RouteSuggestionActionState =
@@ -763,10 +680,11 @@ const initialRouteState: RouteSuggestionActionState =
     message: "",
   };
 
-function RouteProposalComposer({
-  stops,
+function RouteProposalForm({
   onSuccess,
-}: RouteProposalComposerProps) {
+}: {
+  onSuccess: () => void;
+}) {
   const [
     state,
     formAction,
@@ -777,9 +695,11 @@ function RouteProposalComposer({
   );
 
   const [
-    search,
-    setSearch,
-  ] = useState("");
+    apiStops,
+    setApiStops,
+  ] = useState<
+    CommunityStopOption[]
+  >([]);
 
   const [
     selectedStops,
@@ -788,45 +708,40 @@ function RouteProposalComposer({
     CommunityStopOption[]
   >([]);
 
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    isLoadingStops,
+    setIsLoadingStops,
+  ] = useState(false);
+
+  const [
+    stopLoadError,
+    setStopLoadError,
+  ] = useState("");
+
   const searchRef =
     useRef<HTMLInputElement>(null);
 
-  const filteredStops = useMemo(() => {
-    const keyword =
-      search.trim().toLowerCase();
-
-    if (keyword.length < 2) {
-      return [];
-    }
-
-    return stops
-      .filter((stop) => {
-        const searchText = [
-          stop.name,
-          stop.stopNumber ?? "",
-          stop.districtName ?? "",
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        return searchText.includes(
-          keyword,
-        );
-      })
-      .filter(
-        (stop) =>
-          !selectedStops.some(
-            (selected) =>
-              selected.id ===
-              stop.id,
-          ),
-      )
-      .slice(0, 8);
-  }, [
-    search,
-    selectedStops,
-    stops,
-  ]);
+  const visibleApiStops =
+    useMemo(
+      () =>
+        apiStops.filter(
+          (stop) =>
+            !selectedStops.some(
+              (selected) =>
+                selected.id ===
+                stop.id,
+            ),
+        ),
+      [
+        apiStops,
+        selectedStops,
+      ],
+    );
 
   useEffect(() => {
     if (
@@ -835,26 +750,98 @@ function RouteProposalComposer({
       return;
     }
 
-    const timeoutId =
+    const timer =
       window.setTimeout(
         onSuccess,
-        650,
+        600,
       );
 
     return () =>
-      window.clearTimeout(
-        timeoutId,
-      );
+      window.clearTimeout(timer);
   }, [
     state.status,
     onSuccess,
   ]);
+
+  async function searchStops() {
+    const keyword =
+      search.trim();
+
+    if (keyword.length < 2) {
+      setApiStops([]);
+
+      setStopLoadError(
+        "정류장명 또는 정류장 번호를 2자 이상 입력해 주세요.",
+      );
+
+      searchRef.current?.focus();
+
+      return;
+    }
+
+    setIsLoadingStops(true);
+    setStopLoadError("");
+    setApiStops([]);
+
+    try {
+      const params =
+        new URLSearchParams({
+          query: keyword,
+        });
+
+      const response =
+        await fetch(
+          `/api/route-stops?${params.toString()}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+      const result =
+        (await response.json()) as StopSearchResponse;
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+            "정류장을 검색하지 못했습니다.",
+        );
+      }
+
+      const stops =
+        result.stops ?? [];
+
+      setApiStops(stops);
+
+      if (stops.length === 0) {
+        setStopLoadError(
+          `"${keyword}"에 해당하는 정류장을 찾지 못했습니다.`,
+        );
+      }
+    } catch (error) {
+      setStopLoadError(
+        error instanceof Error
+          ? error.message
+          : "정류장을 검색하지 못했습니다.",
+      );
+    } finally {
+      setIsLoadingStops(false);
+    }
+  }
 
   function addStop(
     stop: CommunityStopOption,
   ) {
     if (
       selectedStops.length >= 5
+    ) {
+      return;
+    }
+
+    if (
+      selectedStops.some(
+        (selected) =>
+          selected.id === stop.id,
+      )
     ) {
       return;
     }
@@ -866,21 +853,26 @@ function RouteProposalComposer({
       ],
     );
 
+    setApiStops([]);
     setSearch("");
+    setStopLoadError("");
 
-    window.setTimeout(() => {
-      searchRef.current?.focus();
-    }, 0);
+    window.setTimeout(
+      () =>
+        searchRef.current?.focus(),
+      0,
+    );
   }
 
   function removeStop(
     stopId: number,
   ) {
-    setSelectedStops((current) =>
-      current.filter(
-        (stop) =>
-          stop.id !== stopId,
-      ),
+    setSelectedStops(
+      (current) =>
+        current.filter(
+          (stop) =>
+            stop.id !== stopId,
+        ),
     );
   }
 
@@ -919,7 +911,7 @@ function RouteProposalComposer({
   return (
     <form
       action={formAction}
-      className="space-y-5"
+      className="space-y-6"
     >
       <input
         type="hidden"
@@ -935,7 +927,7 @@ function RouteProposalComposer({
               required
               minLength={2}
               maxLength={100}
-              placeholder="예: 병점역-동탄역 출근 직행"
+              placeholder="예: 병점역-동탄역 출근 급행"
               className={inputClassName}
             />
           </Field>
@@ -952,55 +944,104 @@ function RouteProposalComposer({
             />
           </Field>
 
-          <div>
+          <section>
             <div className="flex items-end justify-between gap-3">
               <div>
-                <label
-                  htmlFor="community-stop-search"
-                  className="text-sm font-bold text-main"
-                >
+                <h3 className="text-sm font-bold text-main">
                   정류장 검색
-                </label>
+                </h3>
 
-                <p className="mt-1 text-xs text-muted">
-                  이동 순서대로 정류장
-                  5개를 선택해 주세요.
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  지역과 반경 제한 없이
+                  전국 버스정류장을 이름
+                  또는 번호로 검색합니다.
                 </p>
               </div>
 
-              <strong
-                className={[
-                  "text-sm",
-                  selectedStops.length ===
-                  5
-                    ? "text-success"
-                    : "text-[#d87525]",
-                ].join(" ")}
-              >
-                {selectedStops.length}/5
+              <strong className="shrink-0 text-sm text-[#d87525]">
+                {
+                  selectedStops.length
+                }
+                /5
               </strong>
             </div>
 
-            <input
-              ref={searchRef}
-              id="community-stop-search"
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value,
-                )
-              }
-              disabled={
-                selectedStops.length >= 5
-              }
-              placeholder="정류장명 또는 정류장 번호"
-              className={`${inputClassName} mt-2`}
-            />
+            <div className="mt-3 flex gap-2">
+              <input
+                ref={searchRef}
+                value={search}
+                onChange={(
+                  event,
+                ) => {
+                  setSearch(
+                    event.target.value,
+                  );
 
-            {filteredStops.length >
+                  setApiStops([]);
+                  setStopLoadError("");
+                }}
+                onKeyDown={(
+                  event,
+                ) => {
+                  if (
+                    event.key ===
+                    "Enter"
+                  ) {
+                    event.preventDefault();
+
+                    void searchStops();
+                  }
+                }}
+                disabled={
+                  selectedStops.length >=
+                  5
+                }
+                placeholder="정류장명 또는 정류장 번호"
+                className={inputClassName}
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  void searchStops()
+                }
+                disabled={
+                  isLoadingStops ||
+                  selectedStops.length >=
+                    5
+                }
+                className="min-h-12 shrink-0 rounded-control bg-[#5470e8] px-5 text-sm font-bold text-white transition hover:bg-[#455fcf] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLoadingStops
+                  ? "검색 중"
+                  : "검색"}
+              </button>
+            </div>
+
+            {stopLoadError && (
+              <p
+                role="status"
+                className="mt-2 text-xs leading-5 text-danger"
+              >
+                {stopLoadError}
+              </p>
+            )}
+
+            {!isLoadingStops &&
+              apiStops.length >
+                0 && (
+                <p className="mt-2 text-xs text-success">
+                  공공데이터
+                  API에서 정류장{" "}
+                  {apiStops.length}개를
+                  찾았습니다.
+                </p>
+              )}
+
+            {visibleApiStops.length >
               0 && (
-              <ul className="mt-2 max-h-56 overflow-y-auto rounded-control border border-line bg-white shadow-card">
-                {filteredStops.map(
+              <ul className="mt-2 max-h-60 overflow-y-auto rounded-control border border-line bg-white shadow-card">
+                {visibleApiStops.map(
                   (stop) => (
                     <li
                       key={stop.id}
@@ -1011,16 +1052,22 @@ function RouteProposalComposer({
                         onClick={() =>
                           addStop(stop)
                         }
-                        className="w-full px-4 py-3 text-left transition hover:bg-surface-muted"
+                        className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition hover:bg-surface-muted"
                       >
-                        <strong className="block text-sm text-main">
-                          {stop.name}
-                        </strong>
+                        <div className="min-w-0">
+                          <strong className="block truncate text-sm text-main">
+                            {stop.name}
+                          </strong>
 
-                        <span className="mt-1 block text-xs text-muted">
-                          {formatStopDetail(
-                            stop,
-                          )}
+                          <span className="mt-1 block truncate text-xs text-muted">
+                            {stop.districtName ||
+                              "지역 정보 없음"}
+                          </span>
+                        </div>
+
+                        <span className="shrink-0 rounded-full border border-line px-3 py-1 text-xs font-semibold text-secondary">
+                          {stop.stopNumber ||
+                            "번호 없음"}
                         </span>
                       </button>
                     </li>
@@ -1028,200 +1075,161 @@ function RouteProposalComposer({
                 )}
               </ul>
             )}
-
-            {search.trim().length >=
-              2 &&
-              filteredStops.length ===
-                0 && (
-                <p className="mt-2 text-xs text-muted">
-                  검색 결과가
-                  없습니다.
-                </p>
-              )}
-          </div>
+          </section>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-main">
-              선택한 정류장
-            </h3>
+        <section>
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-main">
+                선택한 정류장
+              </h3>
 
-            {selectedStops.length ===
-            0 ? (
-              <div className="mt-2 flex min-h-44 items-center justify-center rounded-control border border-dashed border-line px-5 text-center">
-                <p className="text-sm text-muted">
-                  아직 선택한 정류장이
-                  없습니다.
-                </p>
-              </div>
-            ) : (
-              <ol className="mt-2 overflow-hidden rounded-control border border-line">
-                {selectedStops.map(
-                  (stop, index) => (
-                    <SelectedStopRow
-                      key={stop.id}
-                      stop={stop}
-                      index={index}
-                      total={
-                        selectedStops.length
-                      }
-                      onMove={moveStop}
-                      onRemove={
-                        removeStop
-                      }
-                    />
-                  ),
-                )}
-              </ol>
-            )}
+              <p className="mt-1 text-xs leading-5 text-muted">
+                실제 운행 순서대로
+                정류장 5개를 선택해
+                주세요.
+              </p>
+            </div>
+
+            <span className="text-xs text-muted">
+              순서 변경 가능
+            </span>
           </div>
+
+          {selectedStops.length ===
+          0 ? (
+            <div className="mt-3 flex min-h-44 items-center justify-center rounded-control border border-dashed border-line px-4 text-center text-sm text-muted">
+              아직 선택한 정류장이
+              없습니다.
+            </div>
+          ) : (
+            <ol className="mt-3 overflow-hidden rounded-control border border-line bg-white">
+              {selectedStops.map(
+                (stop, index) => (
+                  <li
+                    key={stop.id}
+                    className="flex min-h-16 items-center gap-3 border-b border-line-light px-3 last:border-0"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#5470e8] text-xs font-bold text-white">
+                      {index + 1}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <strong className="block truncate text-sm text-main">
+                        {stop.name}
+                      </strong>
+
+                      <span className="mt-1 block truncate text-xs text-muted">
+                        {formatStop(
+                          stop,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        aria-label={`${stop.name} 위로 이동`}
+                        disabled={
+                          index === 0
+                        }
+                        onClick={() =>
+                          moveStop(
+                            index,
+                            -1,
+                          )
+                        }
+                        className="flex size-8 items-center justify-center rounded-md border border-line text-secondary disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-label={`${stop.name} 아래로 이동`}
+                        disabled={
+                          index ===
+                          selectedStops.length -
+                            1
+                        }
+                        onClick={() =>
+                          moveStop(
+                            index,
+                            1,
+                          )
+                        }
+                        className="flex size-8 items-center justify-center rounded-md border border-line text-secondary disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-label={`${stop.name} 선택 취소`}
+                        onClick={() =>
+                          removeStop(
+                            stop.id,
+                          )
+                        }
+                        className="flex size-8 items-center justify-center rounded-md border border-[#f1c8c8] text-danger"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    <input
+                      type="hidden"
+                      name="stopIds"
+                      value={stop.id}
+                    />
+                  </li>
+                ),
+              )}
+            </ol>
+          )}
 
           {selectedStops.length >
             0 && (
-            <div className="overflow-hidden rounded-control border border-line">
+            <div className="mt-4 overflow-hidden rounded-control border border-line bg-surface-muted">
               <RouteStopMap
                 stopIds={selectedStops.map(
-                  (stop) => stop.id,
+                  (stop) =>
+                    stop.id,
                 )}
                 showPolyline
               />
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <ActionMessage
-        status={state.status}
-        message={state.message}
+        state={state}
       />
+
+      {selectedStops.length <
+        5 && (
+        <p className="text-center text-xs text-muted">
+          정류장을 5개 선택하면
+          노선 제안을 등록할 수
+          있습니다.
+        </p>
+      )}
 
       <Button
         type="submit"
         fullWidth
         disabled={
           isPending ||
-          selectedStops.length < 5
+          selectedStops.length !== 5
         }
       >
         {isPending
           ? "등록 중..."
-          : "노선 제안 등록"}
+          : "희망 노선 등록"}
       </Button>
     </form>
-  );
-}
-
-type SelectedStopRowProps = {
-  stop: CommunityStopOption;
-  index: number;
-  total: number;
-  onMove: (
-    index: number,
-    direction: -1 | 1,
-  ) => void;
-  onRemove: (
-    stopId: number,
-  ) => void;
-};
-
-function SelectedStopRow({
-  stop,
-  index,
-  total,
-  onMove,
-  onRemove,
-}: SelectedStopRowProps) {
-  return (
-    <li className="flex min-h-16 items-center gap-3 border-b border-line-light px-3 py-2 last:border-0">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#5470e8] text-xs font-bold text-white">
-        {index + 1}
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <strong className="block truncate text-sm text-main">
-          {stop.name}
-        </strong>
-
-        <span className="mt-1 block truncate text-xs text-muted">
-          {formatStopDetail(stop)}
-        </span>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1">
-        <SmallIconButton
-          label="위로 이동"
-          disabled={index === 0}
-          onClick={() =>
-            onMove(index, -1)
-          }
-        >
-          ↑
-        </SmallIconButton>
-
-        <SmallIconButton
-          label="아래로 이동"
-          disabled={
-            index === total - 1
-          }
-          onClick={() =>
-            onMove(index, 1)
-          }
-        >
-          ↓
-        </SmallIconButton>
-
-        <SmallIconButton
-          label="정류장 삭제"
-          danger
-          onClick={() =>
-            onRemove(stop.id)
-          }
-        >
-          ×
-        </SmallIconButton>
-      </div>
-
-      <input
-        type="hidden"
-        name="stopIds"
-        value={stop.id}
-      />
-    </li>
-  );
-}
-
-type SmallIconButtonProps = {
-  label: string;
-  disabled?: boolean;
-  danger?: boolean;
-  onClick: () => void;
-  children: ReactNode;
-};
-
-function SmallIconButton({
-  label,
-  disabled = false,
-  danger = false,
-  onClick,
-  children,
-}: SmallIconButtonProps) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        "flex size-8 items-center justify-center rounded-control text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-25",
-        danger
-          ? "text-danger hover:bg-danger-soft"
-          : "text-secondary hover:bg-surface-muted",
-      ].join(" ")}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -1244,16 +1252,17 @@ function Field({
 }
 
 function ActionMessage({
-  status,
-  message,
+  state,
 }: {
-  status:
-    | "idle"
-    | "success"
-    | "error";
-  message: string;
+  state: {
+    status:
+      | "idle"
+      | "success"
+      | "error";
+    message: string;
+  };
 }) {
-  if (!message) {
+  if (!state.message) {
     return null;
   }
 
@@ -1262,112 +1271,48 @@ function ActionMessage({
       role="status"
       className={[
         "rounded-control p-3 text-sm",
-        status === "success"
+        state.status === "success"
           ? "bg-success-soft text-success"
           : "bg-danger-soft text-danger",
       ].join(" ")}
     >
-      {message}
+      {state.message}
     </p>
   );
 }
 
-function WriteIcon() {
+function PageButton({
+  selected = false,
+  disabled = false,
+  onClick,
+  children,
+}: {
+  selected?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="size-5"
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        "flex size-10 items-center justify-center rounded-[8px] border text-sm font-bold transition",
+        selected
+          ? "border-[#5470e8] bg-[#5470e8] text-white"
+          : "border-line bg-white text-secondary hover:border-[#5470e8]",
+        disabled
+          ? "cursor-not-allowed opacity-30"
+          : "",
+      ].join(" ")}
     >
-      <path
-        d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      <path
-        d="m13.5 6.5 4 4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
+      {children}
+    </button>
   );
 }
 
-function ViewIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="size-[18px]"
-    >
-      <path
-        d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-
-      <circle
-        cx="12"
-        cy="12"
-        r="2.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function CommentIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="size-[18px]"
-    >
-      <path
-        d="M5 4.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 3v-3H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StopIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="size-[18px]"
-    >
-      <path
-        d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-
-      <circle
-        cx="12"
-        cy="10"
-        r="2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function formatStopDetail(
+function formatStop(
   stop: CommunityStopOption,
 ) {
   return [
@@ -1375,12 +1320,23 @@ function formatStopDetail(
     stop.districtName,
   ]
     .filter(Boolean)
-    .join(" · ") || "상세 정보 없음";
+    .join(" · ") ||
+    "상세 정보 없음";
 }
 
 function formatDate(
   value: string,
 ) {
+  const date = new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return value;
+  }
+
   return new Intl.DateTimeFormat(
     "ko-KR",
     {
@@ -1390,7 +1346,7 @@ function formatDate(
       hour: "2-digit",
       minute: "2-digit",
     },
-  ).format(new Date(value));
+  ).format(date);
 }
 
 const inputClassName = [
@@ -1400,5 +1356,6 @@ const inputClassName = [
   "placeholder:text-muted",
   "focus:border-[#5470e8]",
   "focus:ring-2 focus:ring-[#5470e8]/10",
+  "disabled:cursor-not-allowed",
   "disabled:bg-surface-muted",
 ].join(" ");
