@@ -30,6 +30,10 @@ import {
   createClient,
 } from "@/lib/supabase/server";
 
+import {
+  AdminIncidentHistory,
+} from "@/components/admin-incident-history";
+
 type IncidentPageProps = {
   params: Promise<{
     id: string;
@@ -390,6 +394,12 @@ export default async function AdminIncidentPage({
         }
         evidence={
           incident.evidence
+        }
+      />
+      
+      <AdminIncidentHistory
+        incidentId={
+          incident.id
         }
       />
 
