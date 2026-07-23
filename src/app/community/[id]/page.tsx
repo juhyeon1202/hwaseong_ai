@@ -11,6 +11,7 @@ import {
   PostForm,
   type PostEditData,
 } from "@/components/post-form";
+import { ReportPostButton } from "@/components/report-post-button";
 import {
   Badge,
   ButtonLink,
@@ -177,6 +178,26 @@ export default async function CommunityPostPage({
     user?.id === post.author_id ||
     user?.role === "admin";
 
+  const canReport =
+    Boolean(user) &&
+    user?.id !== post.author_id;
+
+  let alreadyReported = false;
+
+  if (canReport && user) {
+    const { data: existingReport } =
+      await supabase
+        .from("post_reports")
+        .select("id")
+        .eq("post_id", post.id)
+        .eq("reporter_id", user.id)
+        .maybeSingle();
+
+    alreadyReported = Boolean(
+      existingReport,
+    );
+  }
+
   const editData: PostEditData = {
     id: post.id,
     category: post.category,
@@ -210,6 +231,17 @@ export default async function CommunityPostPage({
                     post.bus_type
                   ]}
                 </Badge>
+              )}
+
+              {canReport && (
+                <div className="ml-auto">
+                  <ReportPostButton
+                    postId={post.id}
+                    alreadyReported={
+                      alreadyReported
+                    }
+                  />
+                </div>
               )}
             </div>
 

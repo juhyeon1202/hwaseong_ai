@@ -2567,3 +2567,88 @@ before update on public.profiles
 for each row
 execute function public.protect_profile_role();
 
+-- =========================================================
+-- 28. 게시물 신고
+-- 정류장 원터치 익명 신고(anonymous_reports)와는 별개 기능입니다.
+-- =========================================================
+
+create type public.post_report_reason as enum (
+  'spam',
+  'abuse',
+  'false_info',
+  'other'
+);
+
+create table public.post_reports (
+  id bigint generated always as identity primary key,
+
+  post_id uuid not null
+    references public.posts(id) on delete cascade,
+
+  reporter_id uuid not null
+    references auth.users(id) on delete cascade,
+
+  reason public.post_report_reason not null,
+  detail text
+    check (detail is null or char_length(detail) <= 500),
+
+  created_at timestamptz not null default now(),
+
+  unique (post_id, reporter_id)
+);
+
+create index post_reports_post_idx
+on public.post_reports (post_id, created_at desc);
+
+alter table public.post_reports enable row level security;
+
+-- 로그인 사용자는 자신의 신고만 등록할 수 있고, 본인 게시글은 신고할 수 없음
+create policy "post_reports_insert_own"
+on public.post_reports
+for insert
+to authenticated
+with check (
+  reporter_id = auth.uid()
+  and not exists (
+    select 1
+    from public.posts p
+    where p.id = post_id
+      and p.author_id = auth.uid()
+  )
+);
+
+-- 신고자 본인 또는 관리자만 신고 내역 조회 가능
+create policy "post_reports_select_own_or_admin"
+on public.post_reports
+for select
+to authenticated
+using (
+  reporter_id = auth.uid()
+  or public.is_admin()
+);
+
+-- 관리자 검토 화면용 게시글별 신고 집계
+create or replace view public.post_report_summary
+with (security_invoker = true)
+as
+select
+  p.id as post_id,
+  p.title,
+  p.author_id,
+  p.is_hidden,
+  p.created_at as post_created_at,
+  count(r.id)::integer as report_count,
+  max(r.created_at) as latest_report_at
+from public.posts p
+join public.post_reports r
+  on r.post_id = p.id
+group by
+  p.id,
+  p.title,
+  p.author_id,
+  p.is_hidden,
+  p.created_at;
+
+grant select on public.post_report_summary
+to authenticated;
+
