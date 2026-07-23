@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
+  requireAdmin,
   requireUser,
 } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +20,9 @@ export type PostActionState = {
 export type CommentActionState =
   PostActionState;
 
+export type ReportActionState =
+  PostActionState;
+
 const validCategories = [
   "route_request",
   "route_suggestion",
@@ -29,6 +33,13 @@ const validCategories = [
 const validBusTypes = [
   "city",
   "village",
+  "other",
+];
+
+const validReportReasons = [
+  "spam",
+  "abuse",
+  "false_info",
   "other",
 ];
 
@@ -274,6 +285,140 @@ export async function deleteComment(
   revalidatePath(
     `/community/${postId}`,
   );
+}
+
+export async function reportPost(
+  _previousState: ReportActionState,
+  formData: FormData,
+): Promise<ReportActionState> {
+  const user = await requireUser();
+
+  const postId =
+    formData.get("postId")?.toString();
+
+  const reason =
+    formData
+      .get("reason")
+      ?.toString() ?? "";
+
+  const detail =
+    formData
+      .get("detail")
+      ?.toString()
+      .trim() || null;
+
+  if (!postId) {
+    return errorState(
+      "신고할 게시글 정보가 없습니다.",
+    );
+  }
+
+  if (
+    !validReportReasons.includes(
+      reason,
+    )
+  ) {
+    return errorState(
+      "신고 사유를 선택해 주세요.",
+    );
+  }
+
+  if (
+    detail &&
+    detail.length > 500
+  ) {
+    return errorState(
+      "상세 사유는 500자 이하로 입력해 주세요.",
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data: post } = await supabase
+    .from("posts")
+    .select("author_id")
+    .eq("id", postId)
+    .single();
+
+  if (!post) {
+    return errorState(
+      "존재하지 않는 게시글입니다.",
+    );
+  }
+
+  if (post.author_id === user.id) {
+    return errorState(
+      "본인 게시글은 신고할 수 없습니다.",
+    );
+  }
+
+  const { error } = await supabase
+    .from("post_reports")
+    .insert({
+      post_id: postId,
+      reporter_id: user.id,
+      reason,
+      detail,
+    });
+
+  if (error) {
+    if (error.code === "23505") {
+      return errorState(
+        "이미 신고한 게시글입니다.",
+      );
+    }
+
+    return errorState(
+      "신고를 접수하지 못했습니다.",
+    );
+  }
+
+  revalidatePath(
+    `/community/${postId}`,
+  );
+
+  return successState(
+    "신고가 접수되었습니다. 검토 후 조치하겠습니다.",
+  );
+}
+
+export async function setPostVisibility(
+  formData: FormData,
+) {
+  await requireAdmin();
+
+  const postId =
+    formData.get("postId")?.toString();
+
+  const hidden =
+    formData.get("hidden") === "true";
+
+  if (!postId) {
+    throw new Error(
+      "처리할 게시글 정보가 없습니다.",
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ is_hidden: hidden })
+    .eq("id", postId);
+
+  if (error) {
+    throw new Error(
+      "게시글 공개 상태를 변경하지 못했습니다.",
+    );
+  }
+
+  revalidatePath(
+    "/admin/post-reports",
+  );
+  revalidatePath(
+    `/community/${postId}`,
+  );
+  revalidatePath("/community");
 }
 
 function parsePostForm(

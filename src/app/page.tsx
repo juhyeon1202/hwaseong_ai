@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
 import {
   KakaoMap,
   type MapMarkerData,
 } from "@/components/kakao-map";
 import {
+  Badge,
   ButtonLink,
   Card,
   ProgressBar,
@@ -16,6 +16,36 @@ import {
   getParticipationRanking,
   type ParticipationRanking,
 } from "@/lib/participation";
+import {
+  summarizeRegionParticipation,
+  type RegionParticipation,
+} from "@/lib/regions";
+
+const quickActions = [
+  {
+    href: "/journal",
+    title: "기록하기",
+    description: "오늘의 이동 경험",
+    icon: "✎",
+    color:
+      "bg-brand-soft text-brand-text",
+  },
+  {
+    href: "/route",
+    title: "길찾기",
+    description: "대중교통 추천 경로",
+    icon: "↗",
+    color: "bg-info-soft text-info",
+  },
+  {
+    href: "/rewards",
+    title: "룰렛",
+    description: "참여 포인트 보상",
+    icon: "◎",
+    color:
+      "bg-warning-soft text-warning",
+  },
+] as const;
 
 const districtCoordinates: Record<
   string,
@@ -54,350 +84,372 @@ const districtCoordinates: Record<
   },
 };
 
-const quickActions = [
-  {
-    href: "/journal",
-    label: "기록하기",
-    description: "오늘의 이동 기록",
-    color:
-      "border-brand bg-brand text-white",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="size-6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="m4 20 4.2-1 10.6-10.6a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" />
-        <path d="m14.5 6.5 3 3" />
-      </svg>
-    ),
-  },
-  {
-    href: "/route",
-    label: "길찾기",
-    description: "대중교통 추천 경로",
-    color:
-      "border-info/25 bg-white text-info",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="size-6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11Z" />
-        <circle cx="12" cy="10" r="2.5" />
-      </svg>
-    ),
-  },
-  {
-    href: "/rewards",
-    label: "룰렛",
-    description: "참여 포인트 보상",
-    color:
-      "border-info/25 bg-white text-info",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="size-6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="8" />
-        <path d="M12 4v16M4 12h16M6.4 6.4l11.2 11.2M17.6 6.4 6.4 17.6" />
-        <circle cx="12" cy="12" r="2" />
-      </svg>
-    ),
-  },
-] as const;
-
 export default async function HomePage() {
   const user = await getCurrentUser();
 
   const [ranking, homeDistrict] =
     await Promise.all([
       getParticipationRanking(),
-      getHomeDistrict(user?.id ?? null),
+      getHomeDistrict(
+        user?.id ?? null,
+      ),
     ]);
 
-  const normalizedRanking = ranking;
-
-  const myDistrictName =
-    homeDistrict ?? "병점2동";
-
   const myRanking =
-    normalizedRanking.find(
+    ranking.find(
       (item) =>
         item.districtName ===
-        myDistrictName,
-    ) ?? normalizedRanking[2] ?? null;
+        homeDistrict,
+    ) ?? null;
 
   const mapMarkers =
-    createMapMarkers(normalizedRanking);
+    createMapMarkers(ranking);
+
+  const regionParticipation =
+    summarizeRegionParticipation(
+      ranking,
+    );
 
   return (
-    <AppShell user={user}>
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="mb-4 md:mb-5">
-          <p className="text-sm font-semibold text-secondary">
-            우리 동네 참여율 지도
-          </p>
-        </header>
+      <div className="space-y-6">
+        <HeroSection />
 
-        <section className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
-          <div className="grid lg:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.7fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.72fr)]">
+          <div className="space-y-6">
             <ParticipationMap
               markers={mapMarkers}
-              ranking={normalizedRanking}
+              ranking={ranking}
+              regionParticipation={
+                regionParticipation
+              }
             />
 
-            <div className="flex flex-col gap-4 border-t border-line-light p-4 sm:p-5 lg:border-l lg:border-t-0">
-              <MyDistrictCard
-                ranking={myRanking}
-                districtName={myDistrictName}
-                allRanking={normalizedRanking}
-              />
+            <NeighborhoodCard
+              homeDistrict={homeDistrict}
+              ranking={myRanking}
+            />
 
-              <QuickActions />
-
-              <RankingPreview
-                ranking={normalizedRanking.slice(
-                  0,
-                  3,
-                )}
-                homeDistrict={myDistrictName}
-              />
-            </div>
+            <QuickActions />
           </div>
-        </section>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
-          <OneTouchReportCard />
+          <aside className="space-y-6">
+            <RankingCard
+              ranking={ranking.slice(
+                0,
+                3,
+              )}
+              homeDistrict={
+                homeDistrict
+              }
+            />
 
-          <AiInsightCard />
-        </section>
+            <ReportCard />
+
+            <AiInsightCard />
+          </aside>
+        </div>
       </div>
-    </AppShell>
+  );
+}
+
+function HeroSection() {
+  return (
+    <section className="flex flex-col gap-4 border-b border-line-light pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <Badge>
+          실시간 시민 참여
+        </Badge>
+
+        <h1 className="mt-3 text-2xl font-bold leading-tight text-main sm:text-3xl">
+          우리 동네 교통,
+          <br className="sm:hidden" /> 함께
+          기록하고 바꿔요
+        </h1>
+
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-secondary">
+          이동 경험과 정류장 불편을 기록하면
+          시민 참여 데이터와 AI 분석을 통해
+          교통 개선에 활용됩니다.
+        </p>
+      </div>
+
+      <Link
+        href="/incidents"
+        className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-control bg-info-soft px-4 text-sm font-semibold text-info sm:self-auto"
+      >
+        <span className="size-2 rounded-pill bg-info" />
+        실시간 교통 알림
+      </Link>
+    </section>
   );
 }
 
 type ParticipationMapProps = {
   markers: MapMarkerData[];
   ranking: ParticipationRanking[];
+  regionParticipation: RegionParticipation[];
 };
 
 function ParticipationMap({
   markers,
   ranking,
+  regionParticipation,
 }: ParticipationMapProps) {
+  const totalReports =
+    ranking.reduce(
+      (sum, item) =>
+        sum + item.reportCount,
+      0,
+    );
+
   return (
-    <div className="relative min-h-[340px] bg-[#eef2f6] sm:min-h-[440px] lg:min-h-[560px]">
-      <KakaoMap
-        center={{
-          latitude: 37.1995,
-          longitude: 127.0645,
-        }}
-        markers={markers}
-        level={8}
-        height="100%"
-        className="absolute inset-0"
-      />
+    <Card
+      padded={false}
+      className="overflow-hidden"
+    >
+      <div className="relative">
+        <KakaoMap
+          center={{
+            latitude: 37.1995,
+            longitude: 127.0645,
+          }}
+          markers={markers}
+          regionOverlays={
+            regionParticipation
+          }
+          level={9}
+          height={420}
+        />
 
-      <div className="pointer-events-none absolute left-3 top-3 rounded-control bg-[#191f28]/85 px-3 py-2 text-xs font-bold text-white shadow-card backdrop-blur-sm sm:left-4 sm:top-4">
-        우리 동네 참여율 지도
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-control bg-[#191f28]/85 px-4 py-3 text-white shadow-card backdrop-blur sm:left-4 sm:top-4">
+          <p className="text-xs text-white/70">
+            최근 7일 시민 참여
+          </p>
+
+          <p className="mt-1 text-lg font-bold">
+            총{" "}
+            {totalReports.toLocaleString()}
+            건
+          </p>
+        </div>
+
+        <div className="absolute inset-x-3 bottom-3 z-10 rounded-card border border-white/50 bg-surface/95 p-4 shadow-floating backdrop-blur sm:inset-x-auto sm:bottom-4 sm:left-4 sm:w-[360px]">
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-danger-soft text-lg font-bold text-danger">
+              !
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted">
+                정류장에서 불편을
+                겪으셨나요?
+              </p>
+
+              <p className="mt-1 font-bold text-main">
+                정류장 원터치 익명 신고
+              </p>
+            </div>
+
+            <ButtonLink
+              href="/report"
+              className="shrink-0"
+            >
+              신고하기
+            </ButtonLink>
+          </div>
+        </div>
       </div>
-
-      <div className="pointer-events-none absolute bottom-3 left-3 rounded-control border border-white/70 bg-white/95 px-3 py-2 shadow-card backdrop-blur-sm sm:bottom-4 sm:left-4">
-        <p className="text-[11px] text-muted">
-          최근 7일 시민 참여
-        </p>
-
-        <p className="mt-0.5 text-sm font-bold text-main">
-          총{" "}
-          {ranking
-            .reduce(
-              (total, item) =>
-                total + item.reportCount,
-              0,
-            )
-            .toLocaleString()}
-          건
-        </p>
-      </div>
-
-      <Link
-        href="/report"
-        className="absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-2 rounded-control bg-brand px-4 text-sm font-bold text-white shadow-floating transition hover:bg-brand-hover sm:bottom-4 sm:right-4"
-      >
-        <span className="flex size-5 items-center justify-center rounded-full bg-white/20">
-          !
-        </span>
-        정류장 신고
-      </Link>
-    </div>
+    </Card>
   );
 }
 
-type MyDistrictCardProps = {
-  ranking: ParticipationRanking | null;
-  districtName: string;
-  allRanking: ParticipationRanking[];
+type NeighborhoodCardProps = {
+  homeDistrict: string | null;
+  ranking:
+    | ParticipationRanking
+    | null;
 };
 
-function MyDistrictCard({
+function NeighborhoodCard({
+  homeDistrict,
   ranking,
-  districtName,
-  allRanking,
-}: MyDistrictCardProps) {
+}: NeighborhoodCardProps) {
+  if (!homeDistrict) {
+    return (
+      <Card className="border-brand-line bg-brand-softer">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-brand-text">
+              우리 동네 순위
+            </p>
+
+            <h2 className="mt-2 text-lg font-bold text-main">
+              거주지역을 설정해 주세요
+            </h2>
+
+            <p className="mt-2 text-sm text-muted">
+              마이페이지에서 거주지역을
+              설정하면 우리 동네 순위를
+              확인할 수 있어요.
+            </p>
+          </div>
+
+          <ButtonLink
+            href="/mypage"
+            variant="secondary"
+          >
+            지역 설정
+          </ButtonLink>
+        </div>
+      </Card>
+    );
+  }
+
   if (!ranking) {
     return (
-      <div className="rounded-card border border-brand-line bg-brand-softer p-5 text-center">
+      <Card className="border-brand-line bg-brand-softer">
         <p className="text-sm font-semibold text-brand-text">
           우리 동네
         </p>
 
-        <strong className="mt-2 block text-xl text-main">
-          {districtName}
-        </strong>
+        <h2 className="mt-2 text-xl font-bold text-main">
+          {homeDistrict}
+        </h2>
 
         <p className="mt-2 text-sm text-muted">
-          아직 참여 기록이 없습니다.
+          아직 최근 참여 기록이 없습니다.
+          첫 교통일지를 남겨 주세요.
         </p>
-      </div>
+
+        <ButtonLink
+          href="/journal"
+          className="mt-5"
+        >
+          우리 동네 기록 참여
+        </ButtonLink>
+      </Card>
     );
   }
 
-  const previousDistrict =
-    allRanking.find(
-      (item) =>
-        item.rank === ranking.rank - 1,
-    ) ?? null;
-
-  const remaining =
-    previousDistrict
-      ? Math.max(
-          1,
-          previousDistrict.reportCount -
-            ranking.reportCount,
-        )
-      : 0;
-
   return (
-    <div className="rounded-card border border-brand-line bg-brand-softer p-5">
+    <Card className="border-brand-line bg-brand-softer">
       <div className="flex items-center gap-5">
-        <div className="shrink-0 text-center">
-          <strong className="block text-3xl font-extrabold text-brand">
-            {ranking.rank}위
-          </strong>
+        <div>
+          <p className="text-sm font-semibold text-brand-text">
+            우리 동네
+          </p>
 
-          <span className="mt-1 block text-xs font-semibold text-secondary">
-            {districtName}
+          <p className="mt-1 text-sm text-secondary">
+            {homeDistrict}
+          </p>
+        </div>
+
+        <strong className="ml-auto text-3xl font-bold text-brand">
+          {ranking.rank}위
+        </strong>
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between text-xs">
+          <span className="text-muted">
+            상대 참여도
+          </span>
+
+          <span className="font-bold text-brand-text">
+            {ranking.participation}%
           </span>
         </div>
 
-        <div className="min-w-0 border-l border-brand-line pl-5">
-          {previousDistrict ? (
-            <>
-              <p className="text-sm font-bold text-main">
-                {previousDistrict.rank}위{" "}
-                {previousDistrict.districtName}
-                까지{" "}
-                <span className="text-brand">
-                  {remaining}건
-                </span>
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-muted">
-                지금 기록하면 우리 동네 순위가
-                올라가요.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-bold text-main">
-                우리 동네가 현재 1위예요!
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-muted">
-                꾸준히 기록해서 순위를
-                지켜주세요.
-              </p>
-            </>
-          )}
-        </div>
+        <ProgressBar
+          value={
+            ranking.participation
+          }
+        />
       </div>
-    </div>
+
+      <p className="mt-4 text-sm leading-6 text-secondary">
+        최근 7일 동안{" "}
+        <strong className="text-main">
+          {ranking.reportCount}건
+        </strong>
+        의 교통 참여 기록이 모였어요.
+      </p>
+    </Card>
   );
 }
 
 function QuickActions() {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-      {quickActions.map((action) => (
-        <Link
-          key={action.href}
-          href={action.href}
-          className={[
-            "flex min-h-[94px] flex-col items-center justify-center rounded-control border px-2 py-3 text-center transition",
-            "active:scale-[0.98] md:hover:-translate-y-0.5",
-            action.color,
-          ].join(" ")}
-        >
-          {action.icon}
+    <section>
+      <h2 className="text-lg font-bold text-main">
+        빠른 실행
+      </h2>
 
-          <strong className="mt-2 block text-sm">
-            {action.label}
-          </strong>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {quickActions.map(
+          (action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="rounded-card border border-line bg-surface p-4 shadow-card transition-transform active:scale-[0.98] sm:p-5 md:hover:-translate-y-0.5"
+            >
+              <span
+                className={[
+                  "flex size-10 items-center justify-center rounded-control text-lg font-bold",
+                  action.color,
+                ].join(" ")}
+              >
+                {action.icon}
+              </span>
 
-          <span className="mt-1 hidden text-[11px] opacity-75 xl:block">
-            {action.description}
-          </span>
-        </Link>
-      ))}
-    </div>
+              <strong className="mt-4 block text-sm text-main">
+                {action.title}
+              </strong>
+
+              <span className="mt-1 hidden text-xs leading-5 text-muted sm:block">
+                {action.description}
+              </span>
+            </Link>
+          ),
+        )}
+      </div>
+    </section>
   );
 }
 
-type RankingPreviewProps = {
+type RankingCardProps = {
   ranking: ParticipationRanking[];
-  homeDistrict: string;
+  homeDistrict: string | null;
 };
 
-function RankingPreview({
+function RankingCard({
   ranking,
   homeDistrict,
-}: RankingPreviewProps) {
+}: RankingCardProps) {
   return (
-    <section className="rounded-card border border-line-light bg-white p-4">
-      <header className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-bold text-main">
-          실시간 동네 순위
-        </h2>
+    <Card>
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-bold text-main">
+            실시간 동네 순위
+          </h2>
+
+          <p className="mt-1 text-xs text-muted">
+            최근 7일 참여 기준
+          </p>
+        </div>
 
         <Link
           href="/ranking"
-          className="inline-flex min-h-11 items-center text-xs font-semibold text-muted hover:text-brand-text"
+          className="text-xs font-semibold text-brand-text"
         >
           전체 보기 ›
         </Link>
       </header>
 
-      <ol className="mt-2 space-y-3">
+      <ol className="mt-5 space-y-4">
         {ranking.map((item) => {
-          const isMine =
+          const isMyDistrict =
             item.districtName ===
             homeDistrict;
 
@@ -405,80 +457,66 @@ function RankingPreview({
             <li
               key={item.districtName}
               className={[
-                "grid grid-cols-[20px_58px_minmax(0,1fr)_38px] items-center gap-2 rounded-lg py-1",
-                isMine
-                  ? "bg-brand-softer px-2"
+                "grid grid-cols-[32px_1fr_48px] items-center gap-3 rounded-control",
+                isMyDistrict
+                  ? "bg-brand-softer p-2"
                   : "",
               ].join(" ")}
             >
               <span
                 className={[
-                  "text-xs font-bold",
-                  isMine
-                    ? "text-brand"
-                    : "text-muted",
+                  "flex size-8 items-center justify-center rounded-pill text-xs font-bold",
+                  item.rank === 1
+                    ? "bg-brand text-on-brand"
+                    : item.rank === 2
+                      ? "bg-info text-white"
+                      : "bg-surface-muted text-secondary",
                 ].join(" ")}
               >
                 {item.rank}
               </span>
 
-              <span
-                className={[
-                  "truncate text-xs font-semibold",
-                  isMine
-                    ? "text-brand-text"
-                    : "text-main",
-                ].join(" ")}
-              >
-                {item.districtName}
-              </span>
+              <div className="min-w-0">
+                <p className="mb-2 truncate text-sm font-semibold text-main">
+                  {item.districtName}
+                  {isMyDistrict
+                    ? " · 우리 동네"
+                    : ""}
+                </p>
 
-              <ProgressBar
-                value={item.participation}
-              />
+                <ProgressBar
+                  value={
+                    item.participation
+                  }
+                />
+              </div>
 
-              <span
-                className={[
-                  "text-right text-[11px] font-bold",
-                  isMine
-                    ? "text-brand"
-                    : "text-muted",
-                ].join(" ")}
-              >
+              <strong className="text-right text-sm text-brand-text">
                 {item.participation}%
-              </span>
+              </strong>
             </li>
           );
         })}
       </ol>
-    </section>
+    </Card>
   );
 }
 
-function OneTouchReportCard() {
+function ReportCard() {
   return (
-    <Card className="flex flex-col justify-between">
-      <div className="flex items-start gap-4">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-danger-soft text-lg font-extrabold text-danger">
-          !
-        </span>
+    <Card>
+      <Badge variant="danger">
+        원터치 신고
+      </Badge>
 
-        <div>
-          <p className="text-xs font-semibold text-danger">
-            원터치 익명 신고
-          </p>
+      <h2 className="mt-4 font-bold text-main">
+        버스가 그냥 지나갔나요?
+      </h2>
 
-          <h2 className="mt-1 text-lg font-bold text-main">
-            정류장에서 불편을 겪으셨나요?
-          </h2>
-
-          <p className="mt-2 text-sm leading-6 text-muted">
-            정류장을 선택하고 만차 통과, 배차
-            지연, 환승 실패를 즉시 신고할 수
-            있어요.
-          </p>
-        </div>
-      </div>
+      <p className="mt-2 text-sm leading-6 text-muted">
+        만차 통과, 배차 지연, 환승 실패를
+        정류장에서 바로 신고할 수 있어요.
+      </p>
 
       <ButtonLink
         href="/report"
@@ -494,34 +532,25 @@ function OneTouchReportCard() {
 function AiInsightCard() {
   return (
     <Card className="border-info/20 bg-info-soft">
-      <div className="flex items-start gap-4">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-info text-sm font-extrabold text-white">
-          AI
-        </span>
+      <Badge variant="info">
+        AI 교통 인사이트
+      </Badge>
 
-        <div>
-          <p className="text-xs font-semibold text-info">
-            AI 교통 인사이트
-          </p>
+      <h2 className="mt-4 font-bold text-main">
+        시민 기록을 분석하고 있어요
+      </h2>
 
-          <h2 className="mt-1 text-lg font-bold text-main">
-            시민 기록을 교통 개선 정보로
-            분석해요
-          </h2>
-
-          <p className="mt-2 text-sm leading-6 text-secondary">
-            반복되는 신고와 이동 기록을 분석해
-            취약 구간과 배차 개선 필요 지점을
-            찾아냅니다.
-          </p>
-        </div>
-      </div>
+      <p className="mt-2 text-sm leading-6 text-secondary">
+        신고가 일정 기준 이상 모이면 교통
+        상황으로 감지하고 관리자 검토 화면에
+        전달합니다.
+      </p>
 
       <Link
         href="/incidents"
-        className="mt-5 inline-flex min-h-11 items-center font-semibold text-info"
+        className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-info"
       >
-        실시간 분석 보기 ›
+        실시간 분석 보기 →
       </Link>
     </Card>
   );
@@ -532,7 +561,9 @@ function createMapMarkers(
 ): MapMarkerData[] {
   return ranking.flatMap((item) => {
     const coordinates =
-      districtCoordinates[item.districtName];
+      districtCoordinates[
+        item.districtName
+      ];
 
     if (!coordinates) {
       return [];
@@ -541,9 +572,11 @@ function createMapMarkers(
     return [
       {
         id: item.districtName,
-        title: `${item.districtName} 참여율 ${item.participation}%`,
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
+        title: `${item.districtName} 참여도 ${item.participation}%`,
+        latitude:
+          coordinates.latitude,
+        longitude:
+          coordinates.longitude,
       },
     ];
   });

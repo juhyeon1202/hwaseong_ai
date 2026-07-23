@@ -19,7 +19,7 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-page px-4 py-12">
+    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
       <section className="w-full max-w-md rounded-card border border-line bg-surface p-6 text-center shadow-card sm:p-8">
         <span className="mx-auto flex size-12 items-center justify-center rounded-pill bg-danger-soft text-xl font-bold text-danger">
           !
@@ -51,6 +51,6 @@ export default function ErrorPage({
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

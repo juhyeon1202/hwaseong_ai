@@ -29,6 +29,12 @@ const adminMenus = [
     icon: "inquiry",
   },
   {
+    href: "/admin/post-reports",
+    label: "게시물 신고",
+    description: "게시판 신고 검토",
+    icon: "flag",
+  },
+  {
     href: "/admin/users",
     label: "회원 관리",
     description: "관리자 권한 설정",
@@ -213,6 +219,25 @@ function AdminMenuIcon({
     );
   }
   
+  if (icon === "flag") {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M5 3v18" />
+
+        <path d="M5 4h11l-2.5 4L16 12H5" />
+      </svg>
+    );
+  }
+
   if (icon === "users") {
     return (
       <svg

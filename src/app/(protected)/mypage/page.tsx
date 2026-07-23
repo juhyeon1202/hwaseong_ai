@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import { AttendanceCard } from "@/components/attendance-card";
 import {
   Badge,
@@ -164,7 +163,6 @@ export default async function MyPage() {
     attendanceDates.includes(today);
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <ProfileHeader
           profile={profile}
@@ -250,7 +248,6 @@ export default async function MyPage() {
           </aside>
         </div>
       </div>
-    </AppShell>
   );
 }
 

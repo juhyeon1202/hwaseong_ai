@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
 import {
   CommentForm,
   DeleteCommentButton,
@@ -12,6 +11,7 @@ import {
   PostForm,
   type PostEditData,
 } from "@/components/post-form";
+import { ReportPostButton } from "@/components/report-post-button";
 import {
   Badge,
   ButtonLink,
@@ -178,6 +178,26 @@ export default async function CommunityPostPage({
     user?.id === post.author_id ||
     user?.role === "admin";
 
+  const canReport =
+    Boolean(user) &&
+    user?.id !== post.author_id;
+
+  let alreadyReported = false;
+
+  if (canReport && user) {
+    const { data: existingReport } =
+      await supabase
+        .from("post_reports")
+        .select("id")
+        .eq("post_id", post.id)
+        .eq("reporter_id", user.id)
+        .maybeSingle();
+
+    alreadyReported = Boolean(
+      existingReport,
+    );
+  }
+
   const editData: PostEditData = {
     id: post.id,
     category: post.category,
@@ -188,7 +208,6 @@ export default async function CommunityPostPage({
   };
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <article>
           <Link
@@ -212,6 +231,17 @@ export default async function CommunityPostPage({
                     post.bus_type
                   ]}
                 </Badge>
+              )}
+
+              {canReport && (
+                <div className="ml-auto">
+                  <ReportPostButton
+                    postId={post.id}
+                    alreadyReported={
+                      alreadyReported
+                    }
+                  />
+                </div>
               )}
             </div>
 
@@ -331,7 +361,6 @@ export default async function CommunityPostPage({
           </details>
         )}
       </div>
-    </AppShell>
   );
 }
 

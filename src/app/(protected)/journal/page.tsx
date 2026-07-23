@@ -1,8 +1,21 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
-import { JournalRouteForm } from "@/components/journal-route-form";
+import {
+  DeleteJournalButton,
+  JournalForm,
+  type JournalFormData,
+  type JournalInitialValues,
+} from "@/components/journal-form";
+
+import {
+  Badge,
+  Card,
+  EmptyState,
+  SectionHeader,
+} from "@/components/ui";
+
 import { requireUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "교통일지 작성",
@@ -13,11 +26,4 @@ export const metadata: Metadata = {
 export default async function JournalPage() {
   const user = await requireUser();
 
-  return (
-    <AppShell user={user}>
-      <div className="mx-auto w-full max-w-6xl">
-        <JournalRouteForm />
-      </div>
-    </AppShell>
-  );
 }

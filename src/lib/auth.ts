@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -14,41 +15,41 @@ export type CurrentUser = {
   points: number;
 };
 
-export async function getCurrentUser(): Promise<
-  CurrentUser | null
-> {
-  const supabase = await createClient();
+export const getCurrentUser = cache(
+  async (): Promise<CurrentUser | null> => {
+    const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return null;
-  }
+    if (userError || !user) {
+      return null;
+    }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select("nickname, role, points")
-      .eq("id", user.id)
-      .single();
+    const { data: profile, error: profileError } =
+      await supabase
+        .from("profiles")
+        .select("nickname, role, points")
+        .eq("id", user.id)
+        .single();
 
-  if (profileError || !profile) {
-    throw new Error(
-      "사용자 프로필을 불러오지 못했습니다.",
-    );
-  }
+    if (profileError || !profile) {
+      throw new Error(
+        "사용자 프로필을 불러오지 못했습니다.",
+      );
+    }
 
-  return {
-    id: user.id,
-    email: user.email ?? null,
-    nickname: profile.nickname,
-    role: profile.role as AppRole,
-    points: profile.points,
-  };
-}
+    return {
+      id: user.id,
+      email: user.email ?? null,
+      nickname: profile.nickname,
+      role: profile.role as AppRole,
+      points: profile.points,
+    };
+  },
+);
 
 export async function requireUser() {
   const user = await getCurrentUser();

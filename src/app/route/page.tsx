@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/app-shell";
 import { RoutePlanner } from "@/components/route-planner";
 import { Badge } from "@/components/ui";
-import { getCurrentUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "대체 경로 찾기",
 };
 
 export default async function RoutePage() {
-  const user = await getCurrentUser();
-
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <header>
           <div className="flex flex-wrap gap-2">
@@ -39,6 +34,5 @@ export default async function RoutePage() {
 
         <RoutePlanner />
       </div>
-    </AppShell>
   );
 }

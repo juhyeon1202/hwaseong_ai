@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AppShell } from "@/components/app-shell";
 import { PostForm } from "@/components/post-form";
 import {
   Badge,
@@ -140,7 +139,6 @@ export default async function CommunityPage({
     (data as Post[] | null) ?? [];
 
   return (
-    <AppShell user={user}>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <section className="space-y-4">
           <SectionHeader
@@ -186,7 +184,6 @@ export default async function CommunityPage({
           )}
         </aside>
       </div>
-    </AppShell>
   );
 }
 

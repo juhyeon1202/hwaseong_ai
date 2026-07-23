@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 
+import { AppShell } from "@/components/app-shell";
+import { getCurrentUser } from "@/lib/auth";
+
 export const metadata: Metadata = {
   title: {
     default: "화성 교통일지",
@@ -16,12 +19,18 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: RootLayoutProps) {
+  const user = await getCurrentUser();
+
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <AppShell user={user}>
+          {children}
+        </AppShell>
+      </body>
     </html>
   );
 }

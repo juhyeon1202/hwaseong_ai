@@ -2,14 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
 import {
   Badge,
   ButtonLink,
   Card,
   SectionHeader,
 } from "@/components/ui";
-import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 type IncidentPageProps = {
@@ -85,7 +83,6 @@ export default async function IncidentPage({
     notFound();
   }
 
-  const user = await getCurrentUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -131,7 +128,6 @@ export default async function IncidentPage({
     : incident.transit_stops;
 
   return (
-    <AppShell user={user}>
       <div className="mx-auto w-full max-w-2xl space-y-6">
         <header>
           <Link
@@ -271,7 +267,6 @@ export default async function IncidentPage({
           있습니다.
         </p>
       </div>
-    </AppShell>
   );
 }
 
