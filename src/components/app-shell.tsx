@@ -215,7 +215,7 @@ function HeaderAccount({
           />
 
           <AccountLink
-            href="/journal"
+            href="/mypage/journals"
             label="내 교통일지"
           />
 
