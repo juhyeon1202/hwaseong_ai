@@ -16,6 +16,10 @@ import {
   getParticipationRanking,
   type ParticipationRanking,
 } from "@/lib/participation";
+import {
+  summarizeRegionParticipation,
+  type RegionParticipation,
+} from "@/lib/regions";
 
 const quickActions = [
   {
@@ -101,6 +105,11 @@ export default async function HomePage() {
   const mapMarkers =
     createMapMarkers(ranking);
 
+  const regionParticipation =
+    summarizeRegionParticipation(
+      ranking,
+    );
+
   return (
       <div className="space-y-6">
         <HeroSection />
@@ -110,6 +119,9 @@ export default async function HomePage() {
             <ParticipationMap
               markers={mapMarkers}
               ranking={ranking}
+              regionParticipation={
+                regionParticipation
+              }
             />
 
             <NeighborhoodCard
@@ -175,11 +187,13 @@ function HeroSection() {
 type ParticipationMapProps = {
   markers: MapMarkerData[];
   ranking: ParticipationRanking[];
+  regionParticipation: RegionParticipation[];
 };
 
 function ParticipationMap({
   markers,
   ranking,
+  regionParticipation,
 }: ParticipationMapProps) {
   const totalReports =
     ranking.reduce(
@@ -200,7 +214,10 @@ function ParticipationMap({
             longitude: 127.0645,
           }}
           markers={markers}
-          level={8}
+          regionOverlays={
+            regionParticipation
+          }
+          level={9}
           height={420}
         />
 
