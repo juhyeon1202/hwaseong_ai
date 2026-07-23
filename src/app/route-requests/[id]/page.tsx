@@ -7,6 +7,7 @@ import {
   updateRouteRequestStatus,
 } from "@/app/route-requests/actions";
 import type { RouteStopOption } from "@/components/route-stop-types";
+import { RouteStopMap } from "@/components/route-stop-map";
 import {
   Badge,
   Button,
@@ -244,6 +245,18 @@ export default async function RouteRequestPage({
               ),
             )}
           </ol>
+
+          {selectedStops.length >
+            0 && (
+            <div className="mt-5 overflow-hidden rounded-control border border-line">
+              <RouteStopMap
+                stopIds={selectedStops.map(
+                  (stop) => stop.id,
+                )}
+                showPolyline
+              />
+            </div>
+          )}
         </Card>
 
         <Card>
