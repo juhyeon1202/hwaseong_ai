@@ -245,6 +245,13 @@ function JournalCard({
       journal.route_payload,
     );
 
+  const restoredRoute =
+    storedRoute.selectedRoute ??
+    createRouteFromSegments(
+      journal,
+      segments,
+    );
+
   const initialData: JournalRouteInitialData = {
     category: journal.category,
     originLabel:
@@ -256,7 +263,7 @@ function JournalCard({
     endPlace:
       storedRoute.endPlace,
     selectedRoute:
-      storedRoute.selectedRoute,
+      restoredRoute,
     reviews: segments.map(
       (segment) => ({
         sentiment:
@@ -493,6 +500,20 @@ function readStoredRoute(
   endPlace: Place | null;
   selectedRoute: TransitRoute | null;
 } {
+  if (typeof value === "string") {
+    try {
+      return readStoredRoute(
+        JSON.parse(value) as unknown,
+      );
+    } catch {
+      return {
+        startPlace: null,
+        endPlace: null,
+        selectedRoute: null,
+      };
+    }
+  }
+
   if (!isRecord(value)) {
     return {
       startPlace: null,
@@ -518,6 +539,8 @@ function readStoredRoute(
       value.selectedRoute,
     )
       ? value.selectedRoute
+      : isTransitRoute(value.route)
+        ? value.route
       : isTransitRoute(value)
         ? value
         : null;
@@ -527,6 +550,97 @@ function readStoredRoute(
     endPlace,
     selectedRoute,
   };
+}
+
+function createRouteFromSegments(
+  journal: Journal,
+  segments: JournalSegment[],
+): TransitRoute | null {
+  if (segments.length === 0) {
+    return null;
+  }
+
+  const steps = segments.map((segment) => ({
+    type: segmentModeToTransitType(segment.mode),
+    guidance:
+      segment.route_number ||
+      (segment.mode === "walk"
+        ? "도보 이동"
+        : "이동 구간"),
+    distance: 0,
+    time: Math.max(
+      60,
+      (segment.duration_minutes ?? 1) * 60,
+    ),
+    vehicles: segment.route_number
+      ? segment.route_number
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [],
+  }));
+
+  const hasBus = steps.some(
+    (step) => step.type === "BUS",
+  );
+  const hasSubway = steps.some(
+    (step) => step.type === "SUBWAY",
+  );
+
+  return {
+    id: createStableRouteId(journal.id),
+    type:
+      hasBus && hasSubway
+        ? "BUS_AND_SUBWAY"
+        : hasSubway
+          ? "SUBWAY"
+          : "BUS",
+    totalDistance: 0,
+    totalTime:
+      (journal.total_minutes ??
+        steps.reduce(
+          (total, step) =>
+            total + step.time / 60,
+          0,
+        )) * 60,
+    transfers: Math.max(
+      0,
+      steps.filter(
+        (step) => step.type !== "WALKING",
+      ).length - 1,
+    ),
+    fare: null,
+    steps,
+  };
+}
+
+function segmentModeToTransitType(
+  mode: SegmentMode,
+): "BUS" | "SUBWAY" | "WALKING" {
+  if (mode === "subway") {
+    return "SUBWAY";
+  }
+
+  if (mode === "walk") {
+    return "WALKING";
+  }
+
+  return "BUS";
+}
+
+function createStableRouteId(
+  journalId: string,
+) {
+  let hash = 0;
+
+  for (const character of journalId) {
+    hash =
+      (hash * 31 +
+        character.charCodeAt(0)) >>>
+      0;
+  }
+
+  return hash || 1;
 }
 
 function isRecord(
