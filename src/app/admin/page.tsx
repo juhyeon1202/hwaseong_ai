@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  AdminIncidentDetectionButton,
+  type IncidentDetectionState,
+} from "@/components/admin-incident-detection-button";
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -103,33 +107,62 @@ const statusLabels: Record<
   resolved: "해결",
 };
 
-async function runIncidentDetection() {
+async function runIncidentDetection(
+  _previousState: IncidentDetectionState,
+): Promise<IncidentDetectionState> {
   "use server";
 
-  await requireAdmin();
+  try {
+    await requireAdmin();
 
-  const supabase =
-    await createClient();
+    const supabase =
+      await createClient();
 
-  const { error } =
-    await supabase.rpc(
-      "detect_report_incidents",
-      {
-        p_threshold: 5,
-        p_window_minutes: 10,
-      },
+    const { data, error } =
+      await supabase.rpc(
+        "detect_report_incidents",
+        {
+          p_threshold: 5,
+          p_window_minutes: 10,
+        },
+      );
+
+    if (error) {
+      return {
+        status: "error",
+        message: `사건 감지에 실패했습니다: ${error.message}`,
+        runId: Date.now(),
+      };
+    }
+
+    const createdCount =
+      Array.isArray(data)
+        ? data.length
+        : 0;
+
+    revalidatePath("/admin");
+    revalidatePath(
+      "/admin/incidents",
     );
 
-  if (error) {
-    throw new Error(
-      `사건 감지에 실패했습니다: ${error.message}`,
-    );
+    return {
+      status: "success",
+      message:
+        createdCount > 0
+          ? `사건 감지가 완료되었습니다. 새로운 교통 사건 ${createdCount}건이 생성되었습니다.`
+          : "사건 감지가 완료되었습니다. 현재 기준을 충족하는 새로운 교통 사건은 없습니다.",
+      runId: Date.now(),
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof Error
+          ? error.message
+          : "사건 감지 중 오류가 발생했습니다.",
+      runId: Date.now(),
+    };
   }
-
-  revalidatePath("/admin");
-  revalidatePath(
-    "/admin/incidents",
-  );
 }
 
 export default async function AdminPage() {
@@ -281,18 +314,9 @@ export default async function AdminPage() {
           </p>
         </div>
 
-        <form
-          action={
-            runIncidentDetection
-          }
-        >
-          <Button
-            type="submit"
-            className="bg-info hover:opacity-90"
-          >
-            지금 사건 감지 실행
-          </Button>
-        </form>
+        <AdminIncidentDetectionButton
+          action={runIncidentDetection}
+        />
       </header>
 
       {hasQueryError && (

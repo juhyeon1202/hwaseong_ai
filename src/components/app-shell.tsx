@@ -1,12 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import {
   DesktopNavigation,
   MobileNavigation,
 } from "@/components/app-navigation";
+import { AiComplaintComingSoon } from "@/components/ai-complaint-coming-soon";
 import { PageBackButton } from "@/components/back-button";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   signOut,
   type CurrentUser,
@@ -48,9 +51,25 @@ type AppHeaderProps = {
   user: CurrentUser | null;
 };
 
-function AppHeader({
+async function AppHeader({
   user,
 }: AppHeaderProps) {
+  const common = await getTranslations("Common");
+  const account = await getTranslations("Account");
+  const accountLabels = {
+    userMenu: account("userMenu"),
+    mypage: account("mypage"),
+    myJournal: account("myJournal"),
+    favorites: account("favorites"),
+    routeVote: account("routeVote"),
+    inquiry: account("inquiry"),
+    adminWork: account("adminWork"),
+    noEmail: account("noEmail"),
+    login: common("login"),
+    signup: common("signup"),
+    logout: common("logout"),
+  };
+
   return (
     <header
       className={[
@@ -70,12 +89,12 @@ function AppHeader({
         
         <Link
           href="/"
-          aria-label="화성 교통일지 홈"
+          aria-label={common("serviceName")}
           className="ml-4 flex min-w-0 shrink-0 items-center gap-3 sm:ml-7"
         >
           <Image
             src="/hwaseong-logo.jpg"
-            alt="화성특례시"
+            alt={common("serviceName")}
             width={156}
             height={44}
             priority
@@ -84,11 +103,11 @@ function AppHeader({
 
           <span className="hidden border-l border-line pl-3 lg:block">
             <strong className="block text-sm font-extrabold text-main">
-              화성 교통일지
+              {common("serviceName")}
             </strong>
 
             <span className="mt-0.5 block text-[10px] font-medium text-muted">
-              시민 참여형 교통 플랫폼
+              {common("serviceDescription")}
             </span>
           </span>
         </Link>
@@ -99,15 +118,32 @@ function AppHeader({
           />
         </div>
 
-        <HeaderAccount user={user} />
+        <LanguageSwitcher />
+
+        <HeaderAccount user={user} labels={accountLabels} />
       </div>
     </header>
   );
 }
 
+type AccountLabels = {
+  userMenu: string;
+  mypage: string;
+  myJournal: string;
+  favorites: string;
+  routeVote: string;
+  inquiry: string;
+  adminWork: string;
+  noEmail: string;
+  login: string;
+  signup: string;
+  logout: string;
+};
+
 function HeaderAccount({
   user,
-}: AppHeaderProps) {
+  labels,
+}: AppHeaderProps & { labels: AccountLabels }) {
   if (!user) {
     return (
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
@@ -120,7 +156,7 @@ function HeaderAccount({
             "hover:bg-surface-muted",
           ].join(" ")}
         >
-          로그인
+          {labels.login}
         </Link>
 
         <Link
@@ -132,7 +168,7 @@ function HeaderAccount({
             "hover:bg-brand-hover sm:inline-flex",
           ].join(" ")}
         >
-          회원가입
+          {labels.signup}
         </Link>
       </div>
     );
@@ -197,7 +233,7 @@ function HeaderAccount({
           </p>
 
           <p className="mt-1 truncate text-xs text-muted">
-            {user.email ?? "이메일 정보 없음"}
+            @{user.username}
           </p>
 
           <p className="mt-2 text-sm font-extrabold text-brand">
@@ -206,38 +242,40 @@ function HeaderAccount({
         </div>
 
         <nav
-          aria-label="사용자 메뉴"
+          aria-label={labels.userMenu}
           className="py-2"
         >
           <AccountLink
             href="/mypage"
-            label="마이페이지"
+            label={labels.mypage}
           />
 
           <AccountLink
             href="/mypage/journals"
-            label="내 교통일지"
+            label={labels.myJournal}
           />
 
           <AccountLink
             href="/favorites"
-            label="즐겨찾기"
+            label={labels.favorites}
           />
 
           <AccountLink
             href="/route-requests"
-            label="희망 노선 투표"
+            label={labels.routeVote}
           />
 
           <AccountLink
             href="/inquiries?mode=write"
-            label="1:1 문의"
+            label={labels.inquiry}
           />
+
+          <AiComplaintComingSoon />
 
           {user.role === "admin" && (
             <AccountLink
               href="/admin"
-              label="관리자 통합 업무"
+              label={labels.adminWork}
               admin
             />
           )}
@@ -256,7 +294,7 @@ function HeaderAccount({
               "hover:bg-danger-soft",
             ].join(" ")}
           >
-            로그아웃
+            {labels.logout}
           </button>
         </form>
       </div>
@@ -292,7 +330,10 @@ function AccountLink({
   );
 }
 
-function AppFooter() {
+async function AppFooter() {
+  const common = await getTranslations("Common");
+  const footer = await getTranslations("Footer");
+
   return (
     <footer className="hidden border-t border-line-light bg-white md:block">
       <div
@@ -306,7 +347,7 @@ function AppFooter() {
           <div className="flex items-center gap-4">
             <Image
               src="/hwaseong-logo.jpg"
-              alt="화성특례시"
+              alt={common("serviceName")}
               width={156}
               height={44}
               className="h-10 w-auto object-contain"
@@ -314,18 +355,17 @@ function AppFooter() {
 
             <div className="border-l border-line pl-4">
               <strong className="block text-sm font-bold text-main">
-                화성 교통일지
+                {common("serviceName")}
               </strong>
 
               <span className="mt-1 block text-xs text-muted">
-                시민 참여형 대중교통 플랫폼
+                {footer("serviceDescription")}
               </span>
             </div>
           </div>
 
           <address className="mt-5 not-italic text-sm leading-6 text-muted">
-            (우)18274 경기도 화성시 남양읍
-            시청로 159
+            {footer("address")}
           </address>
         </div>
 
@@ -337,7 +377,7 @@ function AppFooter() {
               rel="noreferrer"
               className="hover:text-brand"
             >
-              화성시청
+              {footer("cityHall")}
             </a>
 
             <a
@@ -346,27 +386,26 @@ function AppFooter() {
               rel="noreferrer"
               className="hover:text-brand"
             >
-              인스타그램
+              {footer("instagram")}
             </a>
 
             <Link
               href="/privacy"
               className="hover:text-brand"
             >
-              개인정보처리방침
+              {footer("privacy")}
             </Link>
 
             <Link
               href="/terms"
               className="hover:text-brand"
             >
-              이용약관
+              {footer("terms")}
             </Link>
           </nav>
 
           <p className="text-xs text-muted">
-            Copyright © Hwaseong Traffic
-            Journal. All rights reserved.
+            {footer("copyright")}
           </p>
         </div>
       </div>

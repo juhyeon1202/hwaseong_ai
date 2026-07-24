@@ -1,0 +1,57 @@
+{
+  "Common": {
+    "serviceName": "華城交通日誌",
+    "serviceDescription": "市民参加型交通プラットフォーム",
+    "login": "ログイン",
+    "signup": "会員登録",
+    "logout": "ログアウト",
+    "confirm": "確認"
+  },
+  "Navigation": {
+    "mainMenu": "メインメニュー",
+    "home": "ホーム",
+    "community": "掲示板",
+    "journal": "交通日誌",
+    "my": "マイページ",
+    "report": "通報",
+    "admin": "管理者"
+  },
+  "Account": {
+    "userMenu": "ユーザーメニュー",
+    "mypage": "マイページ",
+    "myJournal": "自分の交通日誌",
+    "favorites": "お気に入り",
+    "routeVote": "希望路線投票",
+    "inquiry": "1対1お問い合わせ",
+    "aiComplaint": "AI申立書作成",
+    "adminWork": "管理者ワークスペース",
+    "noEmail": "メール情報なし"
+  },
+  "Language": {
+    "label": "言語",
+    "ko": "한국어",
+    "en": "English",
+    "zh": "中文",
+    "ja": "日本語"
+  },
+  "Footer": {
+    "serviceDescription": "市民参加型公共交通プラットフォーム", "address": "〒18274 京畿道華城市南陽邑市庁路159", "cityHall": "華城市役所", "instagram": "Instagram", "privacy": "プライバシーポリシー", "terms": "利用規約", "copyright": "Copyright © Hwaseong Traffic Journal. All rights reserved."
+  },
+  "Auth": {
+    "loginTitle": "ログイン", "loginDescription": "華城交通日誌にログインしてください。", "signupTitle": "会員登録", "signupDescription": "華城市の交通改善に参加しましょう。",
+    "recoverTitle": "パスワードを探す", "recoverDescription": "IDと登録時のメールアドレスを確認し、仮パスワードを発行します。", "recoverSubmit": "仮パスワードを発行",
+    "updateTitle": "新しいパスワードを設定", "updateDescription": "今後使用する新しいパスワードを入力してください。", "updateSubmit": "パスワードを変更",
+    "username": "ID", "signupUsername": "登録ID", "savedEmail": "登録時に入力したメール", "savedEmailHelp": "認証メールは送信せず、登録情報の確認にのみ使用します。",
+    "password": "パスワード", "newPassword": "新しいパスワード", "newPasswordConfirm": "新しいパスワードの確認", "passwordPlaceholder": "8文字以上", "newPasswordAgain": "新しいパスワードを再入力",
+    "temporaryPasswordTitle": "10分間使用できる仮パスワード", "copyTemporaryPassword": "仮パスワードをコピー", "temporaryPasswordHelp": "このパスワードでログインすると、新しいパスワード設定画面に移動します。",
+    "processing": "処理中...", "temporaryLogin": "仮パスワードでログイン", "forgotPassword": "パスワードをお忘れですか？", "notMember": "まだ会員ではありませんか？", "backToLogin": "ログインに戻る"
+  },
+  "Home": {
+    "badge": "リアルタイム市民参加", "title": "地域の交通を一緒に記録し、改善しましょう", "description": "移動体験や停留所での不便を記録すると、市民参加データとAI分析を通じて交通改善に活用されます。", "trafficAlerts": "リアルタイム交通情報",
+    "recentParticipation": "過去7日間の市民参加", "totalCount": "合計{count}件", "stopProblem": "停留所で不便を感じましたか？", "oneTouchAnonymous": "停留所ワンタッチ匿名通報", "reportNow": "通報する",
+    "quickActions": "クイック操作", "record": "記録する", "recordDescription": "今日の移動体験", "directions": "経路検索", "directionsDescription": "公共交通のおすすめ経路", "roulette": "ルーレット", "rouletteDescription": "参加ポイント特典",
+    "ranking": "リアルタイム地域ランキング", "rankingPeriod": "過去7日間の参加基準", "viewAll": "すべて見る ›", "myNeighborhood": "自分の地域",
+    "oneTouchReport": "ワンタッチ通報", "busPassed": "バスがそのまま通過しましたか？", "reportDescription": "満員通過、配車遅延、乗り換え失敗を停留所からすぐに通報できます。", "reportStop": "停留所を通報",
+    "aiInsight": "AI交通インサイト", "aiTitle": "市民の記録を分析中です", "aiDescription": "通報が基準以上集まると交通事案として検知し、管理者の確認画面へ送信します。", "viewAnalysis": "リアルタイム分析を見る →"
+  }
+}

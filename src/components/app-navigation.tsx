@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 type NavigationItem = {
   href: string;
   label: string;
+  translationKey: "home" | "community" | "journal" | "my" | "report";
   icon: ReactNode;
   matchPaths?: string[];
 };
@@ -15,6 +17,7 @@ const primaryNavigation: NavigationItem[] = [
   {
     href: "/",
     label: "홈",
+    translationKey: "home",
     matchPaths: ["/"],
     icon: (
       <svg viewBox="0 0 24 24">
@@ -27,6 +30,7 @@ const primaryNavigation: NavigationItem[] = [
   {
     href: "/community",
     label: "게시판",
+    translationKey: "community",
     matchPaths: [
       "/community",
       "/route-requests",
@@ -47,6 +51,7 @@ const primaryNavigation: NavigationItem[] = [
   {
     href: "/journal",
     label: "일지",
+    translationKey: "journal",
     matchPaths: ["/journal"],
     icon: (
       <svg viewBox="0 0 24 24">
@@ -59,6 +64,7 @@ const primaryNavigation: NavigationItem[] = [
   {
     href: "/mypage",
     label: "마이",
+    translationKey: "my",
     matchPaths: [
       "/mypage",
       "/favorites",
@@ -77,6 +83,7 @@ const primaryNavigation: NavigationItem[] = [
 const reportNavigation: NavigationItem = {
   href: "/report",
   label: "신고",
+  translationKey: "report",
   matchPaths: [
     "/report",
     "/incidents",
@@ -106,10 +113,11 @@ export function DesktopNavigation({
   isAdmin = false,
 }: AppNavigationProps) {
   const pathname = usePathname();
+  const t = useTranslations("Navigation");
 
   return (
     <nav
-      aria-label="주요 메뉴"
+      aria-label={t("mainMenu")}
       className="hidden items-center gap-1 md:flex"
     >
       {primaryNavigation.map((item) => (
@@ -117,12 +125,14 @@ export function DesktopNavigation({
           key={item.href}
           item={item}
           pathname={pathname}
+          label={t(item.translationKey)}
         />
       ))}
 
       <DesktopNavigationLink
         item={reportNavigation}
         pathname={pathname}
+        label={t(reportNavigation.translationKey)}
       />
 
       {isAdmin && (
@@ -143,7 +153,7 @@ export function DesktopNavigation({
               : "text-secondary hover:text-info",
           ].join(" ")}
         >
-          관리자
+          {t("admin")}
 
           {pathname.startsWith(
             "/admin",
@@ -159,9 +169,11 @@ export function DesktopNavigation({
 function DesktopNavigationLink({
   item,
   pathname,
+  label,
 }: {
   item: NavigationItem;
   pathname: string;
+  label: string;
 }) {
   const isActive = matchesPath(
     pathname,
@@ -204,7 +216,7 @@ function DesktopNavigationLink({
         </span>
       )}
 
-      {item.label}
+      {label}
 
       {isActive && (
         <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand" />
@@ -217,10 +229,11 @@ export function MobileNavigation({
   isAdmin = false,
 }: AppNavigationProps) {
   const pathname = usePathname();
+  const t = useTranslations("Navigation");
 
   return (
     <nav
-      aria-label="모바일 주요 메뉴"
+      aria-label={t("mainMenu")}
       className={[
         "fixed inset-x-0 bottom-0 z-50",
         "border-t border-line bg-white/95",
@@ -284,8 +297,8 @@ export function MobileNavigation({
 
               <span className="text-[11px] font-semibold">
                 {isAdminPage
-                  ? "관리자"
-                  : item.label}
+                  ? t("admin")
+                  : t(item.translationKey)}
               </span>
             </Link>
           );

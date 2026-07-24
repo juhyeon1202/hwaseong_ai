@@ -11,6 +11,9 @@ import {
   EditableCommentContent,
 } from "@/components/comment-panel";
 import {
+  AiPostTranslator,
+} from "@/components/ai-post-translator";
+import {
   PostManageModal,
 } from "@/components/post-manage-modal";
 import type {
@@ -461,6 +464,11 @@ export default async function CommunityPostPage({
                 {post.content}
               </p>
             </div>
+
+            <AiPostTranslator
+              postId={post.id}
+              variant="detail"
+            />
 
             {isRouteSuggestion &&
               routeStops.length >

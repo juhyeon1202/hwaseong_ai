@@ -15,7 +15,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 type Gender = "male" | "female";
-type Language = "ko" | "en" | "zh";
+type Language = "ko" | "en" | "zh" | "ja";
 
 const nicknameAdjectives = [
   "느긋한",
@@ -655,7 +655,7 @@ export function SignupForm() {
         </SignupField>
 
         <SignupField label="사용 언어">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <ChoiceButton
               selected={
                 language === "ko"
@@ -687,6 +687,13 @@ export function SignupForm() {
               }
             >
               中
+            </ChoiceButton>
+
+            <ChoiceButton
+              selected={language === "ja"}
+              onClick={() => setLanguage("ja")}
+            >
+              日本語
             </ChoiceButton>
           </div>
         </SignupField>
