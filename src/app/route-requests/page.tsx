@@ -106,51 +106,54 @@ export default async function RouteRequestsPage() {
   }
 
   return (
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <section className="space-y-4">
-          <SectionHeader
-            title="시민 희망 노선"
-            description="필요한 노선에 투표하고 화성시의 이동 수요를 알려 주세요."
-          />
+    <div className="space-y-6">
+      <SectionHeader
+        title="시민 희망 노선 투표"
+        description="필요한 노선에 투표하고 화성시의 대중교통 이동 수요를 알려 주세요."
+      />
 
-          {routeResult.error ? (
-            <Card>
-              <p className="text-sm text-danger">
-                희망 노선을 불러오지
-                못했습니다.
-              </p>
-            </Card>
-          ) : routes.length === 0 ? (
-            <EmptyState
-              title="등록된 희망 노선이 없습니다"
-              description="필요한 노선을 가장 먼저 제안해 보세요."
-            />
-          ) : (
-            <ol className="space-y-3">
+      <section aria-label="노선 제안 방법">
+        <HowToProposeCard
+          userLoggedIn={Boolean(user)}
+        />
+      </section>
+
+      <section aria-label="희망 노선 투표 목록">
+        {routeResult.error ? (
+          <Card>
+            <p className="text-sm text-danger">
+              희망 노선을 불러오지 못했습니다.
+            </p>
+          </Card>
+        ) : routes.length === 0 ? (
+          <EmptyState
+            title="등록된 희망 노선이 없습니다"
+            description="필요한 노선을 가장 먼저 제안해 보세요."
+          />
+        ) : (
+          <div
+            className={[
+              routes.length > 6
+                ? "max-h-[960px] overflow-y-auto overscroll-contain pr-2"
+                : "",
+            ].join(" ")}
+          >
+            <ol className="grid items-stretch gap-4 md:grid-cols-2">
               {routes.map((route) => (
                 <RouteRequestItem
                   key={route.id}
                   route={route}
-                  userLoggedIn={
-                    Boolean(user)
-                  }
+                  userLoggedIn={Boolean(user)}
                   voted={votedRouteIds.has(
                     route.id,
                   )}
                 />
               ))}
             </ol>
-          )}
-        </section>
-
-        <aside>
-          <HowToProposeCard
-            userLoggedIn={Boolean(
-              user,
-            )}
-          />
-        </aside>
-      </div>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -169,8 +172,8 @@ function RouteRequestItem({
     route.status === "open";
 
   return (
-    <li>
-      <Card>
+    <li className="h-full">
+      <Card className="flex h-full flex-col">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge
             status={route.status}
@@ -202,7 +205,7 @@ function RouteRequestItem({
           </strong>
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        <div className="mt-auto grid gap-2 pt-5 sm:grid-cols-2">
           <ButtonLink
             href={
               route.post_id

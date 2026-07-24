@@ -17,11 +17,12 @@ import {
   type RouteSuggestionActionState,
 } from "@/app/community/actions";
 import {
+  ActionResultModal,
+} from "@/components/action-result-modal";
+import {
   RouteStopMap,
 } from "@/components/route-stop-map";
-import {
-  Button,
-} from "@/components/ui";
+import { Button } from "@/components/ui";
 
 export type CommunityCategory =
   | "route_suggestion"
@@ -53,6 +54,15 @@ type CommunityBoardProps = {
   items: CommunityPostItem[];
   stops: CommunityStopOption[];
   loggedIn: boolean;
+};
+
+type SortType =
+  | "latest"
+  | "views";
+
+type CreateResult = {
+  open: boolean;
+  message: string;
 };
 
 const categoryLabels: Record<
@@ -100,9 +110,23 @@ export function CommunityBoard({
   >("");
 
   const [
+    sortType,
+    setSortType,
+  ] =
+    useState<SortType>("latest");
+
+  const [
     writeModalOpen,
     setWriteModalOpen,
   ] = useState(false);
+
+  const [
+    createResult,
+    setCreateResult,
+  ] = useState<CreateResult>({
+    open: false,
+    message: "",
+  });
 
   const [
     currentPage,
@@ -110,17 +134,42 @@ export function CommunityBoard({
   ] = useState(1);
 
   const filteredItems = useMemo(
-    () =>
-      selectedFilter
-        ? items.filter(
-            (item) =>
-              item.category ===
-              selectedFilter,
-          )
-        : items,
+    () => {
+      const filtered =
+        selectedFilter
+          ? items.filter(
+              (item) =>
+                item.category ===
+                selectedFilter,
+            )
+          : items;
+
+      return [...filtered].sort(
+        (first, second) => {
+          if (
+            sortType === "views"
+          ) {
+            return (
+              second.viewCount -
+              first.viewCount
+            );
+          }
+
+          return (
+            new Date(
+              second.createdAt,
+            ).getTime() -
+            new Date(
+              first.createdAt,
+            ).getTime()
+          );
+        },
+      );
+    },
     [
       items,
       selectedFilter,
+      sortType,
     ],
   );
 
@@ -132,23 +181,27 @@ export function CommunityBoard({
     ),
   );
 
-  const visibleItems = useMemo(() => {
-    const start =
-      (currentPage - 1) *
-      ITEMS_PER_PAGE;
+  const visibleItems =
+    useMemo(() => {
+      const start =
+        (currentPage - 1) *
+        ITEMS_PER_PAGE;
 
-    return filteredItems.slice(
-      start,
-      start + ITEMS_PER_PAGE,
-    );
-  }, [
-    currentPage,
-    filteredItems,
-  ]);
+      return filteredItems.slice(
+        start,
+        start + ITEMS_PER_PAGE,
+      );
+    }, [
+      currentPage,
+      filteredItems,
+    ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedFilter]);
+  }, [
+    selectedFilter,
+    sortType,
+  ]);
 
   function openWriteModal() {
     if (!loggedIn) {
@@ -159,6 +212,28 @@ export function CommunityBoard({
     }
 
     setWriteModalOpen(true);
+  }
+
+  function handlePostCreated(
+    message: string,
+  ) {
+    setWriteModalOpen(false);
+
+    setCreateResult({
+      open: true,
+      message:
+        message ||
+        "게시글이 등록되었습니다.",
+    });
+  }
+
+  function closeCreateResult() {
+    setCreateResult({
+      open: false,
+      message: "",
+    });
+
+    window.location.reload();
   }
 
   return (
@@ -189,46 +264,92 @@ export function CommunityBoard({
           </button>
         </header>
 
-        <nav
-          aria-label="게시글 분류"
-          className="mt-8 flex gap-3 overflow-x-auto pb-2"
-        >
-          {categoryOptions.map(
-            (category) => {
-              const selected =
-                selectedFilter ===
-                category.value;
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <nav
+            aria-label="게시글 분류"
+            className="flex gap-3 overflow-x-auto pb-1"
+          >
+            {categoryOptions.map(
+              (category) => {
+                const selected =
+                  selectedFilter ===
+                  category.value;
 
-              return (
-                <button
-                  key={
-                    category.value ||
-                    "all"
-                  }
-                  type="button"
-                  onClick={() =>
-                    setSelectedFilter(
-                      category.value,
-                    )
-                  }
-                  className={[
-                    "min-h-12 shrink-0 rounded-[10px] border px-5 text-sm font-bold transition",
-                    selected
-                      ? "border-[#5470e8] bg-[#5470e8] text-white"
-                      : "border-line bg-white text-secondary hover:border-[#5470e8]",
-                  ].join(" ")}
-                >
-                  {category.label}
-                </button>
-              );
-            },
-          )}
-        </nav>
+                return (
+                  <button
+                    key={
+                      category.value ||
+                      "all"
+                    }
+                    type="button"
+                    onClick={() =>
+                      setSelectedFilter(
+                        category.value,
+                      )
+                    }
+                    className={[
+                      "min-h-12 shrink-0 rounded-[10px] border px-5 text-sm font-bold transition",
+                      selected
+                        ? "border-[#5470e8] bg-[#5470e8] text-white"
+                        : "border-line bg-white text-secondary hover:border-[#5470e8]",
+                    ].join(" ")}
+                  >
+                    {category.label}
+                  </button>
+                );
+              },
+            )}
+          </nav>
 
-        {visibleItems.length === 0 ? (
+          <div
+            role="group"
+            aria-label="게시글 정렬"
+            className="grid w-[240px] grid-cols-2 self-end rounded-control border border-line bg-white p-1 sm:self-auto"
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setSortType("latest")
+              }
+              aria-pressed={
+                sortType === "latest"
+              }
+              className={[
+                "flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-control px-4 text-sm font-semibold transition-colors",
+                sortType === "latest"
+                  ? "bg-main text-white"
+                  : "text-secondary hover:bg-surface-muted",
+              ].join(" ")}
+            >
+              최신순
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSortType("views")
+              }
+              aria-pressed={
+                sortType === "views"
+              }
+              className={[
+                "min-h-9 rounded-control px-4 text-sm font-semibold transition-colors",
+                sortType === "views"
+                  ? "bg-main text-white"
+                  : "text-secondary hover:bg-surface-muted",
+              ].join(" ")}
+            >
+              조회수순
+            </button>
+          </div>
+        </div>
+
+        {visibleItems.length ===
+        0 ? (
           <div className="mt-6 rounded-[14px] border border-dashed border-line bg-white px-5 py-20 text-center">
             <p className="font-bold text-main">
-              등록된 게시글이 없습니다.
+              등록된 게시글이
+              없습니다.
             </p>
 
             <p className="mt-2 text-sm text-muted">
@@ -317,8 +438,23 @@ export function CommunityBoard({
           onClose={() =>
             setWriteModalOpen(false)
           }
+          onSuccess={
+            handlePostCreated
+          }
         />
       )}
+
+      <ActionResultModal
+        open={createResult.open}
+        title="게시글 등록 완료"
+        message={
+          createResult.message
+        }
+        status="success"
+        onConfirm={
+          closeCreateResult
+        }
+      />
     </>
   );
 }
@@ -328,7 +464,8 @@ function PostCard({
 }: {
   item: CommunityPostItem;
 }) {
-  const href = `/community/${item.id}`;
+  const href =
+    `/community/${item.id}`;
 
   return (
     <li>
@@ -361,6 +498,13 @@ function PostCard({
             {item.itemType ===
             "route" ? (
               <>
+                <span>
+                  조회{" "}
+                  {item.viewCount.toLocaleString(
+                    "ko-KR",
+                  )}
+                </span>
+
                 <span>
                   투표{" "}
                   {item.voteCount.toLocaleString(
@@ -420,10 +564,14 @@ function CategoryBadge({
 
 type WriteModalProps = {
   onClose: () => void;
+  onSuccess: (
+    message: string,
+  ) => void;
 };
 
 function WriteModal({
   onClose,
+  onSuccess,
 }: WriteModalProps) {
   const [
     category,
@@ -541,13 +689,13 @@ function WriteModal({
             {category ===
             "route_suggestion" ? (
               <RouteProposalForm
-                onSuccess={onClose}
+                onSuccess={onSuccess}
               />
             ) : (
               <GeneralPostForm
                 key={category}
                 category={category}
-                onSuccess={onClose}
+                onSuccess={onSuccess}
               />
             )}
           </div>
@@ -570,7 +718,9 @@ function GeneralPostForm({
   category:
     | "information"
     | "question";
-  onSuccess: () => void;
+  onSuccess: (
+    message: string,
+  ) => void;
 }) {
   const [
     state,
@@ -588,16 +738,13 @@ function GeneralPostForm({
       return;
     }
 
-    const timer =
-      window.setTimeout(
-        onSuccess,
-        600,
-      );
-
-    return () =>
-      window.clearTimeout(timer);
+    onSuccess(
+      state.message ||
+        "게시글이 등록되었습니다.",
+    );
   }, [
     state.status,
+    state.message,
     onSuccess,
   ]);
 
@@ -680,7 +827,9 @@ const initialRouteState: RouteSuggestionActionState =
 function RouteProposalForm({
   onSuccess,
 }: {
-  onSuccess: () => void;
+  onSuccess: (
+    message: string,
+  ) => void;
 }) {
   const [
     state,
@@ -747,16 +896,13 @@ function RouteProposalForm({
       return;
     }
 
-    const timer =
-      window.setTimeout(
-        onSuccess,
-        600,
-      );
-
-    return () =>
-      window.clearTimeout(timer);
+    onSuccess(
+      state.message ||
+        "노선 제안이 등록되었습니다.",
+    );
   }, [
     state.status,
+    state.message,
     onSuccess,
   ]);
 
@@ -766,11 +912,9 @@ function RouteProposalForm({
 
     if (keyword.length < 2) {
       setApiStops([]);
-
       setStopLoadError(
         "정류장명 또는 정류장 번호를 2자 이상 입력해 주세요.",
       );
-
       searchRef.current?.focus();
 
       return;
@@ -829,12 +973,7 @@ function RouteProposalForm({
     stop: CommunityStopOption,
   ) {
     if (
-      selectedStops.length >= 5
-    ) {
-      return;
-    }
-
-    if (
+      selectedStops.length >= 5 ||
       selectedStops.some(
         (selected) =>
           selected.id === stop.id,
@@ -956,9 +1095,7 @@ function RouteProposalForm({
               </div>
 
               <strong className="shrink-0 text-sm text-[#d87525]">
-                {
-                  selectedStops.length
-                }
+                {selectedStops.length}
                 /5
               </strong>
             </div>
@@ -967,25 +1104,19 @@ function RouteProposalForm({
               <input
                 ref={searchRef}
                 value={search}
-                onChange={(
-                  event,
-                ) => {
+                onChange={(event) => {
                   setSearch(
                     event.target.value,
                   );
-
                   setApiStops([]);
                   setStopLoadError("");
                 }}
-                onKeyDown={(
-                  event,
-                ) => {
+                onKeyDown={(event) => {
                   if (
                     event.key ===
                     "Enter"
                   ) {
                     event.preventDefault();
-
                     void searchStops();
                   }
                 }}
@@ -1028,8 +1159,8 @@ function RouteProposalForm({
               apiStops.length >
                 0 && (
                 <p className="mt-2 text-xs text-success">
-                  공공데이터
-                  API에서 정류장{" "}
+                  공공데이터 API에서
+                  정류장{" "}
                   {apiStops.length}개를
                   찾았습니다.
                 </p>
@@ -1118,9 +1249,7 @@ function RouteProposalForm({
                       </strong>
 
                       <span className="mt-1 block truncate text-xs text-muted">
-                        {formatStop(
-                          stop,
-                        )}
+                        {formatStop(stop)}
                       </span>
                     </div>
 
@@ -1259,19 +1388,17 @@ function ActionMessage({
     message: string;
   };
 }) {
-  if (!state.message) {
+  if (
+    !state.message ||
+    state.status === "success"
+  ) {
     return null;
   }
 
   return (
     <p
-      role="status"
-      className={[
-        "rounded-control p-3 text-sm",
-        state.status === "success"
-          ? "bg-success-soft text-success"
-          : "bg-danger-soft text-danger",
-      ].join(" ")}
+      role="alert"
+      className="rounded-control bg-danger-soft p-3 text-sm text-danger"
     >
       {state.message}
     </p>
@@ -1312,13 +1439,15 @@ function PageButton({
 function formatStop(
   stop: CommunityStopOption,
 ) {
-  return [
-    stop.stopNumber,
-    stop.districtName,
-  ]
-    .filter(Boolean)
-    .join(" · ") ||
-    "상세 정보 없음";
+  return (
+    [
+      stop.stopNumber,
+      stop.districtName,
+    ]
+      .filter(Boolean)
+      .join(" · ") ||
+    "상세 정보 없음"
+  );
 }
 
 function formatDate(

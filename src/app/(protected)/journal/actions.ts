@@ -188,34 +188,43 @@ export async function updateJournal(
     );
   }
 
+  /*
+   * 생성 기능과 동일하게
+   * routePayload와 segmentsJson을
+   * 검증합니다.
+   */
   const parsed =
-    parseLegacyEditInput(formData);
+    parseJournalInput(formData);
 
   if (!parsed.success) {
     return parsed.state;
   }
 
   const user = await requireUser();
-  const supabase = await createClient();
+  const supabase =
+    await createClient();
   const input = parsed.input;
 
-  const { data: journal } =
-    await supabase
-      .from("trip_journals")
-      .select("id, ended_at")
-      .eq("id", journalId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+  const {
+    data: existingJournal,
+    error: findError,
+  } = await supabase
+    .from("trip_journals")
+    .select("id")
+    .eq("id", journalId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  if (!journal) {
+  if (
+    findError ||
+    !existingJournal
+  ) {
     return errorState(
-      "수정할 수 없는 교통일지입니다.",
+      "수정할 수 있는 교통일지를 찾지 못했습니다.",
     );
   }
 
-  const endedAt = journal.ended_at
-    ? new Date(journal.ended_at)
-    : new Date();
+  const endedAt = new Date();
 
   const startedAt = new Date(
     endedAt.getTime() -
@@ -231,54 +240,83 @@ export async function updateJournal(
         category: input.category,
         started_at:
           startedAt.toISOString(),
+        ended_at:
+          endedAt.toISOString(),
         origin_label:
           input.originLabel,
         destination_label:
           input.destinationLabel,
         total_minutes:
           input.durationMinutes,
+        route_provider: "kakao",
+        route_payload:
+          input.routePayload,
       })
       .eq("id", journalId)
       .eq("user_id", user.id);
 
   if (journalError) {
     return errorState(
-      "교통일지를 수정하지 못했습니다.",
+      `교통일지를 수정하지 못했습니다. ${journalError.message}`,
     );
   }
+
+  /*
+   * 기존 경로의 구간 평가는 삭제하고,
+   * 새로 선택한 추천 경로의 구간으로
+   * 다시 저장합니다.
+   */
+  const {
+    error: deleteSegmentError,
+  } = await supabase
+    .from("trip_segments")
+    .delete()
+    .eq("journal_id", journalId);
+
+  if (deleteSegmentError) {
+    return errorState(
+      `기존 이동 구간을 정리하지 못했습니다. ${deleteSegmentError.message}`,
+    );
+  }
+
+  const segmentRows =
+    input.segments.map(
+      (segment) => ({
+        journal_id: journalId,
+        segment_order:
+          segment.segmentOrder,
+        mode: segment.mode,
+        route_number:
+          segment.routeNumber ||
+          null,
+        duration_minutes:
+          segment.durationMinutes,
+        origin_label:
+          segment.originLabel,
+        destination_label:
+          segment.destinationLabel,
+        sentiment:
+          segment.sentiment,
+        reason_codes:
+          segment.reasonCodes,
+        memo:
+          segment.memo || null,
+      }),
+    );
 
   const { error: segmentError } =
     await supabase
       .from("trip_segments")
-      .update({
-        mode: input.mode,
-        route_number:
-          input.routeNumber || null,
-        duration_minutes:
-          input.durationMinutes,
-        origin_label:
-          input.originLabel,
-        destination_label:
-          input.destinationLabel,
-        sentiment:
-          input.sentiment,
-        reason_codes:
-          input.reasonCodes,
-        memo: input.memo || null,
-      })
-      .eq("journal_id", journalId)
-      .eq("segment_order", 1);
+      .insert(segmentRows);
 
   if (segmentError) {
     return errorState(
-      "이동 구간을 수정하지 못했습니다.",
+      `새 이동 구간을 저장하지 못했습니다. ${segmentError.message}`,
     );
   }
 
-  revalidatePath("/journal");
-
   return successState(
-    "교통일지가 수정되었습니다.",
+    `${segmentRows.length}개 이동 구간으로 교통일지가 수정되었습니다.`,
   );
 }
 
@@ -309,7 +347,6 @@ export async function deleteJournal(
     );
   }
 
-  revalidatePath("/journal");
 }
 
 function parseJournalInput(

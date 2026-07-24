@@ -39,6 +39,9 @@ type JournalFormProps = {
   journal?: JournalFormData;
   initialValues?: JournalInitialValues;
   compact?: boolean;
+  onSuccess?: (
+    message: string,
+  ) => void;
 };
 
 const initialState: JournalActionState = {
@@ -100,6 +103,7 @@ export function JournalForm({
   journal,
   initialValues,
   compact = false,
+  onSuccess,
 }: JournalFormProps) {
   const formRef =
     useRef<HTMLFormElement>(null);
@@ -119,12 +123,27 @@ export function JournalForm({
 
   useEffect(() => {
     if (
-      state.status === "success" &&
-      !journal
+      state.status !== "success"
     ) {
-      formRef.current?.reset();
+      return;
     }
-  }, [journal, state.status]);
+
+    if (journal) {
+      onSuccess?.(
+        state.message ||
+          "교통일지가 수정되었습니다.",
+      );
+
+      return;
+    }
+
+    formRef.current?.reset();
+  }, [
+    journal,
+    onSuccess,
+    state.status,
+    state.message,
+  ]);
 
   const form = (
     <form
@@ -433,20 +452,19 @@ export function JournalForm({
         />
       </Field>
 
-      {state.message && (
-        <p
-          role="status"
-          className={[
-            "rounded-control px-4 py-3",
-            "text-sm leading-6",
-            state.status === "success"
-              ? "bg-success-soft text-success"
-              : "bg-danger-soft text-danger",
-          ].join(" ")}
-        >
-          {state.message}
-        </p>
-      )}
+      {state.message &&
+        state.status === "error" && (
+          <p
+            role="alert"
+            className={[
+              "rounded-control px-4 py-3",
+              "bg-danger-soft text-danger",
+              "text-sm leading-6",
+            ].join(" ")}
+          >
+            {state.message}
+          </p>
+        )}
 
       <Button
         type="submit"

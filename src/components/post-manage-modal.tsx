@@ -130,7 +130,12 @@ export function PostManageModal({
       <dialog
         ref={editDialogRef}
         aria-labelledby={`post-edit-title-${post.id}`}
-        className="m-auto w-[calc(100%-32px)] max-w-3xl rounded-card border border-line bg-surface p-0 text-main shadow-floating backdrop:bg-black/45"
+        className={[
+          "m-auto w-[calc(100%-32px)] rounded-card border border-line bg-surface p-0 text-main shadow-floating backdrop:bg-black/45",
+          editCompleted
+            ? "max-w-md"
+            : "max-w-3xl",
+        ].join(" ")}
       >
         {editCompleted ? (
           <ResultContent

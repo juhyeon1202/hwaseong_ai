@@ -10,6 +10,7 @@ import {
 
 import {
   createJournal,
+  updateJournal,
   type JournalActionState,
 } from "@/app/(protected)/journal/actions";
 
@@ -21,7 +22,11 @@ import {
 } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 
-type Place = {
+import {
+  ActionResultModal,
+} from "@/components/action-result-modal";
+
+export type Place = {
   id: string;
   name: string;
   address: string;
@@ -29,7 +34,7 @@ type Place = {
   latitude: number;
 };
 
-type TransitStep = {
+export type TransitStep = {
   type:
     | "BUS"
     | "SUBWAY"
@@ -40,7 +45,7 @@ type TransitStep = {
   vehicles: string[];
 };
 
-type TransitRoute = {
+export type TransitRoute = {
   id: number;
   type:
     | "BUS"
@@ -97,7 +102,7 @@ type FavoriteRoute = {
   route: TransitRoute;
 };
 
-type SegmentReview = {
+export type SegmentReview = {
   sentiment:
     | "satisfied"
     | "dissatisfied";
@@ -111,8 +116,23 @@ type RouteSort =
   | "transfers"
   | "walking";
 
+export type JournalRouteInitialData = {
+  category: string;
+  originLabel: string;
+  destinationLabel: string;
+  startPlace: Place | null;
+  endPlace: Place | null;
+  selectedRoute: TransitRoute | null;
+  reviews: SegmentReview[];
+};
+
 type JournalRouteFormProps = {
   initialCategory?: string;
+  journalId?: string;
+  initialData?: JournalRouteInitialData;
+  onSuccess?: (
+    message: string,
+  ) => void;
 };
 
 const initialState: JournalActionState = {
@@ -168,23 +188,39 @@ const reasons = [
 
 export function JournalRouteForm({
   initialCategory = "commute",
+  journalId,
+  initialData,
+  onSuccess,
 }: JournalRouteFormProps) {
+  const isEditMode =
+    Boolean(journalId);
   const supabase = useMemo(
     () => createClient(),
     [],
   );
 
   const [category, setCategory] =
-    useState(initialCategory);
+    useState(
+      initialData?.category ??
+        initialCategory,
+    );
 
   const [startPlace, setStartPlace] =
-    useState<Place | null>(null);
+    useState<Place | null>(
+      initialData?.startPlace ?? null,
+    );
 
   const [endPlace, setEndPlace] =
-    useState<Place | null>(null);
+    useState<Place | null>(
+      initialData?.endPlace ?? null,
+    );
 
   const [routes, setRoutes] =
-    useState<TransitRoute[]>([]);
+    useState<TransitRoute[]>(
+      initialData?.selectedRoute
+        ? [initialData.selectedRoute]
+        : [],
+    );
 
   const [routeSort, setRouteSort] =
     useState<RouteSort>("recommended");
@@ -192,10 +228,15 @@ export function JournalRouteForm({
   const [
     selectedRouteId,
     setSelectedRouteId,
-  ] = useState<number | null>(null);
+  ] = useState<number | null>(
+    initialData?.selectedRoute?.id ??
+      null,
+  );
 
   const [reviews, setReviews] =
-    useState<SegmentReview[]>([]);
+    useState<SegmentReview[]>(
+      initialData?.reviews ?? [],
+    );
 
   const [isSearching, setIsSearching] =
     useState(false);
@@ -215,11 +256,128 @@ export function JournalRouteForm({
   const [favoriteError, setFavoriteError] =
     useState("");
 
-  const [state, formAction, isPending] =
-    useActionState(
-      createJournal,
-      initialState,
-    );
+  const journalAction =
+    isEditMode
+      ? updateJournal
+      : createJournal;
+
+  const [
+    state,
+    formAction,
+    isPending,
+  ] = useActionState(
+    journalAction,
+    initialState,
+  );
+
+  const [
+    createResultOpen,
+    setCreateResultOpen,
+  ] = useState(false);
+
+  useEffect(() => {
+    if (
+      state.status !== "success"
+    ) {
+      return;
+    }
+
+    if (isEditMode) {
+      onSuccess?.(
+        state.message ||
+          "교통일지가 수정되었습니다.",
+      );
+
+      return;
+    }
+
+    setCreateResultOpen(true);
+  }, [
+    isEditMode,
+    onSuccess,
+    state.status,
+    state.message,
+  ]);
+
+  useEffect(() => {
+    if (!isEditMode || !initialData) {
+      return;
+    }
+
+    let isActive = true;
+    const savedJournal = initialData;
+
+    async function resolvePlace(
+      label: string,
+    ): Promise<Place | null> {
+      const query = label.trim();
+
+      if (!query) {
+        return null;
+      }
+
+      try {
+        const searchParams = new URLSearchParams({
+          mode: "places",
+          query,
+        });
+        const response = await fetch(
+          `/api/kakao?${searchParams.toString()}`,
+        );
+        const result = await readJsonResponse<{
+          places?: Place[];
+        }>(response);
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const places = result.places ?? [];
+
+        return (
+          places.find(
+            (place) => place.name === query,
+          ) ??
+          places[0] ??
+          null
+        );
+      } catch {
+        return null;
+      }
+    }
+
+    async function restorePlaces() {
+      const [resolvedStart, resolvedEnd] =
+        await Promise.all([
+          savedJournal.startPlace
+            ? Promise.resolve(savedJournal.startPlace)
+            : resolvePlace(savedJournal.originLabel),
+          savedJournal.endPlace
+            ? Promise.resolve(savedJournal.endPlace)
+            : resolvePlace(
+                savedJournal.destinationLabel,
+              ),
+        ]);
+
+      if (!isActive) {
+        return;
+      }
+
+      if (resolvedStart) {
+        setStartPlace(resolvedStart);
+      }
+
+      if (resolvedEnd) {
+        setEndPlace(resolvedEnd);
+      }
+    }
+
+    void restorePlaces();
+
+    return () => {
+      isActive = false;
+    };
+  }, [initialData, isEditMode]);
 
   useEffect(() => {
     let isActive = true;
@@ -621,29 +779,32 @@ export function JournalRouteForm({
   }
 
   return (
-    <div
+  <div
+    className={[
+      "grid items-start gap-6",
+      "lg:grid-cols-[380px_minmax(0,1fr)]",
+      "lg:items-stretch",
+    ].join(" ")}
+  >
+    <Card
       className={[
-        "grid gap-6 lg:items-stretch",
-        "lg:grid-cols-[380px_minmax(0,1fr)]",
+        "flex h-full flex-col",
+        "lg:row-span-2",
       ].join(" ")}
     >
-      <Card
-        className={[
-          "flex flex-col",
-          "lg:row-span-2",
-          "lg:mt-[150px]",
-          "lg:h-[calc(100%-150px)]",
-        ].join(" ")}
-      >
         <header className="border-b border-line-light pb-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-brand">
-                오늘의 일지
+                {isEditMode
+                  ? "나의 교통일지"
+                  : "오늘의 일지"}
               </p>
 
               <h1 className="mt-1 text-xl font-bold text-main">
-                교통일지 기록
+                {isEditMode
+                  ? "교통일지 수정"
+                  : "교통일지 기록"}
               </h1>
             </div>
 
@@ -653,8 +814,9 @@ export function JournalRouteForm({
           </div>
 
           <p className="mt-3 text-sm leading-6 text-muted">
-            경로를 찾고 실제 이용한 경로의 각 구간을 평가해 주세요.
-            오늘의 이동 경험이 더 나은 화성시 교통을 만드는 데이터가 됩니다.
+            {isEditMode
+              ? "출발지와 도착지를 다시 검색하고 실제 이용한 추천 경로와 구간별 평가를 수정해 주세요."
+              : "경로를 찾고 실제 이용한 경로의 각 구간을 평가해 주세요. 오늘의 이동 경험이 더 나은 화성시 교통을 만드는 데이터가 됩니다."}
           </p>
 
           <div className="mt-5 rounded-card bg-surface-muted p-4">
@@ -1041,6 +1203,14 @@ export function JournalRouteForm({
             action={formAction}
             className="space-y-5"
           >
+            {journalId && (
+              <input
+                type="hidden"
+                name="journalId"
+                value={journalId}
+              />
+            )}
+
             <input
               type="hidden"
               name="category"
@@ -1070,9 +1240,11 @@ export function JournalRouteForm({
             <input
               type="hidden"
               name="routePayload"
-              value={JSON.stringify(
+              value={JSON.stringify({
+                startPlace,
+                endPlace,
                 selectedRoute,
-              )}
+              })}
             />
 
             <input
@@ -1131,21 +1303,15 @@ export function JournalRouteForm({
                 )}
               </ol>
 
-              {state.message && (
-                <p
-                  role="status"
-                  className={[
-                    "mt-5 rounded-control",
-                    "px-4 py-3 text-sm leading-6",
-                    state.status ===
-                    "success"
-                      ? "bg-success-soft text-success"
-                      : "bg-danger-soft text-danger",
-                  ].join(" ")}
-                >
-                  {state.message}
-                </p>
-              )}
+              {state.message &&
+                state.status === "error" && (
+                  <p
+                    role="alert"
+                    className="mt-5 rounded-control bg-danger-soft px-4 py-3 text-sm leading-6 text-danger"
+                  >
+                    {state.message}
+                  </p>
+                )}
 
               <Button
                 type="submit"
@@ -1158,12 +1324,35 @@ export function JournalRouteForm({
                 className="mt-6 min-h-12 text-base"
               >
                 {isPending
-                  ? "교통일지 저장 중..."
-                  : "오늘의 교통일지 저장"}
+                  ? isEditMode
+                    ? "교통일지 수정 중..."
+                    : "교통일지 저장 중..."
+                  : isEditMode
+                    ? "교통일지 수정 완료"
+                    : "오늘의 교통일지 저장"}
               </Button>
             </Card>
           </form>
         )}
+
+        <ActionResultModal
+          open={
+            !isEditMode &&
+            createResultOpen
+          }
+        title="교통일지 등록 완료"
+        message={
+          state.message ||
+          "교통일지가 등록되었습니다."
+        }
+        status="success"
+        onConfirm={() => {
+          setCreateResultOpen(false);
+
+          window.location.href =
+            "/mypage/journals";
+        }}
+      />
     </div>
   );
 }
@@ -1184,7 +1373,9 @@ function PlaceSearch({
   allowCurrentLocation = false,
 }: PlaceSearchProps) {
   const [query, setQuery] =
-    useState("");
+    useState(
+      selectedPlace?.name ?? "",
+    );
 
   const [places, setPlaces] =
     useState<Place[]>([]);
@@ -1194,6 +1385,12 @@ function PlaceSearch({
 
   const [message, setMessage] =
     useState("");
+
+  useEffect(() => {
+    setQuery(
+      selectedPlace?.name ?? "",
+    );
+  }, [selectedPlace]);
 
   async function searchPlaces(
     event: FormEvent<HTMLFormElement>,

@@ -6,27 +6,16 @@ import {
   useEffect,
   useState,
 } from "react";
-import {
-  useRouter,
-} from "next/navigation";
 
+import { Button } from "@/components/ui";
 import {
   HWASEONG_DISTRICTS,
   isHwaseongDistrict,
 } from "@/lib/hwaseong-districts";
-import {
-  createClient,
-} from "@/lib/supabase/client";
-import { Button } from "./ui";
+import { createClient } from "@/lib/supabase/client";
 
-type Gender =
-  | "male"
-  | "female";
-
-type Language =
-  | "ko"
-  | "en"
-  | "zh";
+type Gender = "male" | "female";
+type Language = "ko" | "en" | "zh";
 
 const nicknameAdjectives = [
   "느긋한",
@@ -59,62 +48,39 @@ const nicknameNouns = [
 ];
 
 export function SignupForm() {
-  const router = useRouter();
+  const [nickname, setNickname] =
+    useState("");
 
-  const [
-    nickname,
-    setNickname,
-  ] = useState("");
+  const [name, setName] =
+    useState("");
 
-  const [
-    name,
-    setName,
-  ] = useState("");
+  const [username, setUsername] =
+    useState("");
 
-  const [
-    username,
-    setUsername,
-  ] = useState("");
+  const [email, setEmail] =
+    useState("");
 
-  const [
-    email,
-    setEmail,
-  ] = useState("");
-
-  const [
-    otp,
-    setOtp,
-  ] = useState("");
-
-  const [
-    password,
-    setPassword,
-  ] = useState("");
+  const [password, setPassword] =
+    useState("");
 
   const [
     passwordConfirm,
     setPasswordConfirm,
   ] = useState("");
 
-  const [
-    birthDate,
-    setBirthDate,
-  ] = useState("");
+  const [birthDate, setBirthDate] =
+    useState("");
 
-  const [
-    gender,
-    setGender,
-  ] = useState<Gender>("male");
+  const [gender, setGender] =
+    useState<Gender>("male");
 
   const [
     homeDistrict,
     setHomeDistrict,
   ] = useState("");
 
-  const [
-    language,
-    setLanguage,
-  ] = useState<Language>("ko");
+  const [language, setLanguage] =
+    useState<Language>("ko");
 
   const [
     referralCode,
@@ -125,31 +91,8 @@ export function SignupForm() {
     referralCodeStatus,
     setReferralCodeStatus,
   ] = useState<
-    | "idle"
-    | "checking"
-    | "valid"
-    | "invalid"
+    "idle" | "checking" | "valid" | "invalid"
   >("idle");
-
-  const [
-    isOtpSent,
-    setIsOtpSent,
-  ] = useState(false);
-
-  const [
-    isEmailVerified,
-    setIsEmailVerified,
-  ] = useState(false);
-
-  const [
-    isSendingOtp,
-    setIsSendingOtp,
-  ] = useState(false);
-
-  const [
-    isVerifyingOtp,
-    setIsVerifyingOtp,
-  ] = useState(false);
 
   const [
     isSubmitting,
@@ -157,22 +100,26 @@ export function SignupForm() {
   ] = useState(false);
 
   const [
-    message,
-    setMessage,
-  ] = useState("");
+    confirmationSent,
+    setConfirmationSent,
+  ] = useState(false);
 
   const [
-    isError,
-    setIsError,
+    isResending,
+    setIsResending,
   ] = useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isError, setIsError] =
+    useState(false);
 
   const normalizedEmail =
     email.trim().toLowerCase();
 
   useEffect(() => {
-    setNickname(
-      createRandomNickname(),
-    );
+    setNickname(createRandomNickname());
   }, []);
 
   function regenerateNickname() {
@@ -189,16 +136,12 @@ export function SignupForm() {
     setNickname(nextNickname);
   }
 
-  function showError(
-    value: string,
-  ) {
+  function showError(value: string) {
     setIsError(true);
     setMessage(value);
   }
 
-  function showSuccess(
-    value: string,
-  ) {
+  function showSuccess(value: string) {
     setIsError(false);
     setMessage(value);
   }
@@ -220,13 +163,10 @@ export function SignupForm() {
   }
 
   function validateProfile() {
-    if (
-      nickname.trim().length < 2
-    ) {
+    if (nickname.trim().length < 2) {
       showError(
         "닉네임을 생성해 주세요.",
       );
-
       return false;
     }
 
@@ -234,7 +174,6 @@ export function SignupForm() {
       showError(
         "이름을 입력해 주세요.",
       );
-
       return false;
     }
 
@@ -246,7 +185,6 @@ export function SignupForm() {
       showError(
         "아이디는 영문, 숫자, 밑줄을 사용해 4~20자로 입력해 주세요.",
       );
-
       return false;
     }
 
@@ -258,18 +196,15 @@ export function SignupForm() {
       showError(
         "비밀번호는 8자 이상 입력해 주세요.",
       );
-
       return false;
     }
 
     if (
-      password !==
-      passwordConfirm
+      password !== passwordConfirm
     ) {
       showError(
         "비밀번호가 서로 일치하지 않습니다.",
       );
-
       return false;
     }
 
@@ -277,7 +212,6 @@ export function SignupForm() {
       showError(
         "생년월일을 입력해 주세요.",
       );
-
       return false;
     }
 
@@ -289,7 +223,16 @@ export function SignupForm() {
       showError(
         "거주지역을 선택해 주세요.",
       );
+      return false;
+    }
 
+    if (
+      referralCode.trim() &&
+      referralCodeStatus !== "valid"
+    ) {
+      showError(
+        "추천인 코드를 다시 확인해 주세요.",
+      );
       return false;
     }
 
@@ -306,16 +249,16 @@ export function SignupForm() {
       return;
     }
 
-    setReferralCodeStatus(
-      "checking",
-    );
+    setReferralCodeStatus("checking");
 
     const supabase = createClient();
 
     const { data, error } =
       await supabase.rpc(
         "referral_code_exists",
-        { p_code: code },
+        {
+          p_code: code,
+        },
       );
 
     setReferralCodeStatus(
@@ -325,42 +268,34 @@ export function SignupForm() {
     );
   }
 
-  async function sendOtp() {
+  async function completeSignup(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
     setMessage("");
 
     if (!validateProfile()) {
       return;
     }
 
-    setIsSendingOtp(true);
+    setIsSubmitting(true);
 
     try {
-      const supabase =
-        createClient();
+      const supabase = createClient();
 
-      if (isOtpSent) {
-        const { error } =
-          await supabase.auth.resend({
-            type: "signup",
-            email: normalizedEmail,
-          });
-
-        if (error) {
-          throw error;
-        }
-
-        showSuccess(
-          "인증번호를 다시 전송했습니다.",
-        );
-
-        return;
-      }
+      const callbackUrl = new URL(
+        "/auth/confirm-signup",
+        window.location.origin,
+      );
 
       const { data, error } =
         await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
+            emailRedirectTo:
+              callbackUrl.toString(),
             data: {
               nickname:
                 nickname.trim(),
@@ -369,8 +304,6 @@ export function SignupForm() {
                 username
                   .trim()
                   .toLowerCase(),
-              email:
-                normalizedEmail,
               birth_date:
                 birthDate,
               gender,
@@ -383,6 +316,7 @@ export function SignupForm() {
                   .trim()
                   .toUpperCase() ||
                 null,
+              signup_completed: true,
             },
           },
         });
@@ -392,109 +326,76 @@ export function SignupForm() {
       }
 
       if (data.session) {
-        setIsOtpSent(true);
-        setIsEmailVerified(true);
-
-        showSuccess(
-          "이메일 인증이 완료되었습니다.",
-        );
-
+        window.location.replace("/");
         return;
       }
 
-      setIsOtpSent(true);
+      setConfirmationSent(true);
 
       showSuccess(
-        "이메일로 6자리 인증번호를 전송했습니다.",
+        "가입 확인 링크를 이메일로 보냈습니다. 메일의 링크를 누르면 회원가입이 완료됩니다.",
       );
     } catch (error) {
       showError(
         getSignupErrorMessage(
           error instanceof Error
             ? error.message
-            : "인증번호를 전송하지 못했습니다.",
+            : "가입 확인 메일을 보내지 못했습니다.",
         ),
       );
     } finally {
-      setIsSendingOtp(false);
+      setIsSubmitting(false);
     }
   }
 
-  async function verifyOtp() {
-    setMessage("");
-
+  async function resendConfirmation() {
     if (!validateEmail()) {
       return;
     }
 
-    if (!/^\d{6}$/.test(otp)) {
-      showError(
-        "이메일로 받은 6자리 인증번호를 입력해 주세요.",
-      );
-
-      return;
-    }
-
-    setIsVerifyingOtp(true);
+    setMessage("");
+    setIsResending(true);
 
     try {
-      const supabase =
-        createClient();
+      const supabase = createClient();
+
+      const callbackUrl = new URL(
+        "/auth/callback",
+        window.location.origin,
+      );
+
+      callbackUrl.searchParams.set(
+        "next",
+        "/",
+      );
 
       const { error } =
-        await supabase.auth.verifyOtp({
-          email: normalizedEmail,
-          token: otp,
+        await supabase.auth.resend({
           type: "signup",
+          email: normalizedEmail,
+          options: {
+            emailRedirectTo:
+              callbackUrl.toString(),
+          },
         });
 
       if (error) {
         throw error;
       }
 
-      setIsEmailVerified(true);
-
       showSuccess(
-        "이메일 인증이 완료되었습니다.",
+        "가입 확인 링크를 다시 보냈습니다.",
       );
     } catch (error) {
       showError(
         getSignupErrorMessage(
           error instanceof Error
             ? error.message
-            : "인증번호를 확인하지 못했습니다.",
+            : "가입 확인 메일을 다시 보내지 못했습니다.",
         ),
       );
     } finally {
-      setIsVerifyingOtp(false);
-    }
-  }
-
-  async function completeSignup(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    setMessage("");
-
-    if (!validateProfile()) {
-      return;
-    }
-
-    if (!isEmailVerified) {
-      showError(
-        "이메일 인증을 완료해 주세요.",
-      );
-
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      router.replace("/");
-      router.refresh();
-    } finally {
-      setIsSubmitting(false);
+      setIsResending(false);
     }
   }
 
@@ -591,93 +492,27 @@ export function SignupForm() {
           />
         </SignupField>
 
-        <SignupField label="이메일">
-          <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(
-                  event.target.value,
-                );
+        <SignupField
+          label="이메일"
+          description="가입 확인 링크를 받을 실제 이메일을 입력해 주세요."
+        >
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(
+                event.target.value,
+              );
 
-                setIsOtpSent(false);
-                setIsEmailVerified(
-                  false,
-                );
-                setOtp("");
-              }}
-              required
-              autoComplete="email"
-              placeholder="example@email.com"
-              className={inputClassName}
-            />
-
-            <button
-              type="button"
-              disabled={
-                isSendingOtp ||
-                isEmailVerified
-              }
-              onClick={() =>
-                void sendOtp()
-              }
-              className="min-h-14 rounded-control border border-line bg-white text-sm font-bold text-secondary hover:border-info hover:text-info disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isEmailVerified
-                ? "인증 완료"
-                : isSendingOtp
-                  ? "전송 중"
-                  : isOtpSent
-                    ? "재전송"
-                    : "인증"}
-            </button>
-          </div>
+              setConfirmationSent(false);
+              setMessage("");
+            }}
+            required
+            autoComplete="email"
+            placeholder="example@email.com"
+            className={inputClassName}
+          />
         </SignupField>
-
-        {isOtpSent &&
-          !isEmailVerified && (
-            <SignupField label="이메일 인증번호">
-              <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
-                <input
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={(event) =>
-                    setOtp(
-                      event.target.value
-                        .replace(
-                          /\D/g,
-                          "",
-                        )
-                        .slice(0, 6),
-                    )
-                  }
-                  required
-                  maxLength={6}
-                  autoComplete="one-time-code"
-                  placeholder="6자리 인증번호"
-                  className={
-                    inputClassName
-                  }
-                />
-
-                <button
-                  type="button"
-                  disabled={
-                    isVerifyingOtp
-                  }
-                  onClick={() =>
-                    void verifyOtp()
-                  }
-                  className="min-h-14 rounded-control bg-info px-4 text-sm font-bold text-white disabled:opacity-50"
-                >
-                  {isVerifyingOtp
-                    ? "확인 중"
-                    : "확인"}
-                </button>
-              </div>
-            </SignupField>
-          )}
 
         <SignupField label="비밀번호">
           <input
@@ -756,12 +591,6 @@ export function SignupForm() {
           </SignupField>
         </div>
 
-        <p className="-mt-2 text-xs leading-5 text-muted">
-          생년월일과 성별은 통계용이며
-          다른 사용자에게 공개되지
-          않습니다.
-        </p>
-
         <SignupField label="거주 지역">
           <select
             value={homeDistrict}
@@ -830,7 +659,6 @@ export function SignupForm() {
         <SignupField
           label="추천인 코드"
           optional
-          description="유효한 추천인 코드는 가입 완료 후 포인트 지급에 사용됩니다."
         >
           <input
             value={referralCode}
@@ -839,7 +667,7 @@ export function SignupForm() {
                 event.target.value
                   .toUpperCase()
                   .replace(
-                    /[^A-Z0-9]/g,
+                    /[^A-Z0-9-]/g,
                     "",
                   ),
               );
@@ -848,11 +676,11 @@ export function SignupForm() {
                 "idle",
               );
             }}
-            onBlur={
-              checkReferralCode
+            onBlur={() =>
+              void checkReferralCode()
             }
-            maxLength={8}
-            placeholder="예: 4F7B92XQ"
+            maxLength={20}
+            placeholder="예: HWS-2K9F"
             className={inputClassName}
           />
 
@@ -866,23 +694,25 @@ export function SignupForm() {
           {referralCodeStatus ===
             "valid" && (
             <p className="mt-2 text-xs text-success">
-              유효한 추천인 코드입니다.
+              사용할 수 있는 추천인 코드입니다.
             </p>
           )}
 
           {referralCodeStatus ===
             "invalid" && (
             <p className="mt-2 text-xs text-danger">
-              유효하지 않은 추천인
-              코드입니다. 코드 없이도
-              가입을 진행할 수 있습니다.
+              유효하지 않은 추천인 코드입니다.
             </p>
           )}
         </SignupField>
 
         {message && (
           <p
-            role="status"
+            role={
+              isError
+                ? "alert"
+                : "status"
+            }
             className={[
               "rounded-control p-3 text-sm leading-6",
               isError
@@ -894,20 +724,38 @@ export function SignupForm() {
           </p>
         )}
 
-        <Button
-          type="submit"
-          fullWidth
-          disabled={
-            isSubmitting ||
-            !isEmailVerified
-          }
-        >
-          {isSubmitting
-            ? "가입 처리 중..."
-            : isEmailVerified
-              ? "가입 완료"
-              : "이메일 인증 필요"}
-        </Button>
+        {!confirmationSent ? (
+          <Button
+            type="submit"
+            fullWidth
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? "가입 메일 발송 중..."
+              : "가입 확인 링크 받기"}
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            <Button
+              type="button"
+              fullWidth
+              disabled={isResending}
+              onClick={() =>
+                void resendConfirmation()
+              }
+            >
+              {isResending
+                ? "재전송 중..."
+                : "가입 확인 링크 재전송"}
+            </Button>
+
+            <p className="text-center text-xs leading-5 text-muted">
+              이메일의 가입 확인 링크를
+              누르면 별도의 정보 재입력 없이
+              가입이 완료됩니다.
+            </p>
+          </div>
+        )}
       </form>
     </section>
   );
@@ -1036,28 +884,18 @@ function getSignupErrorMessage(
 
   if (
     message.includes("rate limit") ||
-    message.includes("rate_limit")
+    message.includes("rate_limit") ||
+    message.includes("429")
   ) {
-    return "인증번호 발송 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.";
+    return "가입 메일 발송 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
   if (
     message.includes(
-      "Token has expired",
+      "Password should be",
     )
   ) {
-    return "인증번호가 만료되었습니다. 인증번호를 다시 받아 주세요.";
-  }
-
-  if (
-    message.includes(
-      "Invalid OTP",
-    ) ||
-    message.includes(
-      "Token has expired or is invalid",
-    )
-  ) {
-    return "인증번호가 올바르지 않거나 만료되었습니다.";
+    return "비밀번호는 8자 이상 입력해 주세요.";
   }
 
   return message;

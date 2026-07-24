@@ -99,7 +99,7 @@ export function AdminDrtReviewPanel({
 
     try {
       const response = await fetch(
-        `/api/admin/incidents/${incidentId}/drt-review`,
+        `/admin/incidents/${incidentId}/drt-review`,
         {
           method: "POST",
           headers: {
@@ -177,7 +177,7 @@ export function AdminDrtReviewPanel({
 
     try {
       const response = await fetch(
-        `/api/admin/drt-actions/${action.id}/review`,
+        `/admin/drt-actions/${action.id}/review`,
         {
           method: "POST",
           headers: {
@@ -193,7 +193,7 @@ export function AdminDrtReviewPanel({
       );
 
       const result =
-        (await response.json()) as DrtResponse;
+        await readDrtResponse(response);
 
       if (
         !response.ok ||
@@ -608,4 +608,23 @@ function readStoredRuleResult(
           : "low",
     },
   };
+}
+
+async function readDrtResponse(
+  response: Response,
+): Promise<DrtResponse> {
+  const responseText =
+    await response.text();
+
+  try {
+    return JSON.parse(
+      responseText,
+    ) as DrtResponse;
+  } catch {
+    throw new Error(
+      response.ok
+        ? "서버가 올바른 JSON 응답을 반환하지 않았습니다."
+        : `똑버스 API 요청에 실패했습니다. (${response.status})`,
+    );
+  }
 }

@@ -492,7 +492,7 @@ export default async function AdminIncidentsPage({
 
         <form
           method="get"
-          className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-12"
+          className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(260px,2fr)_minmax(150px,1fr)_minmax(170px,1fr)_minmax(160px,1fr)_minmax(200px,auto)]"
         >
           <div className="md:col-span-2 xl:col-span-4">
             <label

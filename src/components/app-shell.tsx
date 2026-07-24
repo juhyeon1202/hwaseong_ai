@@ -226,7 +226,7 @@ function HeaderAccount({
 
           <AccountLink
             href="/route-requests"
-            label="희망 노선"
+            label="희망 노선 투표"
           />
 
           <AccountLink
