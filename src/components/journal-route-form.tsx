@@ -307,6 +307,30 @@ export function JournalRouteForm({
     let isActive = true;
     const savedJournal = initialData;
 
+    // 수정 모달을 열 때 DB에 저장되어 있던 일지 내용을 폼 상태에
+    // 다시 주입한다. 같은 컴포넌트가 재사용되더라도 이전 상태가
+    // 남지 않고 이동 유형, 장소, 경로, 구간별 평가가 모두 복원된다.
+    setCategory(savedJournal.category);
+    setStartPlace(savedJournal.startPlace);
+    setEndPlace(savedJournal.endPlace);
+    setRoutes(
+      savedJournal.selectedRoute
+        ? [savedJournal.selectedRoute]
+        : [],
+    );
+    setSelectedRouteId(
+      savedJournal.selectedRoute?.id ?? null,
+    );
+    setReviews(
+      savedJournal.reviews.map((review) => ({
+        sentiment: review.sentiment,
+        reasonCodes: [...review.reasonCodes],
+        memo: review.memo,
+      })),
+    );
+    setRouteSort("recommended");
+    setSearchError("");
+
     async function resolvePlace(
       label: string,
     ): Promise<Place | null> {
