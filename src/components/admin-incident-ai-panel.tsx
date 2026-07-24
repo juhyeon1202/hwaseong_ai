@@ -301,11 +301,68 @@ export function AdminIncidentAiPanel({
           <AnalysisSection
             title="관리자 권장 조치"
             content={
-              adminRecommendation ??
-              "권장 조치 없음"
+              formatNumberedSteps(
+                adminRecommendation ??
+                  "권장 조치 없음",
+              )
             }
             variant="warning"
           />
+
+          {aiAnalysis?.nearbyContext && (
+            <AnalysisSection
+              title="주변 실시간 교통·기상 정보"
+              content={
+                aiAnalysis.nearbyContext
+              }
+              variant="brand"
+            />
+          )}
+
+          {aiAnalysis &&
+            aiAnalysis.externalEvidence.length > 0 && (
+              <div className="rounded-card border border-line bg-surface-muted p-5">
+                <h3 className="font-bold text-main">
+                  외부 정보 교차 확인
+                </h3>
+
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-muted">
+                  {aiAnalysis.externalEvidence.map(
+                    (item, index) => (
+                      <li key={`${index}-${item}`}>
+                        {index + 1}. {item}
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
+
+          {aiAnalysis &&
+            aiAnalysis.sources.length > 0 && (
+              <div className="rounded-card border border-line bg-white p-5">
+                <h3 className="font-bold text-main">
+                  참고 출처
+                </h3>
+
+                <ul className="mt-3 space-y-2 text-sm leading-6">
+                  {aiAnalysis.sources.map(
+                    (source, index) => (
+                      <li key={`${source.url}-${index}`}>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-brand underline underline-offset-4"
+                        >
+                          {source.title}
+                        </a>
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
 
           {aiAnalysis && (
             <div className="grid gap-3 sm:grid-cols-2">
@@ -503,6 +560,12 @@ type AiAnalysis = {
     | string
     | null;
   evidenceLimitations: string;
+  nearbyContext: string;
+  externalEvidence: string[];
+  sources: Array<{
+    title: string;
+    url: string;
+  }>;
 };
 
 function readAiAnalysis(
@@ -556,7 +619,71 @@ function readAiAnalysis(
       "string"
         ? analysis.evidenceLimitations
         : "",
+
+    nearbyContext:
+      typeof analysis.nearbyContext ===
+      "string"
+        ? analysis.nearbyContext
+        : "",
+
+    externalEvidence:
+      Array.isArray(
+        analysis.externalEvidence,
+      )
+        ? analysis.externalEvidence.filter(
+            (item): item is string =>
+              typeof item === "string",
+          )
+        : [],
+
+    sources: Array.isArray(
+      analysis.sources,
+    )
+      ? analysis.sources.flatMap(
+          (item) => {
+            if (
+              !item ||
+              typeof item !== "object" ||
+              Array.isArray(item)
+            ) {
+              return [];
+            }
+
+            const source = item as Record<
+              string,
+              unknown
+            >;
+
+            if (
+              typeof source.title !==
+                "string" ||
+              typeof source.url !== "string" ||
+              !source.url.startsWith("http")
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                title: source.title,
+                url: source.url,
+              },
+            ];
+          },
+        )
+      : [],
   };
+}
+
+function formatNumberedSteps(
+  content: string,
+) {
+  return content
+    .replace(
+      /\s+(?=\d+\.\s)/g,
+      "\n",
+    )
+    .trim();
 }
 
 function getRiskLabel(

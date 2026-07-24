@@ -20,6 +20,9 @@ import {
   ActionResultModal,
 } from "@/components/action-result-modal";
 import {
+  AiPostTranslator,
+} from "@/components/ai-post-translator";
+import {
   RouteStopMap,
 } from "@/components/route-stop-map";
 import { Button } from "@/components/ui";
@@ -41,6 +44,7 @@ export type CommunityPostItem = {
   commentCount: number;
   voteCount: number;
   stopCount: number;
+  isPinned: boolean;
 };
 
 export type CommunityStopOption = {
@@ -146,6 +150,15 @@ export function CommunityBoard({
 
       return [...filtered].sort(
         (first, second) => {
+          if (
+            first.isPinned !==
+            second.isPinned
+          ) {
+            return first.isPinned
+              ? -1
+              : 1;
+          }
+
           if (
             sortType === "views"
           ) {
@@ -468,18 +481,30 @@ function PostCard({
     `/community/${item.id}`;
 
   return (
-    <li>
+    <li className="overflow-hidden rounded-[14px] border border-line bg-white shadow-card transition hover:-translate-y-0.5 hover:border-[#cbd3f6]">
       <Link
         href={href}
-        className="block rounded-[14px] border border-line bg-white px-5 py-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#cbd3f6] md:px-7"
+        className="block px-5 py-6 md:px-7"
       >
-        <CategoryBadge
-          category={item.category}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <CategoryBadge
+            category={item.category}
+          />
+
+          {item.isPinned && (
+            <span className="inline-flex rounded-full bg-[#fff1e6] px-3 py-1 text-xs font-bold text-[#d8792c]">
+              📌 고정
+            </span>
+          )}
+        </div>
 
         <h2 className="mt-4 line-clamp-1 text-lg font-bold text-main md:text-xl">
           {item.title}
         </h2>
+
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-secondary">
+          {item.content}
+        </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted">
           <span>
@@ -495,48 +520,37 @@ function PostCard({
           </time>
 
           <div className="ml-auto flex gap-5">
+            <span>
+              조회{" "}
+              {item.viewCount.toLocaleString(
+                "ko-KR",
+              )}
+            </span>
+
             {item.itemType ===
-            "route" ? (
-              <>
-                <span>
-                  조회{" "}
-                  {item.viewCount.toLocaleString(
-                    "ko-KR",
-                  )}
-                </span>
-
-                <span>
-                  투표{" "}
-                  {item.voteCount.toLocaleString(
-                    "ko-KR",
-                  )}
-                </span>
-
-                <span>
-                  댓글{" "}
-                  {item.commentCount.toLocaleString(
-                    "ko-KR",
-                  )}
-                </span>
-              </>
-            ) : (
-              <>
-                <span>
-                  조회{" "}
-                  {item.viewCount.toLocaleString(
-                    "ko-KR",
-                  )}
-                </span>
-
-                <span>
-                  댓글{" "}
-                  {item.commentCount}
-                </span>
-              </>
+              "route" && (
+              <span>
+                투표{" "}
+                {item.voteCount.toLocaleString(
+                  "ko-KR",
+                )}
+              </span>
             )}
+
+            <span>
+              댓글{" "}
+              {item.commentCount.toLocaleString(
+                "ko-KR",
+              )}
+            </span>
           </div>
         </div>
       </Link>
+
+      <AiPostTranslator
+        postId={item.id}
+        variant="card"
+      />
     </li>
   );
 }

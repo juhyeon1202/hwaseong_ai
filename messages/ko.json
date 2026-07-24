@@ -1,0 +1,83 @@
+{
+  "Common": {
+    "serviceName": "화성 교통일지",
+    "serviceDescription": "시민 참여형 교통 플랫폼",
+    "login": "로그인",
+    "signup": "회원가입",
+    "logout": "로그아웃",
+    "confirm": "확인"
+  },
+  "Navigation": {
+    "mainMenu": "주요 메뉴",
+    "home": "홈",
+    "community": "게시판",
+    "journal": "일지",
+    "my": "마이",
+    "report": "신고",
+    "admin": "관리자"
+  },
+  "Account": {
+    "userMenu": "사용자 메뉴",
+    "mypage": "마이페이지",
+    "myJournal": "내 교통일지",
+    "favorites": "즐겨찾기",
+    "routeVote": "희망 노선 투표",
+    "inquiry": "1:1 문의",
+    "aiComplaint": "AI 민원 작성",
+    "adminWork": "관리자 통합 업무",
+    "noEmail": "이메일 정보 없음"
+  },
+  "Language": {
+    "label": "언어",
+    "ko": "한국어",
+    "en": "English",
+    "zh": "中文",
+    "ja": "日本語"
+  },
+  "Footer": {
+    "serviceDescription": "시민 참여형 대중교통 플랫폼",
+    "address": "(우)18274 경기도 화성시 남양읍 시청로 159",
+    "cityHall": "화성시청",
+    "instagram": "인스타그램",
+    "privacy": "개인정보처리방침",
+    "terms": "이용약관",
+    "copyright": "Copyright © Hwaseong Traffic Journal. All rights reserved."
+  },
+  "Auth": {
+    "loginTitle": "로그인",
+    "loginDescription": "화성 교통일지에 로그인하세요.",
+    "signupTitle": "회원가입",
+    "signupDescription": "화성시 교통 개선에 참여하세요.",
+    "recoverTitle": "비밀번호 찾기",
+    "recoverDescription": "아이디와 가입 시 입력한 이메일을 확인해 임시 비밀번호를 발급합니다.",
+    "recoverSubmit": "임시 비밀번호 발급",
+    "updateTitle": "새 비밀번호 설정",
+    "updateDescription": "앞으로 사용할 새 비밀번호를 입력하세요.",
+    "updateSubmit": "비밀번호 변경",
+    "username": "아이디",
+    "signupUsername": "가입 아이디",
+    "savedEmail": "가입 시 입력한 이메일",
+    "savedEmailHelp": "인증 메일은 발송하지 않으며, 가입 정보 확인에만 사용합니다.",
+    "password": "비밀번호",
+    "newPassword": "새 비밀번호",
+    "newPasswordConfirm": "새 비밀번호 확인",
+    "passwordPlaceholder": "8자 이상 입력",
+    "newPasswordAgain": "새 비밀번호 다시 입력",
+    "temporaryPasswordTitle": "10분 동안 사용할 수 있는 임시 비밀번호",
+    "copyTemporaryPassword": "임시 비밀번호 복사",
+    "temporaryPasswordHelp": "이 비밀번호로 로그인하면 새 비밀번호 설정 화면으로 이동합니다.",
+    "processing": "처리 중...",
+    "temporaryLogin": "임시 비밀번호로 로그인",
+    "forgotPassword": "비밀번호를 잊으셨나요?",
+    "notMember": "아직 회원이 아니신가요?",
+    "backToLogin": "로그인으로 돌아가기"
+  },
+  "Home": {
+    "badge": "실시간 시민 참여", "title": "우리 동네 교통, 함께 기록하고 바꿔요", "description": "이동 경험과 정류장 불편을 기록하면 시민 참여 데이터와 AI 분석을 통해 교통 개선에 활용됩니다.", "trafficAlerts": "실시간 교통 알림",
+    "recentParticipation": "최근 7일 시민 참여", "totalCount": "총 {count}건", "stopProblem": "정류장에서 불편을 겪으셨나요?", "oneTouchAnonymous": "정류장 원터치 익명 신고", "reportNow": "신고하기",
+    "quickActions": "빠른 실행", "record": "기록하기", "recordDescription": "오늘의 이동 경험", "directions": "길찾기", "directionsDescription": "대중교통 추천 경로", "roulette": "룰렛", "rouletteDescription": "참여 포인트 보상",
+    "ranking": "실시간 동네 순위", "rankingPeriod": "최근 7일 참여 기준", "viewAll": "전체 보기 ›", "myNeighborhood": "우리 동네",
+    "oneTouchReport": "원터치 신고", "busPassed": "버스가 그냥 지나갔나요?", "reportDescription": "만차 통과, 배차 지연, 환승 실패를 정류장에서 바로 신고할 수 있어요.", "reportStop": "정류장 신고하기",
+    "aiInsight": "AI 교통 인사이트", "aiTitle": "시민 기록을 분석하고 있어요", "aiDescription": "신고가 일정 기준 이상 모이면 교통 상황으로 감지하고 관리자 검토 화면에 전달합니다.", "viewAnalysis": "실시간 분석 보기 →"
+  }
+}

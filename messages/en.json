@@ -1,0 +1,64 @@
+{
+  "Common": {
+    "serviceName": "Hwaseong Transport Journal",
+    "serviceDescription": "Citizen-powered transport platform",
+    "login": "Log in",
+    "signup": "Sign up",
+    "logout": "Log out",
+    "confirm": "Confirm"
+  },
+  "Navigation": {
+    "mainMenu": "Main menu",
+    "home": "Home",
+    "community": "Community",
+    "journal": "Journal",
+    "my": "My",
+    "report": "Report",
+    "admin": "Admin"
+  },
+  "Account": {
+    "userMenu": "User menu",
+    "mypage": "My page",
+    "myJournal": "My journals",
+    "favorites": "Favorites",
+    "routeVote": "Route voting",
+    "inquiry": "1:1 inquiry",
+    "aiComplaint": "AI complaint draft",
+    "adminWork": "Admin workspace",
+    "noEmail": "No email information"
+  },
+  "Language": {
+    "label": "Language",
+    "ko": "한국어",
+    "en": "English",
+    "zh": "中文",
+    "ja": "日本語"
+  },
+  "Footer": {
+    "serviceDescription": "Citizen-powered public transport platform",
+    "address": "159, Sicheong-ro, Namyang-eup, Hwaseong-si, Gyeonggi-do 18274",
+    "cityHall": "Hwaseong City Hall",
+    "instagram": "Instagram",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "copyright": "Copyright © Hwaseong Traffic Journal. All rights reserved."
+  },
+  "Auth": {
+    "loginTitle": "Log in", "loginDescription": "Log in to Hwaseong Transport Journal.",
+    "signupTitle": "Sign up", "signupDescription": "Take part in improving transport in Hwaseong.",
+    "recoverTitle": "Find password", "recoverDescription": "Verify your ID and saved email to receive a temporary password.", "recoverSubmit": "Issue temporary password",
+    "updateTitle": "Set a new password", "updateDescription": "Enter the password you want to use from now on.", "updateSubmit": "Change password",
+    "username": "User ID", "signupUsername": "Registered user ID", "savedEmail": "Email entered at sign-up", "savedEmailHelp": "No verification email is sent. It is used only to verify your account.",
+    "password": "Password", "newPassword": "New password", "newPasswordConfirm": "Confirm new password", "passwordPlaceholder": "At least 8 characters", "newPasswordAgain": "Enter the new password again",
+    "temporaryPasswordTitle": "Temporary password valid for 10 minutes", "copyTemporaryPassword": "Copy temporary password", "temporaryPasswordHelp": "Logging in with this password will take you to the new-password screen.",
+    "processing": "Processing...", "temporaryLogin": "Log in with temporary password", "forgotPassword": "Forgot your password?", "notMember": "Not a member yet?", "backToLogin": "Back to login"
+  },
+  "Home": {
+    "badge": "Live citizen participation", "title": "Record and improve transport in our neighborhood", "description": "Your travel experiences and stop reports become citizen data used with AI analysis to improve transport.", "trafficAlerts": "Live traffic alerts",
+    "recentParticipation": "Citizen participation in the last 7 days", "totalCount": "{count} total", "stopProblem": "Had trouble at a bus stop?", "oneTouchAnonymous": "One-touch anonymous stop report", "reportNow": "Report",
+    "quickActions": "Quick actions", "record": "Record", "recordDescription": "Today's travel experience", "directions": "Directions", "directionsDescription": "Recommended public transport routes", "roulette": "Roulette", "rouletteDescription": "Participation point rewards",
+    "ranking": "Live neighborhood ranking", "rankingPeriod": "Based on the last 7 days", "viewAll": "View all ›", "myNeighborhood": "My neighborhood",
+    "oneTouchReport": "One-touch report", "busPassed": "Did the bus pass without stopping?", "reportDescription": "Report full buses, delays, and failed transfers directly at the stop.", "reportStop": "Report a bus stop",
+    "aiInsight": "AI transport insight", "aiTitle": "Analyzing citizen records", "aiDescription": "When reports reach the detection threshold, they are sent to the administrator review screen as a traffic incident.", "viewAnalysis": "View live analysis →"
+  }
+}

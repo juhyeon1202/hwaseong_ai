@@ -33,6 +33,7 @@ type Incident = {
     | "resolved";
   citizen_guidance: string | null;
   ai_summary: string | null;
+  evidence: unknown;
   window_started_at: string;
   window_ended_at: string;
   transit_stops:
@@ -54,6 +55,43 @@ const reportLabels = {
   dispatch_delay: "배차 지연",
   transfer_failure: "환승 실패",
 } as const;
+
+function readNearbyContext(
+  evidence: unknown,
+): string | null {
+  if (
+    !evidence ||
+    typeof evidence !== "object" ||
+    !("aiAnalysis" in evidence)
+  ) {
+    return null;
+  }
+
+  const aiAnalysis = (
+    evidence as {
+      aiAnalysis?: unknown;
+    }
+  ).aiAnalysis;
+
+  if (
+    !aiAnalysis ||
+    typeof aiAnalysis !== "object" ||
+    !("nearbyContext" in aiAnalysis)
+  ) {
+    return null;
+  }
+
+  const nearbyContext = (
+    aiAnalysis as {
+      nearbyContext?: unknown;
+    }
+  ).nearbyContext;
+
+  return typeof nearbyContext === "string" &&
+    nearbyContext.trim()
+    ? nearbyContext.trim()
+    : null;
+}
 
 export async function generateMetadata({
   params,
@@ -92,6 +130,7 @@ export default async function IncidentPage({
         status,
         citizen_guidance,
         ai_summary,
+        evidence,
         window_started_at,
         window_ended_at,
         transit_stops (
@@ -113,6 +152,9 @@ export default async function IncidentPage({
   }
 
   const incident = data as Incident;
+  const nearbyContext = readNearbyContext(
+    incident.evidence,
+  );
 
   const stop = Array.isArray(
     incident.transit_stops,
@@ -165,15 +207,41 @@ export default async function IncidentPage({
 
         <Card className="border-brand-line bg-brand-softer">
           <SectionHeader
-            title="시민 안내"
-            description="현재 교통 상황을 확인하세요."
+            title="종합 교통 상황 안내"
+            description="AI 분석과 확인된 주변 정보를 함께 안내합니다."
           />
 
-          <p className="mt-5 text-base font-semibold leading-7 text-main">
-            {incident.citizen_guidance ??
-              incident.ai_summary ??
-              "주변 교통 상황을 확인해 주세요."}
-          </p>
+          <div className="mt-5 grid gap-4">
+            <section className="rounded-2xl border border-line bg-white p-5">
+              <h2 className="text-sm font-bold text-main">
+                사건 요약
+              </h2>
+              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-secondary">
+                {incident.ai_summary ??
+                  `${stop?.name ?? "해당 정류장"}에서 ${reportLabels[incident.kind]} 신고 ${incident.report_count}건이 접수되었습니다.`}
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-orange-200 bg-orange-50/60 p-5">
+              <h2 className="text-sm font-bold text-main">
+                주변 실시간 교통·기상 정보
+              </h2>
+              <p className="mt-2 whitespace-pre-line text-sm leading-7 text-secondary">
+                {nearbyContext ??
+                  "현재 확인된 외부 교통·기상 특이사항이 없습니다. 실제 운행 정보는 교통정보 제공처에서 다시 확인해 주세요."}
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-blue-200 bg-blue-50/60 p-5">
+              <h2 className="text-sm font-bold text-main">
+                시민 행동 안내
+              </h2>
+              <p className="mt-2 whitespace-pre-line text-base font-semibold leading-7 text-main">
+                {incident.citizen_guidance ??
+                  "실시간 도착 정보를 확인하고 이동에 여유를 두어 주세요."}
+              </p>
+            </section>
+          </div>
         </Card>
 
         <Card>

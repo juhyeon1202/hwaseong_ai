@@ -30,6 +30,7 @@ type PostRow = {
   title: string;
   content: string;
   view_count: number;
+  is_pinned: boolean;
   created_at: string;
 };
 
@@ -76,6 +77,7 @@ export default async function CommunityPage() {
           title,
           content,
           view_count,
+          is_pinned,
           created_at
         `,
       )
@@ -211,6 +213,7 @@ export default async function CommunityPage() {
         ) ?? 0,
       voteCount: 0,
       stopCount: 0,
+      isPinned: post.is_pinned,
     }));
 
   const routeItems: CommunityPostItem[] =
@@ -240,20 +243,31 @@ export default async function CommunityPage() {
           ) ?? 0,
         voteCount: route.vote_count,
         stopCount: route.stop_count,
+        isPinned: false,
       }));
 
   const items = [
     ...postItems,
     ...routeItems,
-  ].sort(
-    (first, second) =>
+  ].sort((first, second) => {
+    if (
+      first.isPinned !==
+      second.isPinned
+    ) {
+      return first.isPinned
+        ? -1
+        : 1;
+    }
+
+    return (
       new Date(
         second.createdAt,
       ).getTime() -
       new Date(
         first.createdAt,
-      ).getTime(),
-  );
+      ).getTime()
+    );
+  });
 
   const stops: CommunityStopOption[] =
     (stopResult.data ?? []).map(

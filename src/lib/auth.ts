@@ -10,6 +10,7 @@ export type AppRole = "citizen" | "admin";
 export type CurrentUser = {
   id: string;
   email: string | null;
+  username: string;
   nickname: string;
   role: AppRole;
   points: number;
@@ -31,7 +32,7 @@ export const getCurrentUser = cache(
     const { data: profile, error: profileError } =
       await supabase
         .from("profiles")
-        .select("nickname, role, points")
+        .select("username, nickname, role, points")
         .eq("id", user.id)
         .single();
 
@@ -44,6 +45,9 @@ export const getCurrentUser = cache(
     return {
       id: user.id,
       email: user.email ?? null,
+      username:
+        profile.username ??
+        String(user.user_metadata?.username ?? ""),
       nickname: profile.nickname,
       role: profile.role as AppRole,
       points: profile.points,

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -23,13 +25,17 @@ export default async function RootLayout({
   children,
 }: RootLayoutProps) {
   const user = await getCurrentUser();
+  const locale = await getLocale();
+  const messages = await getMessages();
 
   return (
-    <html lang="ko">
+    <html lang={locale}>
       <body>
-        <AppShell user={user}>
-          {children}
-        </AppShell>
+        <NextIntlClientProvider messages={messages}>
+          <AppShell user={user}>
+            {children}
+          </AppShell>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

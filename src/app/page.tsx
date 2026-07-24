@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import {
   KakaoMap,
@@ -24,23 +25,23 @@ import {
 const quickActions = [
   {
     href: "/journal",
-    title: "기록하기",
-    description: "오늘의 이동 경험",
+    titleKey: "record",
+    descriptionKey: "recordDescription",
     icon: "✎",
     color:
       "bg-brand-soft text-brand-text",
   },
   {
     href: "/route",
-    title: "길찾기",
-    description: "대중교통 추천 경로",
+    titleKey: "directions",
+    descriptionKey: "directionsDescription",
     icon: "↗",
     color: "bg-info-soft text-info",
   },
   {
     href: "/rewards",
-    title: "룰렛",
-    description: "참여 포인트 보상",
+    titleKey: "roulette",
+    descriptionKey: "rouletteDescription",
     icon: "◎",
     color:
       "bg-warning-soft text-warning",
@@ -153,23 +154,20 @@ export default async function HomePage() {
 }
 
 function HeroSection() {
+  const t = useTranslations("Home");
   return (
     <section className="flex flex-col gap-4 border-b border-line-light pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <Badge>
-          실시간 시민 참여
+          {t("badge")}
         </Badge>
 
         <h1 className="mt-3 text-2xl font-bold leading-tight text-main sm:text-3xl">
-          우리 동네 교통,
-          <br className="sm:hidden" /> 함께
-          기록하고 바꿔요
+          {t("title")}
         </h1>
 
         <p className="mt-3 max-w-2xl text-sm leading-6 text-secondary">
-          이동 경험과 정류장 불편을 기록하면
-          시민 참여 데이터와 AI 분석을 통해
-          교통 개선에 활용됩니다.
+          {t("description")}
         </p>
       </div>
 
@@ -178,7 +176,7 @@ function HeroSection() {
         className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-control bg-info-soft px-4 text-sm font-semibold text-info sm:self-auto"
       >
         <span className="size-2 rounded-pill bg-info" />
-        실시간 교통 알림
+        {t("trafficAlerts")}
       </Link>
     </section>
   );
@@ -195,6 +193,7 @@ function ParticipationMap({
   ranking,
   regionParticipation,
 }: ParticipationMapProps) {
+  const t = useTranslations("Home");
   const totalReports =
     ranking.reduce(
       (sum, item) =>
@@ -223,13 +222,11 @@ function ParticipationMap({
 
         <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-control bg-[#191f28]/85 px-4 py-3 text-white shadow-card backdrop-blur sm:left-4 sm:top-4">
           <p className="text-xs text-white/70">
-            최근 7일 시민 참여
+            {t("recentParticipation")}
           </p>
 
           <p className="mt-1 text-lg font-bold">
-            총{" "}
-            {totalReports.toLocaleString()}
-            건
+            {t("totalCount", { count: totalReports.toLocaleString() })}
           </p>
         </div>
 
@@ -241,12 +238,11 @@ function ParticipationMap({
 
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-muted">
-                정류장에서 불편을
-                겪으셨나요?
+                {t("stopProblem")}
               </p>
 
               <p className="mt-1 font-bold text-main">
-                정류장 원터치 익명 신고
+                {t("oneTouchAnonymous")}
               </p>
             </div>
 
@@ -254,7 +250,7 @@ function ParticipationMap({
               href="/report"
               className="shrink-0"
             >
-              신고하기
+              {t("reportNow")}
             </ButtonLink>
           </div>
         </div>
@@ -379,10 +375,11 @@ function NeighborhoodCard({
 }
 
 function QuickActions() {
+  const t = useTranslations("Home");
   return (
     <section>
       <h2 className="text-lg font-bold text-main">
-        빠른 실행
+        {t("quickActions")}
       </h2>
 
       <div className="mt-4 grid grid-cols-3 gap-3">
@@ -403,11 +400,11 @@ function QuickActions() {
               </span>
 
               <strong className="mt-4 block text-sm text-main">
-                {action.title}
+                {t(action.titleKey)}
               </strong>
 
               <span className="mt-1 hidden text-xs leading-5 text-muted sm:block">
-                {action.description}
+                {t(action.descriptionKey)}
               </span>
             </Link>
           ),
@@ -426,16 +423,17 @@ function RankingCard({
   ranking,
   homeDistrict,
 }: RankingCardProps) {
+  const t = useTranslations("Home");
   return (
     <Card>
       <header className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-bold text-main">
-            실시간 동네 순위
+            {t("ranking")}
           </h2>
 
           <p className="mt-1 text-xs text-muted">
-            최근 7일 참여 기준
+            {t("rankingPeriod")}
           </p>
         </div>
 
@@ -443,7 +441,7 @@ function RankingCard({
           href="/ranking"
           className="text-xs font-semibold text-brand-text"
         >
-          전체 보기 ›
+          {t("viewAll")}
         </Link>
       </header>
 
@@ -480,7 +478,7 @@ function RankingCard({
                 <p className="mb-2 truncate text-sm font-semibold text-main">
                   {item.districtName}
                   {isMyDistrict
-                    ? " · 우리 동네"
+                    ? ` · ${t("myNeighborhood")}`
                     : ""}
                 </p>
 
@@ -503,19 +501,19 @@ function RankingCard({
 }
 
 function ReportCard() {
+  const t = useTranslations("Home");
   return (
     <Card>
       <Badge variant="danger">
-        원터치 신고
+        {t("oneTouchReport")}
       </Badge>
 
       <h2 className="mt-4 font-bold text-main">
-        버스가 그냥 지나갔나요?
+        {t("busPassed")}
       </h2>
 
       <p className="mt-2 text-sm leading-6 text-muted">
-        만차 통과, 배차 지연, 환승 실패를
-        정류장에서 바로 신고할 수 있어요.
+        {t("reportDescription")}
       </p>
 
       <ButtonLink
@@ -523,34 +521,33 @@ function ReportCard() {
         fullWidth
         className="mt-5"
       >
-        정류장 신고하기
+        {t("reportStop")}
       </ButtonLink>
     </Card>
   );
 }
 
 function AiInsightCard() {
+  const t = useTranslations("Home");
   return (
     <Card className="border-info/20 bg-info-soft">
       <Badge variant="info">
-        AI 교통 인사이트
+        {t("aiInsight")}
       </Badge>
 
       <h2 className="mt-4 font-bold text-main">
-        시민 기록을 분석하고 있어요
+        {t("aiTitle")}
       </h2>
 
       <p className="mt-2 text-sm leading-6 text-secondary">
-        신고가 일정 기준 이상 모이면 교통
-        상황으로 감지하고 관리자 검토 화면에
-        전달합니다.
+        {t("aiDescription")}
       </p>
 
       <Link
         href="/incidents"
         className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-info"
       >
-        실시간 분석 보기 →
+        {t("viewAnalysis")}
       </Link>
     </Card>
   );

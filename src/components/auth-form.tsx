@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
@@ -12,37 +13,20 @@ type AuthFormProps = {
   mode: AuthMode;
 };
 
-const modeText = {
-  login: {
-    title: "로그인",
-    description: "화성 교통일지에 로그인하세요.",
-    submit: "로그인",
-  },
-  signup: {
-    title: "회원가입",
-    description: "화성시 교통 개선에 참여하세요.",
-    submit: "회원가입",
-  },
-  recover: {
-    title: "비밀번호 찾기",
-    description: "아이디와 가입 시 입력한 이메일을 확인해 임시 비밀번호를 발급합니다.",
-    submit: "임시 비밀번호 발급",
-  },
-  update: {
-    title: "새 비밀번호 설정",
-    description: "앞으로 사용할 새 비밀번호를 입력하세요.",
-    submit: "비밀번호 변경",
-  },
-} satisfies Record<AuthMode, { title: string; description: string; submit: string }>;
-
-function authEmailFromIdentifier(identifier: string) {
-  const normalized = identifier.trim().toLowerCase();
-  return normalized.includes("@") ? normalized : `${normalized}@users.hwaseong.local`;
+function authEmailFromUsername(username: string) {
+  return `${username.trim().toLowerCase()}@users.hwaseong.local`;
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
-  const text = modeText[mode];
+  const t = useTranslations("Auth");
+  const common = useTranslations("Common");
+  const text = {
+    login: { title: t("loginTitle"), description: t("loginDescription"), submit: common("login") },
+    signup: { title: t("signupTitle"), description: t("signupDescription"), submit: common("signup") },
+    recover: { title: t("recoverTitle"), description: t("recoverDescription"), submit: t("recoverSubmit") },
+    update: { title: t("updateTitle"), description: t("updateDescription"), submit: t("updateSubmit") },
+  }[mode];
 
   const [identifier, setIdentifier] = useState("");
   const [email, setEmail] = useState("");
@@ -109,13 +93,13 @@ export function AuthForm({ mode }: AuthFormProps) {
   async function login() {
     const normalizedIdentifier = identifier.trim().toLowerCase();
 
-    if (!normalizedIdentifier) {
-      throw new Error("아이디를 입력해 주세요.");
+    if (!/^[a-zA-Z0-9_]{4,20}$/.test(normalizedIdentifier)) {
+      throw new Error("아이디는 영문, 숫자, 밑줄을 사용해 4~20자로 입력해 주세요.");
     }
 
     const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: authEmailFromIdentifier(normalizedIdentifier),
+      email: authEmailFromUsername(normalizedIdentifier),
       password,
     });
 
@@ -246,7 +230,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <section className="w-full max-w-md rounded-card border border-line bg-surface p-6 shadow-card sm:p-8">
       <header className="mb-8">
-        <p className="text-sm font-semibold text-brand-text">화성 교통일지</p>
+        <p className="text-sm font-semibold text-brand-text">{common("serviceName")}</p>
         <h1 className="mt-2 text-2xl font-bold text-main">{text.title}</h1>
         <p className="mt-2 text-sm leading-6 text-muted">{text.description}</p>
       </header>
@@ -254,12 +238,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {(mode === "login" || mode === "recover") && (
           <AuthField
-            label={mode === "login" ? "아이디 또는 기존 이메일" : "아이디"}
-            description={
-              mode === "login"
-                ? "새로 가입한 회원은 아이디로, 기존 회원은 기존 이메일로 로그인할 수 있습니다."
-                : undefined
-            }
+            label={t("username")}
           >
             <input
               value={identifier}
@@ -269,7 +248,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               autoCorrect="off"
               spellCheck={false}
               autoComplete="username"
-              placeholder={mode === "login" ? "아이디 또는 이메일" : "가입 아이디"}
+              placeholder={mode === "login" ? t("username") : t("signupUsername")}
               className={inputClassName}
             />
           </AuthField>
@@ -277,8 +256,8 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         {mode === "recover" && (
           <AuthField
-            label="가입 시 입력한 이메일"
-            description="인증 메일은 발송하지 않으며, 가입 정보 확인에만 사용합니다."
+            label={t("savedEmail")}
+            description={t("savedEmailHelp")}
           >
             <input
               type="email"
@@ -293,7 +272,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         )}
 
         {(mode === "login" || mode === "update") && (
-          <AuthField label={mode === "update" ? "새 비밀번호" : "비밀번호"}>
+          <AuthField label={mode === "update" ? t("newPassword") : t("password")}>
             <input
               type="password"
               value={password}
@@ -301,14 +280,14 @@ export function AuthForm({ mode }: AuthFormProps) {
               required
               minLength={8}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              placeholder="8자 이상 입력"
+              placeholder={t("passwordPlaceholder")}
               className={inputClassName}
             />
           </AuthField>
         )}
 
         {mode === "update" && (
-          <AuthField label="새 비밀번호 확인">
+          <AuthField label={t("newPasswordConfirm")}>
             <input
               type="password"
               value={passwordConfirm}
@@ -316,7 +295,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               required
               minLength={8}
               autoComplete="new-password"
-              placeholder="새 비밀번호 다시 입력"
+              placeholder={t("newPasswordAgain")}
               className={inputClassName}
             />
           </AuthField>
@@ -324,7 +303,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         {mode === "recover" && temporaryPassword && (
           <section className="rounded-control border border-brand-line bg-brand-softer p-4 text-center">
-            <p className="text-xs font-semibold text-brand-text">10분 동안 사용할 수 있는 임시 비밀번호</p>
+            <p className="text-xs font-semibold text-brand-text">{t("temporaryPasswordTitle")}</p>
             <p className="mt-2 break-all font-mono text-xl font-extrabold tracking-wide text-main">
               {temporaryPassword}
             </p>
@@ -333,13 +312,13 @@ export function AuthForm({ mode }: AuthFormProps) {
               onClick={() => void copyTemporaryPassword()}
               className="mt-3 min-h-10 rounded-control border border-brand-line bg-white px-4 text-sm font-bold text-brand-text hover:bg-brand-softer"
             >
-              임시 비밀번호 복사
+              {t("copyTemporaryPassword")}
             </button>
             {copyMessage && (
               <p className="mt-2 text-xs leading-5 text-muted">{copyMessage}</p>
             )}
             <p className="mt-2 text-xs leading-5 text-muted">
-              이 비밀번호로 로그인하면 새 비밀번호 설정 화면으로 이동합니다.
+              {t("temporaryPasswordHelp")}
             </p>
           </section>
         )}
@@ -362,7 +341,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             disabled={isSubmitting}
             className="flex min-h-12 w-full items-center justify-center rounded-control bg-brand px-5 font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "처리 중..." : text.submit}
+            {isSubmitting ? t("processing") : text.submit}
           </button>
         )}
 
@@ -372,12 +351,20 @@ export function AuthForm({ mode }: AuthFormProps) {
             onClick={goToTemporaryLogin}
             className="flex min-h-12 w-full items-center justify-center rounded-control bg-brand px-5 font-semibold text-on-brand"
           >
-            임시 비밀번호로 로그인
+            {t("temporaryLogin")}
           </button>
         )}
       </form>
 
-      <AuthFooter mode={mode} />
+      <AuthFooter
+        mode={mode}
+        labels={{
+          forgotPassword: t("forgotPassword"),
+          notMember: t("notMember"),
+          signup: common("signup"),
+          backToLogin: t("backToLogin"),
+        }}
+      />
     </section>
   );
 }
@@ -400,18 +387,29 @@ function AuthField({
   );
 }
 
-function AuthFooter({ mode }: { mode: AuthMode }) {
+function AuthFooter({
+  mode,
+  labels,
+}: {
+  mode: AuthMode;
+  labels: {
+    forgotPassword: string;
+    notMember: string;
+    signup: string;
+    backToLogin: string;
+  };
+}) {
   return (
     <footer className="mt-6 space-y-3 text-center text-sm">
       {mode === "login" && (
         <>
           <Link href="/auth?mode=recover" className="block text-muted hover:text-main">
-            비밀번호를 잊으셨나요?
+            {labels.forgotPassword}
           </Link>
           <p className="text-muted">
-            아직 회원이 아니신가요?{" "}
+            {labels.notMember}{" "}
             <Link href="/auth?mode=signup" className="font-semibold text-brand-text">
-              회원가입
+              {labels.signup}
             </Link>
           </p>
         </>
@@ -419,7 +417,7 @@ function AuthFooter({ mode }: { mode: AuthMode }) {
 
       {(mode === "recover" || mode === "update") && (
         <Link href="/auth?mode=login" className="font-semibold text-brand-text">
-          로그인으로 돌아가기
+          {labels.backToLogin}
         </Link>
       )}
     </footer>

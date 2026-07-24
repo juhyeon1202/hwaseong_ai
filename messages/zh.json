@@ -1,0 +1,57 @@
+{
+  "Common": {
+    "serviceName": "华城交通日志",
+    "serviceDescription": "市民参与型交通平台",
+    "login": "登录",
+    "signup": "注册",
+    "logout": "退出登录",
+    "confirm": "确认"
+  },
+  "Navigation": {
+    "mainMenu": "主菜单",
+    "home": "首页",
+    "community": "社区",
+    "journal": "交通日志",
+    "my": "我的",
+    "report": "举报",
+    "admin": "管理员"
+  },
+  "Account": {
+    "userMenu": "用户菜单",
+    "mypage": "我的页面",
+    "myJournal": "我的交通日志",
+    "favorites": "收藏",
+    "routeVote": "希望路线投票",
+    "inquiry": "一对一咨询",
+    "aiComplaint": "AI投诉草稿",
+    "adminWork": "管理员工作台",
+    "noEmail": "无邮箱信息"
+  },
+  "Language": {
+    "label": "语言",
+    "ko": "한국어",
+    "en": "English",
+    "zh": "中文",
+    "ja": "日本語"
+  },
+  "Footer": {
+    "serviceDescription": "市民参与型公共交通平台", "address": "韩国京畿道华城市南阳邑市厅路159，邮编18274", "cityHall": "华城市政府", "instagram": "Instagram", "privacy": "隐私政策", "terms": "使用条款", "copyright": "Copyright © Hwaseong Traffic Journal. All rights reserved."
+  },
+  "Auth": {
+    "loginTitle": "登录", "loginDescription": "登录华城交通日志。", "signupTitle": "注册", "signupDescription": "参与改善华城市交通。",
+    "recoverTitle": "找回密码", "recoverDescription": "核对账号和注册时填写的邮箱后发放临时密码。", "recoverSubmit": "获取临时密码",
+    "updateTitle": "设置新密码", "updateDescription": "请输入今后使用的新密码。", "updateSubmit": "修改密码",
+    "username": "账号", "signupUsername": "注册账号", "savedEmail": "注册时填写的邮箱", "savedEmailHelp": "不会发送验证邮件，仅用于核对注册信息。",
+    "password": "密码", "newPassword": "新密码", "newPasswordConfirm": "确认新密码", "passwordPlaceholder": "至少输入8个字符", "newPasswordAgain": "再次输入新密码",
+    "temporaryPasswordTitle": "10分钟内有效的临时密码", "copyTemporaryPassword": "复制临时密码", "temporaryPasswordHelp": "使用此密码登录后将进入新密码设置页面。",
+    "processing": "处理中...", "temporaryLogin": "使用临时密码登录", "forgotPassword": "忘记密码？", "notMember": "还不是会员？", "backToLogin": "返回登录"
+  },
+  "Home": {
+    "badge": "实时市民参与", "title": "一起记录并改善我们的社区交通", "description": "记录出行体验和车站不便事项，结合市民参与数据与AI分析改善交通。", "trafficAlerts": "实时交通提醒",
+    "recentParticipation": "近7天市民参与", "totalCount": "共{count}件", "stopProblem": "在车站遇到不便了吗？", "oneTouchAnonymous": "车站一键匿名举报", "reportNow": "举报",
+    "quickActions": "快捷功能", "record": "记录", "recordDescription": "今天的出行体验", "directions": "路线查询", "directionsDescription": "公共交通推荐路线", "roulette": "转盘", "rouletteDescription": "参与积分奖励",
+    "ranking": "实时社区排名", "rankingPeriod": "按近7天参与统计", "viewAll": "查看全部 ›", "myNeighborhood": "我的社区",
+    "oneTouchReport": "一键举报", "busPassed": "公交车没有停车吗？", "reportDescription": "可在车站立即举报满载不停、发车延误和换乘失败。", "reportStop": "举报车站",
+    "aiInsight": "AI交通洞察", "aiTitle": "正在分析市民记录", "aiDescription": "举报达到一定标准后将被识别为交通事件并发送到管理员审核页面。", "viewAnalysis": "查看实时分析 →"
+  }
+}
