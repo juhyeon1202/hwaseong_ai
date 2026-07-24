@@ -211,11 +211,13 @@ export function PostForm({
           노선 제안 수정 시에는 버스 유형을 표시하지 않습니다.
           서버 액션의 FormData 형식을 유지하기 위해 숨겨진 값만 전송합니다.
         */}
-        {isRouteSuggestion && isEditMode ? (
+        {isEditMode ? (
           <input
             type="hidden"
             name="busType"
-            value=""
+            value={
+              initialPost?.busType ?? ""
+            }
           />
         ) : (
           <Field
@@ -224,9 +226,7 @@ export function PostForm({
           >
             <select
               name="busType"
-              defaultValue={
-                initialPost?.busType ?? ""
-              }
+              defaultValue=""
               className={inputClassName}
             >
               <option value="">

@@ -217,9 +217,10 @@ export function AuthForm({
                 .trim()
                 .toLowerCase(),
               {
-                redirectTo:
-                  `${origin}/auth/callback?next=/auth?mode=update`,
-              },
+                redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(
+                  "/auth?mode=update",
+                )}`,
+              }
             );
 
         if (error) {

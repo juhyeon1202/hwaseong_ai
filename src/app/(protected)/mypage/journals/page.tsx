@@ -15,6 +15,15 @@ import {
   createClient,
 } from "@/lib/supabase/server";
 
+import {
+  JournalManageModal,
+} from "@/components/journal-manage-modal";
+import type {
+  JournalRouteInitialData,
+  Place,
+  TransitRoute,
+} from "@/components/journal-route-form";
+
 export const metadata: Metadata = {
   title: "내 교통일지",
   description:
@@ -58,6 +67,7 @@ type Journal = {
   destination_label: string | null;
   total_minutes: number | null;
   created_at: string;
+  route_payload: unknown;
   trip_segments:
     | JournalSegment[]
     | null;
@@ -102,6 +112,7 @@ export default async function MyJournalsPage() {
           destination_label,
           total_minutes,
           created_at,
+          route_payload,
           trip_segments (
             mode,
             route_number,
@@ -229,6 +240,49 @@ function JournalCard({
         "dissatisfied",
     ).length;
 
+  const storedRoute =
+    readStoredRoute(
+      journal.route_payload,
+    );
+
+  const initialData: JournalRouteInitialData = {
+    category: journal.category,
+    originLabel:
+      journal.origin_label ?? "",
+    destinationLabel:
+      journal.destination_label ?? "",
+    startPlace:
+      storedRoute.startPlace,
+    endPlace:
+      storedRoute.endPlace,
+    selectedRoute:
+      storedRoute.selectedRoute,
+    reviews: segments.map(
+      (segment) => ({
+        sentiment:
+          segment.sentiment ===
+          "dissatisfied"
+            ? "dissatisfied"
+            : "satisfied",
+        reasonCodes:
+          segment.reason_codes ?? [],
+        memo:
+          segment.memo ?? "",
+      }),
+    ),
+  };
+
+  const editableJournal = {
+    id: journal.id,
+    category: journal.category,
+    originLabel:
+      journal.origin_label ?? "",
+    destinationLabel:
+      journal.destination_label ??
+      "",
+    initialData,
+  };
+
   return (
     <li>
       <Card>
@@ -242,10 +296,14 @@ function JournalCard({
           </Badge>
 
           <time className="ml-auto text-xs text-muted">
-            {formatDate(
-              journal.started_at,
-            )}
-          </time>
+          {formatDate(
+            journal.started_at,
+          )}
+        </time>
+
+        <JournalManageModal
+          journal={editableJournal}
+        />
         </div>
 
         <div className="mt-5 flex items-center gap-3">
@@ -426,4 +484,87 @@ function formatDate(
       minute: "2-digit",
     },
   ).format(new Date(value));
+}
+
+function readStoredRoute(
+  value: unknown,
+): {
+  startPlace: Place | null;
+  endPlace: Place | null;
+  selectedRoute: TransitRoute | null;
+} {
+  if (!isRecord(value)) {
+    return {
+      startPlace: null,
+      endPlace: null,
+      selectedRoute: null,
+    };
+  }
+
+  const startPlace = isPlace(
+    value.startPlace,
+  )
+    ? value.startPlace
+    : null;
+
+  const endPlace = isPlace(
+    value.endPlace,
+  )
+    ? value.endPlace
+    : null;
+
+  const selectedRoute =
+    isTransitRoute(
+      value.selectedRoute,
+    )
+      ? value.selectedRoute
+      : isTransitRoute(value)
+        ? value
+        : null;
+
+  return {
+    startPlace,
+    endPlace,
+    selectedRoute,
+  };
+}
+
+function isRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null
+  );
+}
+
+function isPlace(
+  value: unknown,
+): value is Place {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.address === "string" &&
+    typeof value.longitude === "number" &&
+    typeof value.latitude === "number"
+  );
+}
+
+function isTransitRoute(
+  value: unknown,
+): value is TransitRoute {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "number" &&
+    typeof value.totalTime === "number" &&
+    typeof value.totalDistance === "number" &&
+    Array.isArray(value.steps)
+  );
 }

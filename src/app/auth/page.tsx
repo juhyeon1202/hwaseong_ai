@@ -4,12 +4,8 @@ import {
   AuthForm,
   type AuthMode,
 } from "@/components/auth-form";
-
-import {
-  SignupForm,
-} from "@/components/signup-form";
-
-import { getCurrentUser } from "@/lib/auth";
+import { SignupForm } from "@/components/signup-form";
+import { createClient } from "@/lib/supabase/server";
 
 type AuthPageProps = {
   searchParams: Promise<{
@@ -17,13 +13,12 @@ type AuthPageProps = {
   }>;
 };
 
-const allowedModes =
-  new Set<AuthMode>([
-    "login",
-    "signup",
-    "recover",
-    "update",
-  ]);
+const allowedModes = new Set<AuthMode>([
+  "login",
+  "signup",
+  "recover",
+  "update",
+]);
 
 export default async function AuthPage({
   searchParams,
@@ -31,8 +26,7 @@ export default async function AuthPage({
   const params = await searchParams;
 
   const requestedMode =
-    (params.mode ??
-      "login") as AuthMode;
+    (params.mode ?? "login") as AuthMode;
 
   const mode = allowedModes.has(
     requestedMode,
@@ -40,17 +34,26 @@ export default async function AuthPage({
     ? requestedMode
     : "login";
 
-  const user = await getCurrentUser();
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (mode === "update") {
     if (!user) {
-      redirect(
-        "/auth?mode=login",
-      );
+      redirect("/auth?mode=login");
     }
   } else if (user) {
+    const { data: profile } =
+      await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
     redirect(
-      user.role === "admin"
+      profile?.role === "admin"
         ? "/admin"
         : "/",
     );
