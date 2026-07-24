@@ -513,8 +513,10 @@ function PostCard({
                 </span>
 
                 <span>
-                  정류장{" "}
-                  {item.stopCount}
+                  댓글{" "}
+                  {item.commentCount.toLocaleString(
+                    "ko-KR",
+                  )}
                 </span>
               </>
             ) : (

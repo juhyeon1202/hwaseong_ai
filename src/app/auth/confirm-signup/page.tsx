@@ -50,6 +50,20 @@ export default async function ConfirmSignupPage({
   const tokenHash =
     params.token_hash ?? "";
 
+  /*
+  * Supabase가 이메일 인증을 먼저 완료한 후
+  * 이 페이지로 이동한 경우에는 token_hash가 없습니다.
+  * 이때는 정상 인증으로 간주하고 로그인 페이지로 이동합니다.
+  */
+  if (
+    !tokenHash &&
+    !params.error
+  ) {
+    redirect(
+      "/auth?mode=login&confirmed=1",
+    );
+  }
+
   const hasError =
     params.error === "invalid_token" ||
     params.error === "missing_token";

@@ -71,7 +71,7 @@ function AppHeader({
         <Link
           href="/"
           aria-label="화성 교통일지 홈"
-          className="flex min-w-0 shrink-0 items-center gap-2.5"
+          className="ml-4 flex min-w-0 shrink-0 items-center gap-3 sm:ml-7"
         >
           <Image
             src="/hwaseong-logo.jpg"
@@ -79,7 +79,7 @@ function AppHeader({
             width={156}
             height={44}
             priority
-            className="h-9 w-auto max-w-[108px] object-contain sm:h-10 sm:max-w-[148px]"
+            className="h-11 w-auto max-w-[142px] object-contain sm:h-12 sm:max-w-[172px]"
           />
 
           <span className="hidden border-l border-line pl-3 lg:block">

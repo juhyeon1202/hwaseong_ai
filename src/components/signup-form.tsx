@@ -57,6 +57,9 @@ export function SignupForm() {
   const [username, setUsername] =
     useState("");
 
+  const [usernameStatus, setUsernameStatus] =
+    useState<"idle" | "checking" | "available" | "unavailable">("idle");
+
   const [email, setEmail] =
     useState("");
 
@@ -99,15 +102,8 @@ export function SignupForm() {
     setIsSubmitting,
   ] = useState(false);
 
-  const [
-    confirmationSent,
-    setConfirmationSent,
-  ] = useState(false);
-
-  const [
-    isResending,
-    setIsResending,
-  ] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const [message, setMessage] =
     useState("");
@@ -185,6 +181,11 @@ export function SignupForm() {
       showError(
         "아이디는 영문, 숫자, 밑줄을 사용해 4~20자로 입력해 주세요.",
       );
+      return false;
+    }
+
+    if (usernameStatus !== "available") {
+      showError("아이디 중복 확인을 완료해 주세요.");
       return false;
     }
 
@@ -268,6 +269,39 @@ export function SignupForm() {
     );
   }
 
+  async function checkUsername() {
+    const normalizedUsername = username.trim().toLowerCase();
+
+    if (!/^[a-zA-Z0-9_]{4,20}$/.test(normalizedUsername)) {
+      setUsernameStatus("unavailable");
+      showError("아이디는 영문, 숫자, 밑줄을 사용해 4~20자로 입력해 주세요.");
+      return;
+    }
+
+    setMessage("");
+    setUsernameStatus("checking");
+
+    try {
+      const response = await fetch(
+        `/api/auth/check-username?username=${encodeURIComponent(normalizedUsername)}`,
+        { cache: "no-store" },
+      );
+      const result = (await response.json()) as {
+        available?: boolean;
+        message?: string;
+      };
+
+      setUsernameStatus(result.available ? "available" : "unavailable");
+
+      if (!result.available) {
+        showError(result.message ?? "이미 사용 중인 아이디입니다.");
+      }
+    } catch {
+      setUsernameStatus("unavailable");
+      showError("아이디 중복 여부를 확인하지 못했습니다.");
+    }
+  }
+
   async function completeSignup(
     event: FormEvent<HTMLFormElement>,
   ) {
@@ -282,55 +316,43 @@ export function SignupForm() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createClient();
-
-      const callbackUrl = new URL(
-        "/auth/confirm-signup",
-        window.location.origin,
-      );
-
-      const { data, error } =
-        await supabase.auth.signUp({
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nickname: nickname.trim(),
+          name: name.trim(),
+          username: username.trim().toLowerCase(),
           email: normalizedEmail,
           password,
-          options: {
-            emailRedirectTo:
-              callbackUrl.toString(),
-            data: {
-              nickname:
-                nickname.trim(),
-              name: name.trim(),
-              username:
-                username
-                  .trim()
-                  .toLowerCase(),
-              birth_date:
-                birthDate,
-              gender,
-              home_district:
-                homeDistrict,
-              preferred_language:
-                language,
-              referral_code:
-                referralCode
-                  .trim()
-                  .toUpperCase() ||
-                null,
-              signup_completed: true,
-            },
-          },
-        });
+          birthDate,
+          gender,
+          homeDistrict,
+          language,
+          referralCode: referralCode.trim().toUpperCase(),
+        }),
+      });
+      const result = (await response.json()) as {
+        authEmail?: string;
+        error?: string;
+      };
 
-      if (error) {
-        throw error;
+      if (!response.ok || !result.authEmail) {
+        throw new Error(result.error ?? "회원가입을 완료하지 못했습니다.");
       }
 
-      if (data.session) {
-        window.location.replace("/");
-        return;
+      const supabase = createClient();
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: result.authEmail,
+        password,
+      });
+
+      if (loginError) {
+        throw loginError;
       }
 
-      setConfirmationSent(true);
+      window.location.replace("/");
+      return;
 
       showSuccess(
         "가입 확인 링크를 이메일로 보냈습니다. 메일의 링크를 누르면 회원가입이 완료됩니다.",
@@ -475,11 +497,13 @@ export function SignupForm() {
         >
           <input
             value={username}
-            onChange={(event) =>
+            onChange={(event) => {
               setUsername(
                 event.target.value,
-              )
-            }
+              );
+              setUsernameStatus("idle");
+              setMessage("");
+            }}
             required
             minLength={4}
             maxLength={20}
@@ -490,11 +514,22 @@ export function SignupForm() {
             placeholder="아이디"
             className={inputClassName}
           />
+          <button
+            type="button"
+            disabled={usernameStatus === "checking"}
+            onClick={() => void checkUsername()}
+            className="mt-2 min-h-11 w-full rounded-control border border-line bg-white px-4 text-sm font-bold text-secondary hover:border-brand hover:text-brand disabled:opacity-50"
+          >
+            {usernameStatus === "checking" ? "확인 중..." : "아이디 중복 확인"}
+          </button>
+          {usernameStatus === "available" && (
+            <p className="mt-2 text-xs text-success">사용할 수 있는 아이디입니다.</p>
+          )}
         </SignupField>
 
         <SignupField
           label="이메일"
-          description="가입 확인 링크를 받을 실제 이메일을 입력해 주세요."
+          description="비밀번호 찾기에서 가입 정보를 확인하는 용도로만 저장됩니다. 인증 메일은 발송하지 않습니다."
         >
           <input
             type="email"
@@ -724,6 +759,11 @@ export function SignupForm() {
           </p>
         )}
 
+        <Button type="submit" fullWidth disabled={isSubmitting}>
+          {isSubmitting ? "회원가입 처리 중..." : "회원가입"}
+        </Button>
+
+        <div className="hidden">
         {!confirmationSent ? (
           <Button
             type="submit"
@@ -756,6 +796,7 @@ export function SignupForm() {
             </p>
           </div>
         )}
+        </div>
       </form>
     </section>
   );

@@ -27,6 +27,7 @@ import {
   SectionHeader,
 } from "@/components/ui";
 import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type CommunityPostPageProps = {
@@ -64,6 +65,7 @@ type Comment = {
   content: string;
   is_secret: boolean;
   created_at: string;
+  is_redacted: boolean;
 };
 
 const categoryLabels: Record<
@@ -134,7 +136,7 @@ export default async function CommunityPostPage({
   const post = data as Post;
 
   const { data: commentData } =
-    await supabase
+    await supabaseAdmin
       .from("post_comments")
       .select(
         `
@@ -151,10 +153,25 @@ export default async function CommunityPostPage({
         ascending: true,
       });
 
-  const comments =
+  const comments = (
     (commentData as
-      | Comment[]
-      | null) ?? [];
+      | Omit<Comment, "is_redacted">[]
+      | null) ?? []
+  ).map((comment): Comment => {
+    const canReadSecret =
+      !comment.is_secret ||
+      user?.id === comment.author_id ||
+      user?.id === post.author_id ||
+      user?.role === "admin";
+
+    return {
+      ...comment,
+      content: canReadSecret
+        ? comment.content
+        : "비밀로 등록된 댓글입니다.",
+      is_redacted: !canReadSecret,
+    };
+  });
 
   const authorIds = [
     post.author_id,
@@ -513,10 +530,11 @@ export default async function CommunityPostPage({
                       ) ?? "화성시민"
                     }
                     canDelete={
-                      user?.id ===
+                      !comment.is_redacted &&
+                      (user?.id ===
                         comment.author_id ||
                       user?.role ===
-                        "admin"
+                        "admin")
                     }
                   />
                 ),
@@ -588,7 +606,7 @@ function CommentItem({
         commentId={comment.id}
         postId={postId}
         content={comment.content}
-        canEdit={canDelete}
+        canEdit={canDelete && !comment.is_redacted}
         canDelete={canDelete}
       />
     </li>

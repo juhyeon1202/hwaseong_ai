@@ -13,6 +13,7 @@ import {
 import {
   createClient,
 } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
   title: "시민 게시판",
@@ -123,7 +124,7 @@ export default async function CommunityPage() {
       .order("name")
       .limit(1000),
 
-    supabase
+    supabaseAdmin
       .from("post_comments")
       .select("post_id"),
   ]);

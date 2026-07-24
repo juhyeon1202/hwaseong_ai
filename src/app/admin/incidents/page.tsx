@@ -492,9 +492,9 @@ export default async function AdminIncidentsPage({
 
         <form
           method="get"
-          className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(260px,2fr)_minmax(150px,1fr)_minmax(170px,1fr)_minmax(160px,1fr)_minmax(200px,auto)]"
+          className="mt-5 grid gap-4 md:grid-cols-2"
         >
-          <div className="md:col-span-2 xl:col-span-4">
+          <div className="min-w-0 md:col-span-2">
             <label
               htmlFor="incident-search"
               className="text-xs font-bold text-secondary"
@@ -508,64 +508,106 @@ export default async function AdminIncidentsPage({
               name="q"
               defaultValue={keyword}
               placeholder="정류장명 또는 사건 번호"
-              className="mt-2 min-h-11 w-full rounded-control border border-line bg-surface px-4 text-sm text-main outline-none transition-colors placeholder:text-muted focus:border-brand"
+              className="mt-2 min-h-11 w-full min-w-0 rounded-control border border-line bg-surface px-4 text-sm text-main outline-none transition-colors placeholder:text-muted focus:border-brand"
             />
           </div>
 
-          <div className="xl:col-span-2">
+          <div className="min-w-0">
             <FilterSelect
               id="incident-status"
               name="status"
               label="처리 상태"
-              defaultValue={status ?? ""}
+              defaultValue={
+                status ?? ""
+              }
             >
-              <option value="">전체 상태</option>
-              <option value="detected">감지됨</option>
-              <option value="reviewing">검토 중</option>
-              <option value="notified">시민 안내</option>
-              <option value="resolved">해결 완료</option>
+              <option value="">
+                전체 상태
+              </option>
+
+              <option value="detected">
+                감지됨
+              </option>
+
+              <option value="reviewing">
+                검토 중
+              </option>
+
+              <option value="notified">
+                시민 안내
+              </option>
+
+              <option value="resolved">
+                해결 완료
+              </option>
             </FilterSelect>
           </div>
 
-          <div className="xl:col-span-2">
+          <div className="min-w-0">
             <FilterSelect
               id="incident-severity"
               name="severity"
               label="위험도"
-              defaultValue={severity ?? ""}
+              defaultValue={
+                severity ?? ""
+              }
             >
-              <option value="">전체 위험도</option>
-              <option value="high">긴급</option>
-              <option value="medium">주의</option>
-              <option value="low">일반</option>
+              <option value="">
+                전체 위험도
+              </option>
+
+              <option value="high">
+                긴급
+              </option>
+
+              <option value="medium">
+                주의
+              </option>
+
+              <option value="low">
+                일반
+              </option>
             </FilterSelect>
           </div>
 
-          <div className="xl:col-span-2">
+          <div className="min-w-0">
             <FilterSelect
               id="incident-kind"
               name="kind"
               label="신고 유형"
-              defaultValue={kind ?? ""}
+              defaultValue={
+                kind ?? ""
+              }
             >
-              <option value="">전체 유형</option>
-              <option value="full_pass">만차 통과</option>
-              <option value="dispatch_delay">배차 지연</option>
-              <option value="transfer_failure">환승 실패</option>
+              <option value="">
+                전체 유형
+              </option>
+
+              <option value="full_pass">
+                만차 통과
+              </option>
+
+              <option value="dispatch_delay">
+                배차 지연
+              </option>
+
+              <option value="transfer_failure">
+                환승 실패
+              </option>
             </FilterSelect>
           </div>
 
-          <div className="flex items-end gap-2 md:col-span-2 xl:col-span-2">
+          <div className="grid min-w-0 grid-cols-2 items-end gap-3">
             <button
               type="submit"
-              className="inline-flex min-h-11 flex-1 whitespace-nowrap items-center justify-center rounded-control bg-brand px-4 text-sm font-bold text-on-brand transition-colors hover:bg-brand-hover"
+              className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-control bg-brand px-4 text-sm font-bold text-on-brand transition-colors hover:bg-brand-hover"
             >
               검색
             </button>
 
             <Link
               href="/admin/incidents"
-              className="inline-flex min-h-11 flex-1 whitespace-nowrap items-center justify-center rounded-control border border-line bg-surface px-4 text-sm font-semibold text-secondary transition-colors hover:bg-surface-muted"
+              className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-control border border-line bg-surface px-4 text-sm font-semibold text-secondary transition-colors hover:bg-surface-muted"
             >
               초기화
             </Link>
@@ -667,11 +709,10 @@ function FilterSelect({
   name: string;
   label: string;
   defaultValue: string;
-  children:
-    React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label
         htmlFor={id}
         className="text-xs font-bold text-secondary"
@@ -685,7 +726,7 @@ function FilterSelect({
         defaultValue={
           defaultValue
         }
-        className="mt-2 min-h-11 w-full rounded-control border border-line bg-surface px-3 text-sm text-main outline-none focus:border-brand"
+        className="mt-2 min-h-11 w-full min-w-0 rounded-control border border-line bg-surface px-4 pr-10 text-sm text-main outline-none transition-colors focus:border-brand"
       >
         {children}
       </select>
